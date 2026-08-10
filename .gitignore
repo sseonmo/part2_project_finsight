@@ -4,6 +4,11 @@ out/
 next-env.d.ts
 tsconfig.tsbuildinfo
 
+# local environment variables
+.env
+.env.*
+!.env.example
+
 __pycache__/
 .pytest_cache/
 .coverage
