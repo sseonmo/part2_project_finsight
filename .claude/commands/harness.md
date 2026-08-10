@@ -138,11 +138,12 @@ python3 scripts/execute.py {task-name} --push  # 실행 후 push
 
 execute.py가 자동으로 처리하는 것:
 
+- 실행 전 clean worktree 확인 — 기존 변경사항이 step 커밋에 섞이면 즉시 중단
 - `feat-{task-name}` 브랜치 생성/checkout
 - 가드레일 주입 — CLAUDE.md + docs/*.md 내용을 매 step 프롬프트에 포함
 - 컨텍스트 누적 — 완료된 step의 summary를 다음 step 프롬프트에 전달
 - 자가 교정 — 실패 시 최대 3회 재시도하며, 이전 에러 메시지를 프롬프트에 피드백
-- 2단계 커밋 — 코드 변경(`feat`)과 메타데이터(`chore`)를 분리 커밋
+- 2단계 커밋 — step 세션은 커밋하지 않고, execute.py가 코드 변경(`feat`)과 메타데이터(`chore`)를 분리 커밋
 - 타임스탬프 — started_at, completed_at, failed_at, blocked_at 자동 기록
 
 에러 복구:

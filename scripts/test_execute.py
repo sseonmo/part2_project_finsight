@@ -245,9 +245,10 @@ class TestBuildPreamble:
         result = executor._build_preamble("", ctx)
         assert "이전 Step 산출물" in result
 
-    def test_includes_commit_example(self, executor):
+    def test_tells_step_not_to_commit(self, executor):
         result = executor._build_preamble("", "")
-        assert "feat(mvp):" in result
+        assert "커밋하지 마라" in result
+        assert "feat(mvp):" not in result
 
     def test_includes_rules(self, executor):
         result = executor._build_preamble("", "")
@@ -320,6 +321,31 @@ class TestUpdateTopIndex:
     def test_no_top_index_file(self, executor, tmp_path):
         executor._top_index_file = tmp_path / "nonexistent.json"
         executor._update_top_index("completed")  # should not raise
+
+
+# ---------------------------------------------------------------------------
+# _ensure_clean_worktree (mocked)
+# ---------------------------------------------------------------------------
+
+class TestCleanWorktree:
+    def test_clean_worktree_passes(self, executor):
+        executor._run_git = lambda *args: MagicMock(returncode=0, stdout="", stderr="")
+
+        executor._ensure_clean_worktree()
+
+    def test_dirty_worktree_exits(self, executor):
+        executor._run_git = lambda *args: MagicMock(returncode=0, stdout=" M plan.md\n", stderr="")
+
+        with pytest.raises(SystemExit) as exc_info:
+            executor._ensure_clean_worktree()
+        assert exc_info.value.code == 1
+
+    def test_git_status_failure_exits(self, executor):
+        executor._run_git = lambda *args: MagicMock(returncode=1, stdout="", stderr="not a git repo")
+
+        with pytest.raises(SystemExit) as exc_info:
+            executor._ensure_clean_worktree()
+        assert exc_info.value.code == 1
 
 
 # ---------------------------------------------------------------------------

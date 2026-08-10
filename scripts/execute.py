@@ -84,6 +84,7 @@ class StepExecutor:
     def run(self):
         self._print_header()
         self._check_blockers()
+        self._ensure_clean_worktree()
         self._checkout_branch()
         guardrails = self._load_guardrails()
         self._ensure_created_at()
@@ -136,6 +137,20 @@ class StepExecutor:
             sys.exit(1)
 
         print(f"  Branch: {branch}")
+
+    def _ensure_clean_worktree(self):
+        r = self._run_git("status", "--porcelain")
+        if r.returncode != 0:
+            print("  ERROR: git 상태 확인 실패.")
+            print(f"  {r.stderr.strip()}")
+            sys.exit(1)
+
+        dirty = r.stdout.strip()
+        if dirty:
+            print("  ERROR: 작업 트리가 깨끗하지 않습니다.")
+            print(dirty)
+            print("  Hint: 변경사항을 commit하거나 stash한 뒤 harness를 실행하세요.")
+            sys.exit(1)
 
     def _commit_step(self, step_num: int, step_name: str):
         output_rel = f"phases/{self._phase_dir_name}/step{step_num}-output.json"
@@ -202,9 +217,6 @@ class StepExecutor:
 
     def _build_preamble(self, guardrails: str, step_context: str,
                         prev_error: Optional[str] = None) -> str:
-        commit_example = self.FEAT_MSG.format(
-            phase=self._phase_name, num="N", name="<step-name>"
-        )
         retry_section = ""
         if prev_error:
             retry_section = (
@@ -224,8 +236,7 @@ class StepExecutor:
             f"   - AC 통과 → \"completed\" + \"summary\" 필드에 이 step의 산출물을 한 줄로 요약\n"
             f"   - {self.MAX_RETRIES}회 수정 시도 후에도 실패 → \"error\" + \"error_message\" 기록\n"
             f"   - 사용자 개입이 필요한 경우 (API 키, 인증, 수동 설정 등) → \"blocked\" + \"blocked_reason\" 기록 후 즉시 중단\n"
-            f"6. 모든 변경사항을 커밋하라:\n"
-            f"   {commit_example}\n\n---\n\n"
+            f"6. 커밋하지 마라. execute.py가 status/summary 확인 후 코드 변경과 메타데이터를 분리 커밋한다.\n\n---\n\n"
         )
 
     # --- Claude 호출 ---
