@@ -347,6 +347,66 @@ class TestCleanWorktree:
             executor._ensure_clean_worktree()
         assert exc_info.value.code == 1
 
+    def _status(self, executor, porcelain: str):
+        executor._run_git = lambda *args: MagicMock(returncode=0, stdout=porcelain, stderr="")
+
+    def test_own_step_files_pass(self, executor):
+        """D단계가 만든 이번 task의 step 정의는 dirty로 보지 않는다."""
+        self._status(executor, "?? phases/0-mvp/step2.md\n?? phases/0-mvp/step3.md\n")
+
+        executor._ensure_clean_worktree()
+
+    def test_top_index_passes(self, executor):
+        self._status(executor, "?? phases/index.json\n")
+
+        executor._ensure_clean_worktree()
+
+    def test_modified_task_index_passes(self, executor):
+        """에러 복구: index.json의 status를 pending으로 되돌린 뒤 재실행한다."""
+        self._status(executor, " M phases/0-mvp/index.json\n")
+
+        executor._ensure_clean_worktree()
+
+    def test_other_task_dir_exits(self, executor):
+        """다른 task의 phase 파일은 이번 실행의 소유가 아니다."""
+        self._status(executor, "?? phases/1-polish/step1.md\n")
+
+        with pytest.raises(SystemExit) as exc_info:
+            executor._ensure_clean_worktree()
+        assert exc_info.value.code == 1
+
+    def test_untracked_user_file_exits(self, executor):
+        self._status(executor, "?? plan.md\n")
+
+        with pytest.raises(SystemExit) as exc_info:
+            executor._ensure_clean_worktree()
+        assert exc_info.value.code == 1
+
+    def test_user_file_mixed_with_own_files_exits(self, executor):
+        self._status(executor, "?? phases/0-mvp/step2.md\n?? plan.md\n")
+
+        with pytest.raises(SystemExit) as exc_info:
+            executor._ensure_clean_worktree()
+        assert exc_info.value.code == 1
+
+    def test_error_lists_only_offending_paths(self, executor, capsys):
+        """harness 자신의 파일은 에러 출력에 섞이지 않아야 한다."""
+        self._status(executor, "?? phases/0-mvp/step2.md\n?? plan.md\n")
+
+        with pytest.raises(SystemExit):
+            executor._ensure_clean_worktree()
+        out = capsys.readouterr().out
+        assert "plan.md" in out
+        assert "phases/0-mvp/step2.md" not in out
+
+    def test_hint_mentions_untracked_stash(self, executor, capsys):
+        """기본 stash는 untracked를 담지 않으므로 -u를 안내해야 한다."""
+        self._status(executor, "?? plan.md\n")
+
+        with pytest.raises(SystemExit):
+            executor._ensure_clean_worktree()
+        assert "stash -u" in capsys.readouterr().out
+
 
 # ---------------------------------------------------------------------------
 # _checkout_branch (mocked)
@@ -443,6 +503,152 @@ class TestCommitStep:
         commit_msgs = [c[2] for c in calls if c[0] == "commit"]
         assert len(commit_msgs) == 1
         assert "chore" in commit_msgs[0]
+
+
+# ---------------------------------------------------------------------------
+# _commit_phase_files (mocked)
+# ---------------------------------------------------------------------------
+
+class TestCommitPhaseFiles:
+    def _record(self, executor, staged: bool = True):
+        calls = []
+        def fake_git(*args):
+            calls.append(args)
+            if args[:2] == ("diff", "--cached"):
+                return MagicMock(returncode=1 if staged else 0)
+            return MagicMock(returncode=0, stdout="", stderr="")
+        executor._run_git = fake_git
+        return calls
+
+    def test_commits_own_phase_files(self, executor, top_index):
+        calls = self._record(executor)
+
+        executor._commit_phase_files()
+
+        add_calls = [c for c in calls if c[0] == "add"]
+        assert len(add_calls) == 1
+        assert "phases/0-mvp" in add_calls[0]
+        assert "phases/index.json" in add_calls[0]
+
+        commit_calls = [c for c in calls if c[0] == "commit"]
+        assert len(commit_calls) == 1
+        assert "chore(mvp):" in commit_calls[0][2]
+
+    def test_does_not_use_add_all(self, executor, top_index):
+        """add -A 로 담으면 검사를 통과한 사용자 파일까지 커밋된다."""
+        calls = self._record(executor)
+
+        executor._commit_phase_files()
+
+        assert ("add", "-A") not in calls
+
+    def test_skips_missing_top_index(self, executor):
+        """phases/index.json 이 없으면 pathspec 에 넣지 않는다 (git add 가 실패한다)."""
+        calls = self._record(executor)
+
+        executor._commit_phase_files()
+
+        add_call = next(c for c in calls if c[0] == "add")
+        assert "phases/index.json" not in add_call
+
+    def test_nothing_staged_skips_commit(self, executor, top_index):
+        """이미 커밋된 상태로 재실행하면 빈 커밋을 만들지 않는다."""
+        calls = self._record(executor, staged=False)
+
+        executor._commit_phase_files()
+
+        assert not [c for c in calls if c[0] == "commit"]
+
+
+# ---------------------------------------------------------------------------
+# 실제 git 저장소 통합 테스트
+#
+# porcelain 은 새 디렉토리를 "?? phases/" 로 축약한다. mock 으로는 재현되지 않아
+# 소유 판정이 조용히 무너지므로, 이 구간만 실제 git 으로 검증한다.
+# ---------------------------------------------------------------------------
+
+def _git(root, *args):
+    subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=True)
+
+
+def _status(root, *extra):
+    return subprocess.run(
+        ["git", "status", "--porcelain", *extra], cwd=root, capture_output=True, text=True
+    ).stdout
+
+
+@pytest.fixture
+def git_repo(tmp_project):
+    """CLAUDE.md/docs 만 커밋된 저장소. phases/ 는 통째로 untracked 로 남는다."""
+    _git(tmp_project, "init", "-q")
+    _git(tmp_project, "config", "user.email", "t@example.com")
+    _git(tmp_project, "config", "user.name", "tester")
+    _git(tmp_project, "add", "CLAUDE.md", "docs")
+    _git(tmp_project, "commit", "-qm", "init")
+    return tmp_project
+
+
+class TestWorktreeWithRealGit:
+    def test_untracked_phases_dir_passes(self, executor, git_repo):
+        """최초 실행. git 이 '?? phases/' 로 축약해도 통과해야 한다."""
+        assert "?? phases/\n" in _status(git_repo)  # 축약이 실제로 일어나는지 먼저 확인
+
+        executor._ensure_clean_worktree()
+
+    def test_user_file_blocks(self, executor, git_repo):
+        (git_repo / "plan.md").write_text("draft")
+
+        with pytest.raises(SystemExit) as exc_info:
+            executor._ensure_clean_worktree()
+        assert exc_info.value.code == 1
+
+    def test_phase_commit_leaves_user_file_in_worktree(self, executor, git_repo, top_index):
+        """선커밋은 phases/ 만 담고 사용자 파일은 건드리지 않아야 한다."""
+        (git_repo / "plan.md").write_text("draft")
+
+        executor._commit_phase_files()
+
+        committed = subprocess.run(
+            ["git", "show", "--name-only", "--format=", "HEAD"],
+            cwd=git_repo, capture_output=True, text=True,
+        ).stdout
+        assert "phases/0-mvp/step2.md" in committed
+        assert "phases/index.json" in committed
+        assert "plan.md" not in committed
+        assert "?? plan.md" in _status(git_repo)
+
+    def test_worktree_empty_when_steps_begin(self, executor, git_repo, top_index):
+        """step 루프 진입 시 worktree 가 실제로 비어야 _commit_step 의 add -A 가 안전하다."""
+        executor._commit_phase_files()
+
+        assert _status(git_repo, "-uall").strip() == ""
+
+
+# ---------------------------------------------------------------------------
+# run() 호출 순서
+# ---------------------------------------------------------------------------
+
+class TestRunOrder:
+    def test_phase_files_committed_after_checkout_before_steps(self, executor):
+        order = []
+        executor._print_header = lambda: None
+        executor._check_blockers = lambda: None
+        executor._ensure_clean_worktree = lambda: order.append("clean")
+        executor._checkout_branch = lambda: order.append("checkout")
+        executor._commit_phase_files = lambda: order.append("phase-commit")
+        executor._load_guardrails = lambda: ""
+        executor._ensure_created_at = lambda: None
+        executor._execute_all_steps = lambda guardrails: order.append("steps")
+        executor._finalize = lambda: None
+
+        executor.run()
+
+        # 검사는 checkout 전에 — 잘못된 브랜치로 옮겨간 뒤 중단되면 안 된다
+        assert order.index("clean") < order.index("checkout")
+        # 선커밋은 checkout 후에 — main 이 아니라 feat 브랜치에 찍혀야 한다
+        assert order.index("checkout") < order.index("phase-commit")
+        # step 루프 전에 worktree 가 비워져야 _commit_step 의 add -A 가 안전하다
+        assert order.index("phase-commit") < order.index("steps")
 
 
 # ---------------------------------------------------------------------------

@@ -57,6 +57,7 @@ class StepExecutor:
     CLAUDE_TIMEOUT = 1800  # Claude 호출 제한 시간 (초)
     FEAT_MSG = "feat({phase}): step {num} — {name}"
     CHORE_MSG = "chore({phase}): step {num} output"
+    SETUP_MSG = "chore({phase}): step 정의 추가"
     TZ = timezone(timedelta(hours=9))
 
     def __init__(self, phase_dir_name: str, *, auto_push: bool = False):
@@ -86,6 +87,7 @@ class StepExecutor:
         self._check_blockers()
         self._ensure_clean_worktree()
         self._checkout_branch()
+        self._commit_phase_files()
         guardrails = self._load_guardrails()
         self._ensure_created_at()
         self._execute_all_steps(guardrails)
@@ -138,19 +140,48 @@ class StepExecutor:
 
         print(f"  Branch: {branch}")
 
+    def _is_own_phase_file(self, path: str) -> bool:
+        """이번 실행이 만들고 커밋할 harness 자신의 메타데이터인가."""
+        return path == "phases/index.json" or path.startswith(f"phases/{self._phase_dir_name}/")
+
     def _ensure_clean_worktree(self):
-        r = self._run_git("status", "--porcelain")
+        # -uall: 기본 porcelain은 새 디렉토리를 "?? phases/" 로 축약해버려
+        # 그 안이 harness 소유인지 판정할 수 없다.
+        r = self._run_git("status", "--porcelain", "-uall")
         if r.returncode != 0:
             print("  ERROR: git 상태 확인 실패.")
             print(f"  {r.stderr.strip()}")
             sys.exit(1)
 
-        dirty = r.stdout.strip()
-        if dirty:
-            print("  ERROR: 작업 트리가 깨끗하지 않습니다.")
-            print(dirty)
-            print("  Hint: 변경사항을 commit하거나 stash한 뒤 harness를 실행하세요.")
+        # phases/ 아래 이번 task의 파일은 _commit_phase_files가 곧 커밋하므로 제외한다.
+        # 남는 것은 step 커밋에 섞이면 안 되는 무관한 변경뿐이다.
+        foreign = [ln for ln in r.stdout.splitlines() if ln and not self._is_own_phase_file(ln[3:])]
+        if foreign:
+            print("  ERROR: harness와 무관한 변경사항이 있습니다.")
+            print("\n".join(foreign))
+            print("  Hint: commit하거나 `git stash -u` 로 치운 뒤 harness를 실행하세요.")
             sys.exit(1)
+
+    def _commit_phase_files(self):
+        """step 정의·index를 먼저 커밋해 step 시작 시점의 worktree를 비운다.
+
+        이게 없으면 D단계 산출물이 첫 step의 feat 커밋에 섞이고,
+        _commit_step의 `add -A`가 무엇을 담는지 보장할 수 없게 된다.
+        """
+        targets = [f"phases/{self._phase_dir_name}"]
+        if self._top_index_file.exists():
+            targets.append("phases/index.json")
+
+        self._run_git("add", "--", *targets)
+        if self._run_git("diff", "--cached", "--quiet").returncode == 0:
+            return
+
+        msg = self.SETUP_MSG.format(phase=self._phase_name)
+        r = self._run_git("commit", "-m", msg)
+        if r.returncode == 0:
+            print(f"  Commit: {msg}")
+        else:
+            print(f"  WARN: phase 정의 커밋 실패: {r.stderr.strip()}")
 
     def _commit_step(self, step_num: int, step_name: str):
         output_rel = f"phases/{self._phase_dir_name}/step{step_num}-output.json"

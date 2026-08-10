@@ -138,8 +138,9 @@ python3 scripts/execute.py {task-name} --push  # 실행 후 push
 
 execute.py가 자동으로 처리하는 것:
 
-- 실행 전 clean worktree 확인 — 기존 변경사항이 step 커밋에 섞이면 즉시 중단
+- 실행 전 worktree 확인 — harness와 무관한 변경사항이 step 커밋에 섞이면 즉시 중단 (`phases/` 아래 이번 task 파일은 harness 자신의 산출물이므로 제외)
 - `feat-{task-name}` 브랜치 생성/checkout
+- phase 정의 선커밋 — D단계에서 만든 step 정의와 index를 `chore`로 먼저 커밋해 step 시작 시점의 worktree를 비운다
 - 가드레일 주입 — CLAUDE.md + docs/*.md 내용을 매 step 프롬프트에 포함
 - 컨텍스트 누적 — 완료된 step의 summary를 다음 step 프롬프트에 전달
 - 자가 교정 — 실패 시 최대 3회 재시도하며, 이전 에러 메시지를 프롬프트에 피드백
