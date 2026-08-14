@@ -90,6 +90,8 @@ sha256(user_id | transacted_on | amount | merchant_normalized | occurrence)
 - **기간이 겹치는 다른 파일**(3월치 / 3~4월치)을 올려도 겹치는 거래의 키가 동일 → 중복되지 않는다
 - 같은 날 같은 가게에서 같은 금액을 두 번 쓴 **진짜 2건**은 occurrence 0/1로 구분되어 보존된다
 
+중복을 막는 것은 **`dedupe_key` 의 UNIQUE 제약이고, 삽입은 `ON CONFLICT (dedupe_key) DO NOTHING` 이다.** 조회로 존재를 확인한 뒤 넣는 방식으로 구현하지 말 것 — 같은 파일을 두 번 올리거나 워커 스텝이 재시도되면 두 트랜잭션이 동시에 "없음"을 보고 둘 다 넣는다. 재시도가 전제인 파이프라인이라 실제로 발생한다. `duplicate_count` 는 삽입 시도 수와 실제 삽입 수의 차이로 센다.
+
 파일 내 행 순번을 쓰지 않는 이유는 ADR-003. 8단계가 전 행을 메모리에 올리는 이유가 이것이다 — 조합을 세려면 파일 전체를 봐야 하고, sanity check의 비율 판정도 마찬가지다.
 
 ## 가맹점 분류
@@ -115,7 +117,7 @@ sha256(user_id | transacted_on | amount | merchant_normalized | occurrence)
 |---|---|---|
 | `profiles` | `user_id` PK, `trial_started_at`, `subscription_status`, `polar_customer_id`, `current_period_end` | 본인만 |
 | `upload_jobs` | `id`, `user_id`, `storage_key`, `original_filename`, `status`, `mapping` jsonb, `failed_reason`, 완료 요약 4종(`inserted_count`, `duplicate_count`, `skipped_rows`, `uncategorized_count`) | 본인만 |
-| `transactions` | `id`, `user_id`, `upload_job_id`, `transacted_on`, `amount`, `merchant_raw`, `merchant_normalized`, `category`, `transaction_type`, `dedupe_key` | 본인만 |
+| `transactions` | `id`, `user_id`, `upload_job_id`, `transacted_on`, `amount`, `merchant_raw`, `merchant_normalized`, `category`, `transaction_type`, `dedupe_key`. `dedupe_key` **UNIQUE** | 본인만 |
 | `merchant_categories` | `merchant_normalized` PK, `category` | **전역** — 읽기 전체 허용, 쓰기는 service role만 |
 | `user_category_overrides` | `(user_id, merchant_normalized)` PK, `category` | 본인만 |
 | `csv_format_fingerprints` | `(user_id, header_hash)` PK, `mapping` jsonb | 본인만 |
@@ -129,6 +131,14 @@ sha256(user_id | transacted_on | amount | merchant_normalized | occurrence)
 - `upload_jobs.mapping` 과 `csv_format_fingerprints.mapping` 에 같은 값이 들어간다. **둘 다 필요하다** — fingerprint는 sanity check를 통과한 뒤에만 저장되므로, `needs_mapping` 에서 재개하는 시점에는 아직 없다
 - 조회 시 카테고리는 `user_category_overrides` → `merchant_categories` 순으로 결정한다
 - Storage 경로는 `{user_id}/{job_id}/{서버가 생성한 파일명}`. 다운로드는 소유자 확인 후 60초 서명 URL로만 내보낸다
+
+## 외부 진입점
+`/api/inngest` 와 Polar 웹훅은 로그인 세션 없이 외부에서 호출되고 **service role로 DB에 쓴다 — RLS가 막아주지 않는다.** 서명 검증을 통과한 요청만 처리한다.
+
+- **Polar 웹훅**: webhook secret으로 서명을 검증한다. 실패는 401이고 본문을 파싱하지 않는다. 검증이 없으면 `user_id`를 담아 POST하는 것만으로 결제 없이 구독이 켜진다
+- **`/api/inngest`**: Inngest signing key로 검증한다
+- **웹훅은 이벤트 ID로 멱등 처리한다.** 같은 이벤트가 재전송되면 두 번째는 무시한다. 없으면 재전송 한 번에 `current_period_end`가 두 번 연장된다
+- **`/api/uploads/:id` 계열은 매 요청 job 소유자를 확인한다.** 식별자만 바꿔 남의 업로드를 조작할 수 있다
 
 ## 상태 관리
 서버 상태는 Server Components + Supabase 직접 조회.
