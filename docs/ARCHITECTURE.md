@@ -35,9 +35,11 @@ Server Components 기본. 인터랙션이 필요한 곳만 Client Component.
 1. 클라이언트가 /api/uploads/signed-url 요청
 2. 서버가 Storage 키를 생성(파일명은 서버가 정한다) + upload_jobs 레코드 pending 생성
    크기·MIME 제한도 여기서 건다. 버킷은 private
+   클라이언트가 함께 보낸 card_label 을 여기서 저장한다 (dedupe_key 구성 요소)
 3. 클라이언트가 서명 URL로 Supabase Storage에 직접 업로드 (Next 서버를 통과하지 않는다)
 4. 클라이언트가 /api/uploads/:id/start 호출 → Inngest 이벤트 발행
-5. [워커] 파일 다운로드 → 인코딩 감지(UTF-8 / EUC-KR / CP949) → 헤더 해시 계산
+5. [워커] 파일 다운로드 → 인코딩 감지(UTF-8 / EUC-KR / CP949) → 헤더 해시 계산·저장
+      같은 card_label 의 기존 job과 해시가 다르면 카드 오지정 경고 플래그를 세운다(중단하지 않음)
 6. [워커] fingerprint 조회. 히트하면 캐시된 매핑 사용, 미스면 LLM(terra)으로 컬럼 매핑 추론
 7. [워커] 매핑을 20행에 적용 → 파싱 성공률 90% 미만이면 needs_mapping 후 중단
       날짜가 숫자 구분 형식이면 전체 행을 스캔해 MM/DD·DD/MM 을 판별한다
@@ -82,13 +84,17 @@ Server Components 기본. 인터랙션이 필요한 곳만 Client Component.
 
 ## 중복 방지 — dedupe_key
 ```
-sha256(user_id | transacted_on | amount | merchant_normalized | occurrence)
+sha256(user_id | card_label | transacted_on | amount | merchant_normalized | occurrence)
 ```
 `occurrence` = **같은 파일 안에서 (날짜, 금액, 정규화 가맹점명) 조합이 몇 번째로 등장했는지**(0부터).
+`card_label` = 업로드할 때 사용자가 고른 카드(`upload_jobs.card_label`).
 
 - 같은 파일을 다시 올려도 키가 동일 → 중복 삽입되지 않는다
 - **기간이 겹치는 다른 파일**(3월치 / 3~4월치)을 올려도 겹치는 거래의 키가 동일 → 중복되지 않는다
 - 같은 날 같은 가게에서 같은 금액을 두 번 쓴 **진짜 2건**은 occurrence 0/1로 구분되어 보존된다
+- **다른 카드의 명세서에 있는 같은 조합**(3/4·4,500원·스타벅스)도 `card_label` 이 달라 보존된다
+
+**`card_label` 이 키에 있어야 하는 이유** — `occurrence` 는 파일 안에서만 세므로, 카드 A와 카드 B의 3월 명세서에 같은 조합이 1건씩 있으면 **양쪽 다 `occurrence = 0`** 이 되어 키가 완전히 같아진다. 그러면 두 번째 파일의 진짜 거래가 `ON CONFLICT DO NOTHING` 으로 버려지고 화면에는 "중복이라 건너뛴 거래"로 보고된다 — **진짜 2건이 1건으로 줄어드는데 사용자는 중복이 제거된 줄 안다.** `merchant_normalized` 가 지점 코드를 지우므로 강남점과 종로점도 같은 이름이 되어 충돌 확률이 더 오른다. 대상 사용자가 카드 1~4장인 이상(PRD) 이것은 예외가 아니라 정상 경로다.
 
 중복을 막는 것은 **`dedupe_key` 의 UNIQUE 제약이고, 삽입은 `ON CONFLICT (dedupe_key) DO NOTHING` 이다.** 조회로 존재를 확인한 뒤 넣는 방식으로 구현하지 말 것 — 같은 파일을 두 번 올리거나 워커 스텝이 재시도되면 두 트랜잭션이 동시에 "없음"을 보고 둘 다 넣는다. 재시도가 전제인 파이프라인이라 실제로 발생한다. `duplicate_count` 는 삽입 시도 수와 실제 삽입 수의 차이로 센다.
 
@@ -116,7 +122,7 @@ sha256(user_id | transacted_on | amount | merchant_normalized | occurrence)
 | 테이블 | 핵심 컬럼 | RLS |
 |---|---|---|
 | `profiles` | `user_id` PK, `trial_started_at`, `subscription_status`, `polar_customer_id`, `current_period_end` | 본인만 |
-| `upload_jobs` | `id`, `user_id`, `storage_key`, `original_filename`, `status`, `mapping` jsonb, `failed_reason`, 완료 요약 4종(`inserted_count`, `duplicate_count`, `skipped_rows`, `uncategorized_count`) | 본인만 |
+| `upload_jobs` | `id`, `user_id`, `storage_key`, `original_filename`, `card_label` **NOT NULL**, `header_hash`, `status`, `mapping` jsonb, `failed_reason`, 완료 요약 4종(`inserted_count`, `duplicate_count`, `skipped_rows`, `uncategorized_count`) | 본인만 |
 | `transactions` | `id`, `user_id`, `upload_job_id`, `transacted_on`, `amount`, `merchant_raw`, `merchant_normalized`, `category`, `transaction_type`, `dedupe_key`. `dedupe_key` **UNIQUE** | 본인만 |
 | `merchant_categories` | `merchant_normalized` PK, `category` | **전역** — 읽기 전체 허용, 쓰기는 service role만 |
 | `user_category_overrides` | `(user_id, merchant_normalized)` PK, `category` | 본인만 |
@@ -129,6 +135,9 @@ sha256(user_id | transacted_on | amount | merchant_normalized | occurrence)
 - `amount`는 **항상 양수**다. 환불·취소는 `transaction_type = 'refund'`로 구분한다
   → 집계 쿼리는 반드시 `transaction_type` 필터를 명시할 것. 누락하면 환불이 지출로 잡힌다
 - `upload_jobs.mapping` 과 `csv_format_fingerprints.mapping` 에 같은 값이 들어간다. **둘 다 필요하다** — fingerprint는 sanity check를 통과한 뒤에만 저장되므로, `needs_mapping` 에서 재개하는 시점에는 아직 없다
+- **카드 목록은 테이블로 두지 않는다.** `SELECT DISTINCT card_label FROM upload_jobs WHERE user_id = ?` 가 곧 그 사용자의 카드 목록이다. 테이블·마이그레이션·CRUD 화면이 통째로 사라지고, 카드는 업로드가 있어야 존재하므로 고아 레코드도 생기지 않는다
+- **`card_label` 오지정 방어**: 5단계에서 계산한 `header_hash` 를 `upload_jobs` 에 저장하고, **같은 `card_label` 로 올린 기존 job과 해시가 다르면** 완료 요약에 "이 파일은 '카드 1'로 올린 이전 파일과 형식이 다릅니다. 다른 카드라면 삭제 후 카드를 바꿔 올려주세요"를 함께 띄운다. job을 멈추지는 않는다. 카드사가 다르면 CSV 헤더도 다르므로, 이미 계산하는 값 하나로 오지정을 잡을 수 있다. 이 방어가 없으면 사용자가 두 번째 카드 파일을 기본값 그대로 올렸을 때 `card_label` 을 키에 넣은 효과가 사라진다
+- `csv_format_fingerprints` 의 키는 `card_label` 과 무관하게 `(user_id, header_hash)` 그대로다. 형식 캐시는 "이 헤더를 어떻게 읽는가"이지 "누구 카드인가"가 아니다
 - 조회 시 카테고리는 `user_category_overrides` → `merchant_categories` 순으로 결정한다
 - Storage 경로는 `{user_id}/{job_id}/{서버가 생성한 파일명}`. 다운로드는 소유자 확인 후 60초 서명 URL로만 내보낸다
 
