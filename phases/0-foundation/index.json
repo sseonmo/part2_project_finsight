@@ -53,7 +53,10 @@
     {
       "step": 6,
       "name": "signals",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-17T16:54:11+0900",
+      "summary": "src/lib/signals의 Signal={type,period,targetKey,impact,payload}와 detectSignals(input) 진입점을 추가하고 RPC get_category_monthly_totals/get_period_transactions/get_category_amount_medians/get_merchant_history/get_seen_merchants_before_period를 추가함",
+      "completed_at": "2026-08-17T17:08:13+0900"
     },
     {
       "step": 7,
