@@ -2,11 +2,39 @@
   "project": "FinSight",
   "phase": "1-dashboard",
   "steps": [
-    { "step": 0, "name": "app-shell", "status": "pending" },
-    { "step": 1, "name": "upload-dialog", "status": "pending" },
-    { "step": 2, "name": "dashboard", "status": "pending" },
-    { "step": 3, "name": "transactions", "status": "pending" },
-    { "step": 4, "name": "uploads-history", "status": "pending" },
-    { "step": 5, "name": "manual-mapping", "status": "pending" }
-  ]
+    {
+      "step": 0,
+      "name": "app-shell",
+      "status": "completed",
+      "started_at": "2026-08-18T00:46:16+0900",
+      "summary": "Added cached getSessionContext(): SessionContext|null, token-based AppSidebar/PathAwareAppHeader/AppHeader(onUploadClick optional, default emits finsight:upload-click)/Badge/ReadOnlyBanner/TrialEndingBanner shell, and get_transaction_months RPC for latest month links.",
+      "completed_at": "2026-08-18T01:00:47+0900"
+    },
+    {
+      "step": 1,
+      "name": "upload-dialog",
+      "status": "pending"
+    },
+    {
+      "step": 2,
+      "name": "dashboard",
+      "status": "pending"
+    },
+    {
+      "step": 3,
+      "name": "transactions",
+      "status": "pending"
+    },
+    {
+      "step": 4,
+      "name": "uploads-history",
+      "status": "pending"
+    },
+    {
+      "step": 5,
+      "name": "manual-mapping",
+      "status": "pending"
+    }
+  ],
+  "created_at": "2026-08-18T00:46:16+0900"
 }
