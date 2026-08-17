@@ -37,7 +37,10 @@
     {
       "step": 4,
       "name": "csv-parse",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-17T16:33:38+0900",
+      "summary": "src/lib/csv에 encoding/parse/date/amount/mapping/sanity/dedupe 순수 함수와 thresholds.ts를 추가함; ParsedRow={rowIndex,transactedOn,amount,merchantRaw,merchantNormalized?,transactionType,raw}, 임계값은 src/lib/csv/thresholds.ts",
+      "completed_at": "2026-08-17T16:44:27+0900"
     },
     {
       "step": 5,
