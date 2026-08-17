@@ -29,7 +29,10 @@
     {
       "step": 3,
       "name": "auth",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-17T16:21:28+0900",
+      "summary": "Supabase createBrowserClient/createServerClient(src/services/supabase.ts)와 server-only createServiceRoleClient(src/services/supabase-service-role.ts), evaluateEntitlement(input), /dashboard·/settings 로그인 미들웨어(api/static 제외)를 추가함",
+      "completed_at": "2026-08-17T16:33:38+0900"
     },
     {
       "step": 4,
