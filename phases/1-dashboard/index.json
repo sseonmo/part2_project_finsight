@@ -21,7 +21,10 @@
     {
       "step": 2,
       "name": "dashboard",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-18T01:11:49+0900",
+      "summary": "Added dashboard RPCs get_dashboard_summary/get_dashboard_category_breakdown/get_dashboard_monthly_flow/get_dashboard_top_merchants, typed wrappers fetchDashboard*, POST /api/signals/[id]/dismiss, and /dashboard month selection via ?month=YYYY-MM with KPI/category/flow/merchant/insight panels.",
+      "completed_at": "2026-08-18T02:01:46+0900"
     },
     {
       "step": 3,
