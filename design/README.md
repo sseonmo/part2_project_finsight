@@ -32,9 +32,11 @@
 | 경로 | 무엇 |
 |---|---|
 | `FinSight 프로토타입.dc.html` | 화면 9종. 상단이 마크업, 하단 `<script type="text/x-dc">` 가 목업 데이터와 로직 |
-| `support.js` · `_ds/_ds_bundle.js` | 프로토타입 런타임. HTML을 브라우저에서 열려면 필요하다. **구현에는 쓰지 않는다** |
-| `_ds/tokens/*.css` | 색·타이포·간격·radius·elevation 토큰 |
-| `_ds/readme.md` | 디자인 시스템 자체 설명. "Known gaps" 절에 없는 것이 적혀 있다 |
+| `support.js` · `_ds/<시스템>/_ds_bundle.js` | 프로토타입 런타임. HTML을 브라우저에서 열려면 필요하다. **구현에는 쓰지 않는다** |
+| `_ds/<시스템>/tokens/*.css` | 색·타이포·간격·radius·elevation 토큰 |
+| `_ds/<시스템>/readme.md` | 디자인 시스템 자체 설명. "Known gaps" 절에 없는 것이 적혀 있다 |
+
+`<시스템>` 은 `finsight-design-system-1f7cfde5-d4d8-415e-8576-6cd642df2233` 이다. 번들이 붙인 이름이라 그대로 뒀다.
 | `thumbnail.webp` | 대시보드 라이트 모드 렌더 이미지 |
 | `HANDOFF_README.md` | 번들 원본 README (위 주의 참고) |
 | `uploads/PRD.snapshot.md` | **이 디자인을 만들 때 넣은 PRD.** 정본이 아니다 — 아래 참고 |
