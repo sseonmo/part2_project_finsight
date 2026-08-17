@@ -1,0 +1,48 @@
+:root{
+  --fs-hero:80px; /* @kind font */
+  --lh-hero:1.05; /* @kind other */
+  --ls-hero:-2px; /* @kind other */
+  --fs-display-lg:60px; /* @kind font */
+  --lh-display-lg:1.10; /* @kind other */
+  --ls-display-lg:-1.5px; /* @kind other */
+  --fs-h1:48px; /* @kind font */
+  --lh-h1:1.15; /* @kind other */
+  --ls-h1:-1px; /* @kind other */
+  --fs-h2:36px; /* @kind font */
+  --lh-h2:1.20; /* @kind other */
+  --ls-h2:-0.5px; /* @kind other */
+  --fs-h3:28px; /* @kind font */
+  --lh-h3:1.25; /* @kind other */
+  --fs-h4:22px; /* @kind font */
+  --lh-h4:1.30; /* @kind other */
+  --fs-h5:18px; /* @kind font */
+  --lh-h5:1.40; /* @kind other */
+  --fs-subtitle:18px; /* @kind font */
+  --lh-subtitle:1.50; /* @kind other */
+  --fs-body-md:16px; /* @kind font */
+  --lh-body:1.50; /* @kind other */
+  --fs-body-sm:14px; /* @kind font */
+  --fs-caption:13px; /* @kind font */
+  --lh-caption:1.40; /* @kind other */
+  --fs-micro:12px; /* @kind font */
+  --fs-micro-uppercase:11px; /* @kind font */
+  --ls-micro-uppercase:0.5px; /* @kind other */
+  --fs-button:14px; /* @kind font */
+  --lh-button:1.30; /* @kind other */
+  --fs-stat:64px; /* @kind font */
+  --lh-stat:1.10; /* @kind other */
+  --ls-stat:-1.5px; /* @kind other */
+}
+.fs-hero{font:var(--weight-medium) var(--fs-hero)/var(--lh-hero) var(--font-display);letter-spacing:var(--ls-hero)}
+.fs-display-lg{font:var(--weight-medium) var(--fs-display-lg)/var(--lh-display-lg) var(--font-display);letter-spacing:var(--ls-display-lg)}
+.fs-h1{font:var(--weight-medium) var(--fs-h1)/var(--lh-h1) var(--font-display);letter-spacing:var(--ls-h1)}
+.fs-h2{font:var(--weight-medium) var(--fs-h2)/var(--lh-h2) var(--font-display);letter-spacing:var(--ls-h2)}
+.fs-h3{font:var(--weight-medium) var(--fs-h3)/var(--lh-h3) var(--font-display)}
+.fs-h4{font:var(--weight-medium) var(--fs-h4)/var(--lh-h4) var(--font-display)}
+.fs-h5{font:var(--weight-medium) var(--fs-h5)/var(--lh-h5) var(--font-display)}
+.fs-subtitle{font:var(--weight-regular) var(--fs-subtitle)/var(--lh-subtitle) var(--font-core)}
+.fs-body{font:var(--weight-regular) var(--fs-body-md)/var(--lh-body) var(--font-core)}
+.fs-body-sm{font:var(--weight-regular) var(--fs-body-sm)/var(--lh-body) var(--font-core)}
+.fs-caption{font:var(--weight-regular) var(--fs-caption)/var(--lh-caption) var(--font-core)}
+.fs-micro-uppercase{font:var(--weight-semibold) var(--fs-micro-uppercase)/var(--lh-caption) var(--font-core);letter-spacing:var(--ls-micro-uppercase);text-transform:uppercase}
+.fs-stat{font:var(--weight-medium) var(--fs-stat)/var(--lh-stat) var(--font-display);letter-spacing:var(--ls-stat)}

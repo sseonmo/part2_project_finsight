@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/finsight-design-system-1f7cfde5-d4d8-415e-8576-6cd642df2233/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/finsight-design-system-1f7cfde5-d4d8-415e-8576-6cd642df2233/tokens/colors.css">
+<link rel="stylesheet" href="_ds/finsight-design-system-1f7cfde5-d4d8-415e-8576-6cd642df2233/tokens/typography.css">
+<link rel="stylesheet" href="_ds/finsight-design-system-1f7cfde5-d4d8-415e-8576-6cd642df2233/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/finsight-design-system-1f7cfde5-d4d8-415e-8576-6cd642df2233/tokens/radius.css">
+<link rel="stylesheet" href="_ds/finsight-design-system-1f7cfde5-d4d8-415e-8576-6cd642df2233/tokens/elevation.css">
+<link rel="stylesheet" href="_ds/finsight-design-system-1f7cfde5-d4d8-415e-8576-6cd642df2233/tokens/base.css">
+<link rel="stylesheet" href="_ds/finsight-design-system-1f7cfde5-d4d8-415e-8576-6cd642df2233/styles.css">
+<script src="_ds/finsight-design-system-1f7cfde5-d4d8-415e-8576-6cd642df2233/_ds_bundle.js"></script>
+<style>
+[data-theme="dark"]{
+  --canvas:#14141C;--surface:#1E1E28;--surface-soft:#191922;--surface-yellow:#2A2313;
+  --surface-pricing-featured:#1F1B33;
+  --hairline:#2C2C39;--hairline-soft:#242430;--hairline-strong:#3C3C4C;
+  --ink-deep:#FFFFFF;--ink:#F1F1F5;--charcoal:#E2E2E9;--slate:#ADADBE;--steel:#9797AA;
+  --stone:#7E7E92;--muted:#63637A;
+  --primary:#F1F1F5;--on-primary:#0B0B12;--footer-bg:#0A0A12;
+  --surface-page:#0E0E15;--brand-blue:#7A9BFF;--blue-pressed:#A7BCFF;
+  --yellow-light:#2A2313;--yellow-dark:#F7DE93;--teal-light:#14312D;--moss-dark:#8FD9CB;
+  --coral-light:#331C17;--brand-red:#3A1A18;--brand-red-dark:#FF8D80;--success-accent:#4FD79A;
+  --text-heading:#F1F1F5;--text-body:#E2E2E9;--text-secondary:#ADADBE;--text-tertiary:#9797AA;
+  --text-muted:#63637A;--text-link:#7A9BFF;
+  --surface-page:#0E0E15;--surface-card:#14141C;--surface-section:#191922;
+  --border-default:#2C2C39;--border-quiet:#242430;--border-input:#3C3C4C;
+  --accent-brand:#FBD24E;
+}
+[data-theme="dark"] select option{background:#1E1E28;color:#F1F1F5}
+</style>
+</helmet>
+<div data-theme="{{ theme }}" style="min-height:100vh;background:var(--surface-page);color:var(--text-body);font:400 14px/1.5 var(--font-core);display:flex">
+
+  <aside style="width:236px;flex:0 0 236px;background:var(--canvas);border-right:1px solid var(--hairline);display:flex;flex-direction:column;position:sticky;top:0;height:100vh">
+    <div style="display:flex;align-items:center;gap:10px;padding:18px 20px 16px 20px;border-bottom:1px solid var(--hairline-soft)">
+      <div style="width:26px;height:26px;border-radius:8px;background:var(--brand-yellow)"></div>
+      <span style="font:500 18px/1.2 var(--font-display);letter-spacing:-0.4px;color:var(--ink)">finsight</span>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:2px;padding:14px 12px">
+      <div style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary);padding:6px 8px 8px 8px">내 지출</div>
+      <sc-for list="{{ navMain }}" as="item" hint-placeholder-count="5">
+        <button onClick="{{ item.go }}" style="{{ item.style }}">
+          <span style="width:16px;height:16px;border-radius:5px;flex:0 0 16px;background:{{ item.dot }}"></span>
+          <span>{{ item.label }}</span>
+        </button>
+      </sc-for>
+      <div style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary);padding:18px 8px 8px 8px">상태 미리보기</div>
+      <sc-for list="{{ navState }}" as="item" hint-placeholder-count="2">
+        <button onClick="{{ item.go }}" style="{{ item.style }}">
+          <span style="width:16px;height:16px;border-radius:5px;flex:0 0 16px;background:{{ item.dot }}"></span>
+          <span>{{ item.label }}</span>
+        </button>
+      </sc-for>
+    </nav>
+    <div style="margin-top:auto;padding:14px;border-top:1px solid var(--hairline-soft);display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span style="font:400 13px/1.4 var(--font-core);color:var(--text-secondary)">테마</span>
+        <button onClick="{{ toggleTheme }}" style="display:flex;align-items:center;gap:6px;border:1px solid var(--hairline-strong);background:var(--surface);color:var(--text-body);border-radius:9999px;padding:5px 12px;font:500 12px/1.3 var(--font-core);cursor:pointer">{{ themeLabel }}</button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span style="font:400 13px/1.4 var(--font-core);color:var(--text-secondary)">체험 만료 상태</span>
+        <button onClick="{{ toggleLock }}" style="{{ lockToggleStyle }}">{{ lockLabel }}</button>
+      </div>
+      <div style="border-top:1px solid var(--hairline-soft);padding-top:10px;display:flex;align-items:center;gap:9px">
+        <span style="width:26px;height:26px;border-radius:9999px;background:var(--surface);border:1px solid var(--hairline);display:flex;align-items:center;justify-content:center;font:500 11px/1 var(--font-core);color:var(--text-secondary)">지</span>
+        <div style="display:flex;flex-direction:column">
+          <span style="font:500 13px/1.3 var(--font-core);color:var(--ink)">지현</span>
+          <span style="font:400 11px/1.3 var(--font-core);color:var(--text-tertiary)">{{ planLabel }}</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <header style="display:flex;align-items:center;gap:16px;padding:16px 28px;border-bottom:1px solid var(--hairline);background:var(--canvas);position:sticky;top:0;z-index:5">
+      <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+        <h1 style="font:500 20px/1.25 var(--font-display);letter-spacing:-0.4px;color:var(--ink)">{{ pageTitle }}</h1>
+        <span style="font:400 13px/1.4 var(--font-core);color:var(--text-tertiary)">{{ pageSub }}</span>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <sc-if value="{{ showMonthSwitch }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:2px;background:var(--surface);border-radius:9999px;padding:3px">
+            <sc-for list="{{ monthChips }}" as="m" hint-placeholder-count="4">
+              <button onClick="{{ m.go }}" style="{{ m.style }}">{{ m.label }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ canWrite }}" hint-placeholder-val="{{ true }}">
+          <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.Button" variant="primary" size="sm" onClick="{{ goUpload }}" hint-size="auto,36px">명세서 올리기</x-import>
+        </sc-if>
+        <sc-if value="{{ readOnly }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.Button" variant="yellow" size="sm" onClick="{{ goPricing }}" hint-size="auto,36px">결제하고 계속 쓰기</x-import>
+        </sc-if>
+      </div>
+    </header>
+
+    <sc-if value="{{ readOnly }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 28px;background:var(--surface-yellow);border-bottom:1px solid var(--hairline)">
+        <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.Badge" tone="yellow" hint-size="auto,22px">읽기 전용</x-import>
+        <span style="font:400 13px/1.4 var(--font-core);color:var(--text-body)">7일 체험이 8월 14일에 끝났습니다. 지금까지 만든 대시보드·리뷰·리포트는 그대로 볼 수 있고, 새 업로드와 수정만 막혀 있습니다.</span>
+        <a href="#" onClick="{{ goPricing }}" style="margin-left:auto;white-space:nowrap;font:500 13px/1.4 var(--font-core);color:var(--text-link)">요금제 보기</a>
+      </div>
+    </sc-if>
+
+    <div style="flex:1;padding:24px 28px 56px 28px;max-width:1240px;width:100%">
+
+      <sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+            <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+              <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;min-width:0">
+                <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">{{ k.label }}</span>
+                <span style="font:500 26px/1.1 var(--font-display);letter-spacing:-0.6px;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap">{{ k.value }}</span>
+                <span style="{{ k.deltaStyle }}">{{ k.delta }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:grid;grid-template-columns:{{ dashCols }};gap:16px;align-items:start">
+            <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+              <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;padding:20px">
+                <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:16px">
+                  <h2 style="font:500 15px/1.3 var(--font-display);color:var(--ink)">카테고리별 지출</h2>
+                  <span style="font:400 12px/1.4 var(--font-core);color:var(--text-tertiary)">{{ monthLabel }} · 10종 고정</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:22px;margin-bottom:18px">
+                  <div style="position:relative;display:flex;align-items:center;justify-content:center">
+                    <div style="{{ donutStyle }}"></div>
+                    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;pointer-events:none">
+                      <span style="font:500 18px/1.15 var(--font-display);letter-spacing:-0.4px;color:var(--ink);font-variant-numeric:tabular-nums">{{ donutTotal }}</span>
+                      <span style="font:400 11px/1.3 var(--font-core);color:var(--text-tertiary)">{{ donutCount }}</span>
+                    </div>
+                  </div>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+                    <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">가장 큰 거래 5건</span>
+                    <sc-for list="{{ biggest }}" as="t" hint-placeholder-count="5">
+                      <div style="display:grid;grid-template-columns:44px minmax(0,1fr) 92px 38px;gap:10px;align-items:center">
+                        <span style="font:400 12px/1.4 var(--font-core);color:var(--text-tertiary);font-variant-numeric:tabular-nums">{{ t.date }}</span>
+                        <div style="display:flex;align-items:center;gap:6px;min-width:0">
+                          <span style="width:7px;height:7px;border-radius:2px;flex:0 0 7px;background:{{ t.color }}"></span>
+                          <span style="font:400 13px/1.4 var(--font-core);color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.merchant }}</span>
+                        </div>
+                        <span style="font:400 13px/1.4 var(--font-core);color:var(--ink);text-align:right;font-variant-numeric:tabular-nums">{{ t.amount }}</span>
+                        <span style="font:400 12px/1.4 var(--font-core);color:var(--text-muted);text-align:right">{{ t.share }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:9px;padding-top:16px;border-top:1px solid var(--hairline-soft)">
+                  <sc-for list="{{ catRows }}" as="c" hint-placeholder-count="8">
+                    <div style="display:grid;grid-template-columns:minmax(64px,92px) minmax(0,1fr) 92px 54px;align-items:center;gap:12px">
+                      <div style="display:flex;align-items:center;gap:7px;min-width:0">
+                        <span style="width:9px;height:9px;border-radius:3px;flex:0 0 9px;background:{{ c.color }}"></span>
+                        <span style="font:400 13px/1.4 var(--font-core);color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span>
+                      </div>
+                      <div style="height:9px;border-radius:9999px;background:var(--surface);overflow:hidden">
+                        <div style="{{ c.barStyle }}"></div>
+                      </div>
+                      <span style="font:400 13px/1.4 var(--font-core);color:var(--ink);text-align:right;font-variant-numeric:tabular-nums">{{ c.amount }}</span>
+                      <span style="{{ c.deltaStyle }}">{{ c.delta }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;padding:20px">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+                  <h2 style="font:500 15px/1.3 var(--font-display);color:var(--ink)">지출 흐름</h2>
+                  <span style="font:400 12px/1.4 var(--font-core);color:var(--text-tertiary)">{{ flowNote }}</span>
+                  <div style="margin-left:auto;display:flex;gap:4px">
+                    <sc-for list="{{ flowTabs }}" as="f" hint-placeholder-count="2">
+                      <button onClick="{{ f.go }}" style="{{ f.style }}">{{ f.label }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:flex-end;gap:10px;height:128px">
+                  <sc-for list="{{ flowBars }}" as="b" hint-placeholder-count="12">
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end;min-width:0">
+                      <span style="font:400 11px/1.3 var(--font-core);color:var(--text-secondary);font-variant-numeric:tabular-nums">{{ b.total }}</span>
+                      <div style="{{ b.barStyle }}"></div>
+                      <span style="{{ b.labelStyle }}">{{ b.label }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;padding:20px">
+                <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px">
+                  <h2 style="font:500 15px/1.3 var(--font-display);color:var(--ink)">가맹점 상위</h2>
+                  <span style="font:400 12px/1.4 var(--font-core);color:var(--text-tertiary)">{{ monthLabel }} · 금액 순</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:11px">
+                  <sc-for list="{{ topMerchants }}" as="m" hint-placeholder-count="6">
+                    <div style="display:grid;grid-template-columns:minmax(0,1fr) 44px 100px;gap:12px;align-items:center">
+                      <div style="display:flex;flex-direction:column;gap:5px;min-width:0">
+                        <span style="font:400 13px/1.4 var(--font-core);color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.merchant }}</span>
+                        <div style="{{ m.barStyle }}"></div>
+                      </div>
+                      <span style="font:400 12px/1.4 var(--font-core);color:var(--text-tertiary);text-align:right">{{ m.count }}</span>
+                      <span style="font:400 13px/1.4 var(--font-core);color:var(--ink);text-align:right;font-variant-numeric:tabular-nums">{{ m.amount }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+              <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:baseline;gap:8px">
+                  <h2 style="font:500 15px/1.3 var(--font-display);color:var(--ink)">같은 시점 비교</h2>
+                  <span style="font:400 12px/1.4 var(--font-core);color:var(--text-tertiary)">{{ mtdLabel }}</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <sc-for list="{{ mtdRows }}" as="r" hint-placeholder-count="2">
+                    <div style="display:flex;flex-direction:column;gap:5px">
+                      <div style="display:flex;align-items:baseline;gap:8px">
+                        <span style="font:400 13px/1.4 var(--font-core);color:var(--text-secondary)">{{ r.label }}</span>
+                        <span style="margin-left:auto;font:500 14px/1.4 var(--font-core);color:var(--ink);font-variant-numeric:tabular-nums">{{ r.value }}</span>
+                      </div>
+                      <div style="height:10px;border-radius:9999px;background:var(--surface);overflow:hidden">
+                        <div style="{{ r.barStyle }}"></div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                <p style="font:400 13px/1.55 var(--font-core);color:var(--text-secondary);text-wrap:pretty">{{ mtdVerdict }}</p>
+              </div>
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <h2 style="font:500 15px/1.3 var(--font-display);color:var(--ink)">이번 달 인사이트</h2>
+                <span style="font:400 12px/1.4 var(--font-core);color:var(--text-tertiary)">영향도 순 · {{ signalCount }}</span>
+                <a href="#" onClick="{{ goReview }}" style="margin-left:auto;font:500 12px/1.4 var(--font-core);color:var(--text-link)">전체 리뷰</a>
+              </div>
+              <div style="display:grid;grid-template-columns:{{ insightCols }};gap:12px">
+                <sc-for list="{{ topSignals }}" as="s" hint-placeholder-count="3">
+                  <div onClick="{{ s.openDetail }}" style="{{ s.cardStyle }}">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="width:8px;height:8px;border-radius:3px;flex:0 0 8px;background:{{ s.color }}"></span>
+                      <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">{{ s.label }}</span>
+                      <button onClick="{{ s.dismiss }}" style="margin-left:auto;border:none;background:none;color:var(--text-muted);font:400 15px/1 var(--font-core);cursor:pointer;padding:0 2px">×</button>
+                    </div>
+                    <sc-if value="{{ s.showImpact }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;flex-direction:column;gap:1px">
+                        <span style="font:500 24px/1.15 var(--font-display);letter-spacing:-0.6px;color:var(--ink);font-variant-numeric:tabular-nums">{{ s.impact }}</span>
+                        <span style="font:400 12px/1.4 var(--font-core);color:var(--text-tertiary)">{{ s.impactLabel }}</span>
+                      </div>
+                    </sc-if>
+                    <p style="{{ s.textStyle }}">{{ s.sentence }}</p>
+                    <sc-if value="{{ s.showFoot }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:10px;border-top:1px solid var(--hairline-soft)">
+                        <span style="font:400 12px/1.4 var(--font-core);color:var(--text-secondary)">{{ s.merchant }}</span>
+                        <span style="font:400 12px/1.4 var(--font-core);color:var(--text-muted)">{{ s.date }}</span>
+                        <a href="#" onClick="{{ s.openTx }}" style="margin-left:auto;font:500 12px/1.4 var(--font-core);color:var(--text-link)">거래 보기</a>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ hasDismissed }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ restoreAll }}" style="align-self:flex-start;border:1px solid var(--hairline-strong);background:none;color:var(--text-secondary);border-radius:9999px;padding:6px 14px;font:500 12px/1.3 var(--font-core);cursor:pointer">숨긴 신호 되살리기</button>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isReview }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:16px;max-width:900px">
+          <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:8px">
+            <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">요약</span>
+            <p style="font:400 16px/1.55 var(--font-core);color:var(--text-body);text-wrap:pretty">{{ reviewSummary }}</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+              <sc-for list="{{ signalTypes }}" as="t" hint-placeholder-count="5">
+                <span style="{{ t.chipStyle }}">{{ t.label }}</span>
+              </sc-for>
+            </div>
+          </div>
+          <sc-for list="{{ allSignals }}" as="s" hint-placeholder-count="4">
+            <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;padding:20px 22px;display:grid;grid-template-columns:1fr 168px;gap:20px;align-items:start">
+              <div style="display:flex;flex-direction:column;gap:9px;min-width:0">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="width:8px;height:8px;border-radius:3px;flex:0 0 8px;background:{{ s.color }}"></span>
+                  <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">{{ s.label }}</span>
+                  <span style="font:400 11px/1.4 var(--font-core);color:var(--text-muted);font-family:var(--font-mono)">{{ s.key }}</span>
+                </div>
+                <p style="font:400 15px/1.6 var(--font-core);color:var(--text-body);text-wrap:pretty">{{ s.sentence }}</p>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--hairline);border-radius:9999px;padding:3px 10px;font:400 12px/1.4 var(--font-core);color:var(--text-secondary)">
+                    <span style="width:7px;height:7px;border-radius:2px;background:{{ s.catColor }}"></span>{{ s.cat }}
+                  </span>
+                  <span style="font:400 12px/1.4 var(--font-core);color:var(--text-tertiary)">{{ s.rule }}</span>
+                  <a href="#" onClick="{{ s.openDetail }}" style="font:500 12px/1.4 var(--font-core);color:var(--text-link)">근거 거래 보기</a>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;text-align:right">
+                <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">영향도</span>
+                <span style="font:500 22px/1.15 var(--font-display);letter-spacing:-0.5px;color:var(--ink);font-variant-numeric:tabular-nums">{{ s.impact }}</span>
+                <span style="font:400 12px/1.4 var(--font-core);color:var(--text-tertiary)">{{ s.impactLabel }}</span>
+                <button onClick="{{ s.dismiss }}" style="margin-top:4px;border:1px solid var(--hairline-strong);background:none;color:var(--text-secondary);border-radius:9999px;padding:5px 12px;font:500 12px/1.3 var(--font-core);cursor:pointer">숨기기</button>
+              </div>
+            </div>
+          </sc-for>
+          <div style="background:var(--surface-soft);border:1px solid var(--hairline-soft);border-radius:16px;padding:20px 22px">
+            <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px">
+              <h2 style="font:500 15px/1.3 var(--font-display);color:var(--ink)">반복 결제</h2>
+              <span style="font:400 12px/1.4 var(--font-core);color:var(--text-tertiary)">평소 그 자체라 인사이트 카드에 올리지 않습니다 · 영향도 없음</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:1px">
+              <sc-for list="{{ subs }}" as="r" hint-placeholder-count="2">
+                <div style="display:grid;grid-template-columns:1fr 120px 88px 96px;gap:12px;align-items:center;padding:11px 0;border-top:1px solid var(--hairline-soft)">
+                  <span style="font:400 14px/1.4 var(--font-core);color:var(--ink)">{{ r.merchant }}</span>
+                  <span style="font:400 13px/1.4 var(--font-core);color:var(--text-secondary)">{{ r.cadence }}</span>
+                  <span style="font:400 13px/1.4 var(--font-core);color:var(--text-secondary);text-align:right;font-variant-numeric:tabular-nums">{{ r.count }}</span>
+                  <span style="font:400 14px/1.4 var(--font-core);color:var(--ink);text-align:right;font-variant-numeric:tabular-nums">{{ r.amount }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isTx }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <input value="{{ q }}" onChange="{{ setQ }}" placeholder="가맹점 검색" style="border:1px solid var(--hairline-strong);background:var(--surface);color:var(--text-body);border-radius:9999px;padding:9px 16px;font:400 13px/1.3 var(--font-core);width:220px;outline:none">
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ filterChips }}" as="f" hint-placeholder-count="6">
+                <button onClick="{{ f.go }}" style="{{ f.style }}">{{ f.label }}</button>
+              </sc-for>
+            </div>
+            <span style="margin-left:auto;font:400 13px/1.4 var(--font-core);color:var(--text-tertiary)">{{ txCountLabel }}</span>
+          </div>
+          <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;overflow:hidden">
+            <div style="display:grid;grid-template-columns:96px 1fr 176px 116px 92px;gap:12px;padding:11px 20px;background:var(--surface-soft);border-bottom:1px solid var(--hairline)">
+              <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">날짜</span>
+              <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">가맹점</span>
+              <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">카테고리</span>
+              <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary);text-align:right">금액</span>
+              <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary);text-align:right">상태</span>
+            </div>
+            <sc-for list="{{ txRows }}" as="t" hint-placeholder-count="12">
+              <div style="display:grid;grid-template-columns:96px 1fr 176px 116px 92px;gap:12px;padding:9px 20px;border-bottom:1px solid var(--hairline-soft);align-items:center">
+                <span style="font:400 13px/1.4 var(--font-core);color:var(--text-tertiary);font-variant-numeric:tabular-nums">{{ t.date }}</span>
+                <span style="font:400 14px/1.4 var(--font-core);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.merchant }}</span>
+                <div style="display:flex;align-items:center;gap:7px;min-width:0">
+                  <span style="width:9px;height:9px;border-radius:3px;flex:0 0 9px;background:{{ t.color }}"></span>
+                  <select value="{{ t.cat }}" onChange="{{ t.setCat }}" disabled="{{ readOnly }}" style="{{ t.selectStyle }}">
+                    <sc-for list="{{ catNames }}" as="c" hint-placeholder-count="10">
+                      <option value="{{ c }}">{{ c }}</option>
+                    </sc-for>
+                  </select>
+                </div>
+                <span style="font:400 14px/1.4 var(--font-core);color:var(--ink);text-align:right;font-variant-numeric:tabular-nums">{{ t.amount }}</span>
+                <div style="display:flex;justify-content:flex-end">
+                  <span style="{{ t.tagStyle }}">{{ t.tag }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <p style="font:400 12px/1.5 var(--font-core);color:var(--text-tertiary)">{{ txFootnote }}</p>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isReport }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:760px;display:flex;flex-direction:column;gap:20px">
+          <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;padding:28px 32px;display:flex;flex-direction:column;gap:18px">
+            <div style="display:flex;align-items:baseline;gap:12px">
+              <h2 style="font:500 28px/1.25 var(--font-display);letter-spacing:-0.6px;color:var(--ink)">{{ monthLabel }} 리포트</h2>
+              <span style="font:400 13px/1.4 var(--font-core);color:var(--text-tertiary)">{{ reportRange }}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:16px 0;border-top:1px solid var(--hairline-soft);border-bottom:1px solid var(--hairline-soft)">
+              <sc-for list="{{ reportStats }}" as="s" hint-placeholder-count="3">
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">{{ s.label }}</span>
+                  <span style="font:500 22px/1.15 var(--font-display);letter-spacing:-0.5px;color:var(--ink);font-variant-numeric:tabular-nums">{{ s.value }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <sc-for list="{{ reportParas }}" as="p" hint-placeholder-count="4">
+                <div style="display:flex;flex-direction:column;gap:5px">
+                  <h3 style="font:500 15px/1.3 var(--font-display);color:var(--ink)">{{ p.head }}</h3>
+                  <p style="font:400 15px/1.65 var(--font-core);color:var(--text-body);text-wrap:pretty">{{ p.body }}</p>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;padding-top:16px;border-top:1px solid var(--hairline-soft)">
+              <span style="font:400 12px/1.5 var(--font-core);color:var(--text-tertiary)">{{ reportFootnote }}</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isUpload }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1000px;display:flex;flex-direction:column;gap:16px">
+          <sc-if value="{{ readOnly }}" hint-placeholder-val="{{ false }}">
+            <div style="background:var(--canvas);border:1px solid var(--hairline);border-radius:16px;padding:32px;display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+              <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.Badge" tone="neutral" hint-size="auto,22px">쓰기 잠김</x-import>
+              <h2 style="font:500 22px/1.3 var(--font-display);color:var(--ink)">업로드는 결제 후에 다시 열립니다</h2>
+              <p style="font:400 15px/1.6 var(--font-core);color:var(--text-secondary);max-width:52ch">체험 기간에 올린 4개월치 명세서와 그때 만든 리뷰·리포트는 그대로 남아 있습니다. 새 명세서를 올리거나 분류를 고치는 것만 막혀 있습니다.</p>
+              <div style="display:flex;gap:10px;margin-top:6px">
+                <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.Button" variant="primary" size="md" onClick="{{ goPricing }}" hint-size="auto,40px">요금제 보기</x-import>
+                <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.Button" variant="ghost" size="md" onClick="{{ goDash }}" hint-size="auto,40px">대시보드로 돌아가기</x-import>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ canWrite }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <sc-for list="{{ steps }}" as="s" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span style="{{ s.numStyle }}">{{ s.num }}</span>
+                    <span style="{{ s.labelStyle }}">{{ s.label }}</span>
+                    <span style="width:26px;height:1px;background:var(--hairline)"></span>
+                  </div>
+                </sc-for>
+              </div>
+
+              <sc-if value="{{ uStep1 }}" hint-placeholder-val="{{ true }}">
+                <div style="background:var(--canvas);border:1px dashed var(--hairline-strong);border-radius:16px;padding:40px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center">
+                  <div style="width:40px;height:40px;border-radius:12px;background:var(--surface-yellow);display:flex;align-items:center;justify-content:center;font:500 15px/1 var(--font-core);color:var(--yellow-dark)">CSV</div>
+                  <h2 style="font:500 18px/1.35 var(--font-display);color:var(--ink)">카드사에서 내려받은 CSV를 그대로 올리세요</h2>
+                  <p style="font:400 14px/1.6 var(--font-core);color:var(--text-secondary);max-width:46ch">형식은 가리지 않습니다. 컬럼 이름을 자동으로 읽어 날짜·가맹점·금액에 맞추고, 검증을 통과한 줄만 저장합니다.</p>
+                  <div style="display:flex;gap:10px;margin-top:6px">
+                    <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.Button" variant="primary" size="md" onClick="{{ pickFile }}" hint-size="auto,40px">파일 선택</x-import>
+                    <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.Button" variant="secondary" size="md" onClick="{{ pickFile }}" hint-size="auto,40px">예시 파일로 해보기</x-import>
+                  </div>
+                  <span style="font:400 12px/1.4 var(--font-core);color:var(--text-tertiary);margin-top:4px">신한 · 현대 · 삼성 · KB · 토스뱅크 형식 확인됨</span>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ uStep2 }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid;grid-template-columns:{{ mapCols }};gap:16px;align-items:start">
+                  <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <h2 style="font:500 15px/1.3 var(--font-display);color:var(--ink)">컬럼 매핑</h2>
+                      <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.Badge" tone="teal" hint-size="auto,22px">자동 추론</x-import>
+                      <span style="margin-left:auto;font:400 12px/1.4 var(--font-core);color:var(--text-tertiary)">{{ fileName }}</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                      <sc-for list="{{ mapRows }}" as="m" hint-placeholder-count="4">
+                        <div style="display:grid;grid-template-columns:120px 1fr 148px;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--hairline-soft)">
+                          <span style="font:400 13px/1.4 var(--font-core);color:var(--text-secondary)">{{ m.field }}</span>
+                          <select value="{{ m.column }}" onChange="{{ m.setCol }}" style="border:1px solid var(--hairline-strong);background:var(--surface);color:var(--text-body);border-radius:9999px;padding:7px 12px;font:400 13px/1.3 var(--font-core);width:100%;outline:none">
+                            <sc-for list="{{ csvColumns }}" as="c" hint-placeholder-count="6">
+                              <option value="{{ c }}">{{ c }}</option>
+                            </sc-for>
+                          </select>
+                          <span style="{{ m.confStyle }}">{{ m.conf }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="display:flex;gap:10px;padding-top:6px">
+                      <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.Button" variant="primary" size="md" onClick="{{ confirmMap }}" hint-size="auto,40px">이대로 저장</x-import>
+                      <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.Button" variant="ghost" size="md" onClick="{{ resetUpload }}" hint-size="auto,40px">다시 올리기</x-import>
+                    </div>
+                  </div>
+                  <div style="background:var(--surface-soft);border:1px solid var(--hairline-soft);border-radius:16px;padding:20px;min-width:0;overflow:hidden">
+                    <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:12px">
+                      <h2 style="font:500 15px/1.3 var(--font-display);color:var(--ink)">미리보기</h2>
+                      <span style="font:400 12px/1.4 var(--font-core);color:var(--text-tertiary)">앞 5줄</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:1px;font-variant-numeric:tabular-nums">
+                      <sc-for list="{{ previewRows }}" as="p" hint-placeholder-count="5">
+                        <div style="display:grid;grid-template-columns:82px 1fr 96px;gap:10px;padding:8px 0;border-top:1px solid var(--hairline-soft)">
+                          <span style="font:400 12px/1.4 var(--font-mono);color:var(--text-tertiary)">{{ p.date }}</span>
+                          <span style="font:400 13px/1.4 var(--font-core);color:var(--text-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.merchant }}</span>
+                          <span style="font:400 13px/1.4 var(--font-core);color:var(--ink);text-align:right">{{ p.amount }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ uStep3 }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:14px">
+                  <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:16px">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.Badge" tone="success" hint-size="auto,22px">저장 완료</x-import>
+                      <h2 style="font:500 16px/1.3 var(--font-display);color:var(--ink)">{{ savedLabel }}</h2>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+                      <sc-for list="{{ validation }}" as="v" hint-placeholder-count="3">
+                        <div style="background:var(--surface-soft);border:1px solid var(--hairline-soft);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px">
+                          <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">{{ v.label }}</span>
+                          <span style="font:500 22px/1.15 var(--font-display);color:var(--ink);font-variant-numeric:tabular-nums">{{ v.value }}</span>
+                          <span style="font:400 12px/1.45 var(--font-core);color:var(--text-tertiary)">{{ v.note }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:1px">
+                      <sc-for list="{{ rejects }}" as="r" hint-placeholder-count="2">
+                        <div style="display:grid;grid-template-columns:56px 1fr;gap:12px;padding:10px 0;border-top:1px solid var(--hairline-soft);align-items:baseline">
+                          <span style="font:400 12px/1.4 var(--font-mono);color:var(--text-muted)">{{ r.line }}</span>
+                          <span style="font:400 13px/1.5 var(--font-core);color:var(--text-secondary)">{{ r.reason }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="display:flex;gap:10px">
+                      <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.Button" variant="primary" size="md" onClick="{{ goDash }}" hint-size="auto,40px">대시보드 보기</x-import>
+                      <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.Button" variant="ghost" size="md" onClick="{{ resetUpload }}" hint-size="auto,40px">다른 카드 올리기</x-import>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:900px;display:flex;flex-direction:column;gap:16px">
+          <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;padding:44px 40px;display:flex;flex-direction:column;gap:14px;align-items:flex-start">
+            <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.Badge" tone="yellow" hint-size="auto,22px">체험 7일 · 남은 7일</x-import>
+            <h2 style="font:500 32px/1.2 var(--font-display);letter-spacing:-0.8px;color:var(--ink)">첫 명세서 하나면 시작됩니다</h2>
+            <p style="font:400 16px/1.6 var(--font-core);color:var(--text-secondary);max-width:52ch">계좌를 연동하지 않습니다. 카드사에서 CSV를 내려받아 올리면 지출을 10종으로 분류하고, 행동을 바꿀 수 있는 신호 5종을 문장으로 알려줍니다.</p>
+            <div style="display:flex;gap:10px;margin-top:8px">
+              <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.Button" variant="primary" size="lg" onClick="{{ goUpload }}" hint-size="auto,44px">명세서 올리기</x-import>
+              <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.Button" variant="secondary" size="lg" onClick="{{ loadSample }}" hint-size="auto,44px">예시 데이터로 둘러보기</x-import>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+            <sc-for list="{{ emptySteps }}" as="e" hint-placeholder-count="3">
+              <div style="{{ e.style }}">
+                <span style="font:500 13px/1.3 var(--font-core);color:var(--text-tertiary)">{{ e.num }}</span>
+                <h3 style="font:500 16px/1.35 var(--font-display);color:var(--ink)">{{ e.head }}</h3>
+                <p style="font:400 13px/1.55 var(--font-core);color:var(--text-secondary)">{{ e.body }}</p>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:var(--surface-soft);border:1px solid var(--hairline-soft);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:10px">
+            <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">이런 문장을 받게 됩니다</span>
+            <sc-for list="{{ sampleSentences }}" as="s" hint-placeholder-count="3">
+              <p style="font:400 14px/1.6 var(--font-core);color:var(--text-body);padding-left:12px;border-left:2px solid var(--hairline)">{{ s }}</p>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isPricing }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:860px;display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;align-items:center;gap:14px">
+            <h2 style="font:500 24px/1.25 var(--font-display);letter-spacing:-0.5px;color:var(--ink)">{{ pricingHead }}</h2>
+            <div style="margin-left:auto">
+              <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.PillTabs" items="{{ cycleTabs }}" value="{{ cycle }}" onChange="{{ setCycle }}" hint-size="auto,40px"></x-import>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;align-items:start">
+            <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.PricingCard" variant="{{ monthlyVariant }}" name="월 결제" price="{{ monthlyPrice }}" price-suffix="/월" blurb="{{ monthlyBlurb }}" features="{{ planFeatures }}" cta-label="{{ monthlyCta }}" on-cta="{{ pay }}" badge="{{ monthlyBadge }}" hint-size="100%,420px"></x-import>
+            <x-import component-from-global-scope="FinsightDesignSystem_1f7cfd.PricingCard" variant="{{ yearlyVariant }}" name="연 결제" price="{{ yearlyPrice }}" price-suffix="/년" blurb="{{ yearlyBlurb }}" features="{{ planFeatures }}" cta-label="{{ yearlyCta }}" on-cta="{{ pay }}" badge="{{ yearlyBadge }}" hint-size="100%,420px"></x-import>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:8px;padding:0 2px">
+            <span style="font:500 13px/1.5 var(--font-core);color:var(--ink)">{{ cycleCompare }}</span>
+            <span style="font:400 13px/1.5 var(--font-core);color:var(--text-secondary)">{{ cycleCompareNote }}</span>
+          </div>
+          <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+            <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">결제하지 않으면 어떻게 되나요</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <span style="font:500 14px/1.4 var(--font-core);color:var(--ink)">읽기 — 전면 허용</span>
+                <p style="font:400 13px/1.55 var(--font-core);color:var(--text-secondary)">체험 중 만든 대시보드·리뷰·리포트는 기간이 끝난 뒤에도 계속 볼 수 있습니다.</p>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <span style="font:500 14px/1.4 var(--font-core);color:var(--ink)">쓰기 — 전면 금지</span>
+                <p style="font:400 13px/1.55 var(--font-core);color:var(--text-secondary)">새 업로드, 분류 수정, 신호 숨기기가 잠깁니다. 결제하면 그 자리에서 다시 열립니다.</p>
+              </div>
+            </div>
+            <span style="font:400 12px/1.5 var(--font-core);color:var(--text-tertiary);padding-top:6px;border-top:1px solid var(--hairline-soft)">{{ payNote }}</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isSignal }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:880px;display:flex;flex-direction:column;gap:16px">
+          <a href="#" onClick="{{ backToReview }}" style="font:500 13px/1.4 var(--font-core);color:var(--text-secondary)">← AI 리뷰로 돌아가기</a>
+          <sc-if value="{{ detailMissing }}" hint-placeholder-val="{{ false }}">
+            <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;padding:28px">
+              <p style="font:400 15px/1.6 var(--font-core);color:var(--text-secondary)">이 신호는 지금 데이터에서 더 이상 잡히지 않습니다. 분류를 고치면 신호도 다시 계산됩니다.</p>
+            </div>
+          </sc-if>
+          <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;padding:24px 26px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="width:9px;height:9px;border-radius:3px;background:{{ detailCatColor }}"></span>
+              <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">{{ detailHead }}</span>
+              <span style="font:400 11px/1.4 var(--font-mono);color:var(--text-muted)">{{ detailKey }}</span>
+              <span style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--hairline);border-radius:9999px;padding:3px 10px;font:400 12px/1.4 var(--font-core);color:var(--text-secondary)">{{ detailCat }}</span>
+            </div>
+            <p style="font:400 18px/1.55 var(--font-core);color:var(--text-body);text-wrap:pretty">{{ detailSentence }}</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding-top:16px;border-top:1px solid var(--hairline-soft)">
+              <sc-for list="{{ detailFacts }}" as="f" hint-placeholder-count="4">
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font:400 12px/1.4 var(--font-core);color:var(--text-tertiary)">{{ f.k }}</span>
+                  <span style="font:500 16px/1.3 var(--font-core);color:var(--ink);font-variant-numeric:tabular-nums">{{ f.v }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:10px;padding-top:14px;border-top:1px solid var(--hairline-soft)">
+              <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">영향도</span>
+              <span style="font:500 20px/1.2 var(--font-display);color:var(--ink);font-variant-numeric:tabular-nums">{{ detailImpact }}</span>
+              <span style="font:400 12px/1.4 var(--font-core);color:var(--text-tertiary)">{{ detailImpactLabel }}</span>
+              <span style="margin-left:auto;font:400 12px/1.4 var(--font-core);color:var(--text-tertiary)">{{ detailRule }}</span>
+            </div>
+          </div>
+
+          <div style="background:var(--surface-soft);border:1px solid var(--hairline-soft);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:6px">
+            <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">왜 이 조건인가</span>
+            <p style="font:400 14px/1.6 var(--font-core);color:var(--text-body);text-wrap:pretty">{{ detailWhy }}</p>
+          </div>
+
+          <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;overflow:hidden">
+            <div style="display:grid;grid-template-columns:88px 1fr 148px 116px;gap:12px;padding:11px 16px;background:var(--surface-soft);border-bottom:1px solid var(--hairline)">
+              <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">날짜</span>
+              <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">가맹점</span>
+              <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">카테고리</span>
+              <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary);text-align:right">금액</span>
+            </div>
+            <sc-for list="{{ detailRows }}" as="r" hint-placeholder-count="8">
+              <div style="{{ r.rowStyle }}">
+                <span style="font:400 13px/1.4 var(--font-core);color:var(--text-tertiary);font-variant-numeric:tabular-nums">{{ r.date }}</span>
+                <div style="display:flex;align-items:center;gap:8px;min-width:0">
+                  <span style="font:400 14px/1.4 var(--font-core);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.merchant }}</span>
+                  <span style="{{ r.markStyle }}">{{ r.mark }}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:7px;min-width:0">
+                  <span style="width:8px;height:8px;border-radius:3px;flex:0 0 8px;background:{{ r.color }}"></span>
+                  <span style="font:400 13px/1.4 var(--font-core);color:var(--text-secondary)">{{ r.cat }}</span>
+                </div>
+                <span style="font:400 14px/1.4 var(--font-core);color:var(--ink);text-align:right;font-variant-numeric:tabular-nums">{{ r.amount }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap">
+          <div style="width:390px;flex:0 0 390px;background:var(--canvas);border:1px solid var(--hairline);border-radius:36px;box-shadow:var(--shadow-3);overflow:hidden;display:flex;flex-direction:column">
+            <div style="padding:20px 20px 16px 20px;display:flex;flex-direction:column;gap:14px;border-bottom:1px solid var(--hairline-soft)">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="width:20px;height:20px;border-radius:6px;background:var(--brand-yellow)"></div>
+                <span style="font:500 14px/1.2 var(--font-display);color:var(--ink)">finsight</span>
+                <span style="margin-left:auto;font:400 12px/1.4 var(--font-core);color:var(--text-tertiary)">{{ mMonth }}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">이번 달 지출</span>
+                <span style="font:500 34px/1.1 var(--font-display);letter-spacing:-1px;color:var(--ink);font-variant-numeric:tabular-nums">{{ mTotal }}</span>
+                <span style="font:400 13px/1.4 var(--font-core);color:var(--text-secondary)">{{ mMtd }}</span>
+              </div>
+            </div>
+            <div style="padding:16px 20px;display:flex;flex-direction:column;gap:11px;border-bottom:1px solid var(--hairline-soft)">
+              <sc-for list="{{ mCats }}" as="c" hint-placeholder-count="5">
+                <div style="display:flex;flex-direction:column;gap:5px">
+                  <div style="display:flex;align-items:baseline;gap:8px">
+                    <span style="width:8px;height:8px;border-radius:3px;background:{{ c.color }}"></span>
+                    <span style="font:400 14px/1.4 var(--font-core);color:var(--text-body)">{{ c.name }}</span>
+                    <span style="margin-left:auto;font:400 14px/1.4 var(--font-core);color:var(--ink);font-variant-numeric:tabular-nums">{{ c.amount }}</span>
+                  </div>
+                  <div style="height:8px;border-radius:9999px;background:var(--surface);overflow:hidden">
+                    <div style="{{ c.barStyle }}"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--hairline-soft);background:var(--surface-soft)">
+              <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">이번 달 인사이트</span>
+              <sc-for list="{{ mSignals }}" as="s" hint-placeholder-count="3">
+                <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:14px;padding:13px 14px;display:flex;flex-direction:column;gap:6px">
+                  <div style="display:flex;align-items:center;gap:7px">
+                    <span style="width:7px;height:7px;border-radius:2px;background:{{ s.color }}"></span>
+                    <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">{{ s.label }}</span>
+                    <span style="margin-left:auto;font:500 13px/1.3 var(--font-core);color:var(--ink);font-variant-numeric:tabular-nums">{{ s.impact }}</span>
+                  </div>
+                  <p style="font:400 13px/1.55 var(--font-core);color:var(--text-body);text-wrap:pretty">{{ s.sentence }}</p>
+                </div>
+              </sc-for>
+            </div>
+            <div style="padding:16px 20px;display:flex;flex-direction:column;gap:9px">
+              <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">최근 거래</span>
+              <sc-for list="{{ mTx }}" as="t" hint-placeholder-count="6">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="width:8px;height:8px;border-radius:3px;flex:0 0 8px;background:{{ t.color }}"></span>
+                  <div style="display:flex;flex-direction:column;min-width:0">
+                    <span style="font:400 14px/1.35 var(--font-core);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.merchant }}</span>
+                    <span style="font:400 11px/1.35 var(--font-core);color:var(--text-tertiary)">{{ t.cat }} · {{ t.date }}</span>
+                  </div>
+                  <span style="margin-left:auto;font:400 14px/1.4 var(--font-core);color:var(--ink);font-variant-numeric:tabular-nums">{{ t.amount }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="margin-top:auto;display:flex;padding:12px 8px 18px 8px;border-top:1px solid var(--hairline-soft);background:var(--canvas)">
+              <sc-for list="{{ mTabs }}" as="t" hint-placeholder-count="4">
+                <span style="{{ t.style }}">{{ t.label }}</span>
+              </sc-for>
+            </div>
+          </div>
+          <div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:12px">
+            <div style="background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px">
+              <h2 style="font:500 15px/1.3 var(--font-display);color:var(--ink)">폭이 줄면 이렇게 접힙니다</h2>
+              <sc-for list="{{ mobileNotes }}" as="n" hint-placeholder-count="4">
+                <div style="display:grid;grid-template-columns:120px 1fr;gap:12px;padding:10px 0;border-top:1px solid var(--hairline-soft)">
+                  <span style="font:400 13px/1.5 var(--font-mono);color:var(--text-tertiary)">{{ n.k }}</span>
+                  <span style="font:400 13px/1.55 var(--font-core);color:var(--text-body)">{{ n.v }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="background:var(--surface-soft);border:1px solid var(--hairline-soft);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:6px">
+              <span style="font:600 11px/1.4 var(--font-core);letter-spacing:0.5px;text-transform:uppercase;color:var(--text-tertiary)">모바일 규칙</span>
+              <p style="font:400 14px/1.6 var(--font-core);color:var(--text-body);text-wrap:pretty">모바일에서는 표를 지우지 않고 카드로 바꿉니다. 숫자 하나(이번 달 지출)를 가장 크게 두고, 그 아래는 순서가 곧 우선순위입니다 — 카테고리, 신호, 거래. 탭 높이는 44px 이상을 지킵니다.</p>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;dashboardLayout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;chart-first&quot;,&quot;signals-first&quot;],&quot;default&quot;:&quot;chart-first&quot;,&quot;tsType&quot;:&quot;'chart-first'|'signals-first'&quot;,&quot;section&quot;:&quot;레이아웃 변형&quot;},&quot;insightStyle&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;compact&quot;,&quot;sentence&quot;,&quot;metric&quot;],&quot;default&quot;:&quot;compact&quot;,&quot;tsType&quot;:&quot;'compact'|'sentence'|'metric'&quot;,&quot;section&quot;:&quot;레이아웃 변형&quot;},&quot;uploadFlow&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;stepper&quot;,&quot;stacked&quot;],&quot;default&quot;:&quot;stepper&quot;,&quot;tsType&quot;:&quot;'stepper'|'stacked'&quot;,&quot;section&quot;:&quot;레이아웃 변형&quot;}}">
+const CATS = [
+  ['식비','#F2735A'],['카페/간식','#E8B818'],['생활/마트','#1F9C8B'],['교통','#2557E6'],
+  ['주거/통신','#6B4FD8'],['쇼핑','#D9508B'],['의료/건강','#17A46A'],['문화/여가','#E07A2F'],
+  ['금융/보험','#56566B'],['기타','#A8A8B8']
+];
+const CATCOLOR = Object.fromEntries(CATS);
+const MERCH = {
+  '식비':['김밥천국','한솥도시락','교촌치킨','배달의민족','쿠팡이츠','명륜진사갈비'],
+  '카페/간식':['스타벅스','투썸플레이스','메가커피','베스킨라빈스','파리바게뜨'],
+  '생활/마트':['이마트','쿠팡','GS25','올리브영','다이소'],
+  '교통':['서울시버스','코레일','카카오T','SK에너지'],
+  '주거/통신':['SK텔레콤','한국전력','서울도시가스','아파트관리비'],
+  '쇼핑':['무신사','29CM','네이버쇼핑'],
+  '의료/건강':['서울내과','온누리약국','짐박스PT'],
+  '문화/여가':['CGV','예스24','클라이밍파크'],
+  '금융/보험':['삼성화재','현대해상'],
+  '기타':['우체국','당근마켓','편의점결제']
+};
+const PLAN = {
+  '식비':[14,9000,32000],'카페/간식':[10,4200,9500],'생활/마트':[8,12000,68000],
+  '교통':[9,1500,42000],'주거/통신':[4,38000,120000],'쇼핑':[4,25000,140000],
+  '의료/건강':[2,8000,45000],'문화/여가':[3,12000,38000],'금융/보험':[2,45000,110000],'기타':[2,5000,30000]
+};
+const MONTHS = ['2026-05','2026-06','2026-07','2026-08'];
+const won = n => Math.round(n).toLocaleString('ko-KR') + '원';
+const wonShort = n => n >= 10000 ? (Math.round(n/1000)/10).toLocaleString('ko-KR') + '만원' : won(n);
+const days = (a,b) => Math.round((new Date(b) - new Date(a)) / 86400000);
+const median = a => { const s=[...a].sort((x,y)=>x-y); const m=s.length>>1; return s.length%2 ? s[m] : (s[m-1]+s[m])/2; };
+const mean = a => a.reduce((x,y)=>x+y,0)/a.length;
+const hasJong = s => { const c = s.charCodeAt(s.length-1) - 0xAC00; return c >= 0 && c < 11172 && c % 28 !== 0; };
+const ga = s => s + (hasJong(s) ? '이' : '가');
+const eun = s => s + (hasJong(s) ? '은' : '는');
+
+function buildTx(){
+  let s = 20260817;
+  const r = () => ((s = (s*1103515245+12345) & 0x7fffffff) / 0x7fffffff);
+  const tx = []; let id = 1;
+  MONTHS.forEach((m, mi) => {
+    Object.keys(PLAN).forEach(cat => {
+      const [n, lo, hi] = PLAN[cat];
+      let count = Math.max(1, Math.round(n * (0.85 + r()*0.3)));
+      let mult = 1;
+      if (cat === '카페/간식' && mi === 3) { count = Math.round(count*1.55); mult = 1.3; }
+      if (cat === '식비' && mi === 3) mult = 0.92;
+      const pool = MERCH[cat];
+      for (let i=0;i<count;i++){
+        const day = 1 + Math.floor(r()*27);
+        tx.push({id:id++, date:`${m}-${String(day).padStart(2,'0')}`, merchant:pool[Math.floor(r()*pool.length)], cat, amount:Math.round((lo + r()*(hi-lo))*mult/100)*100});
+      }
+    });
+  });
+  MONTHS.forEach(m => tx.push({id:id++, date:m+'-17', merchant:'넷플릭스', cat:'문화/여가', amount:13500}));
+  [['2026-05-04',10450],['2026-06-04',10450],['2026-07-04',10450],['2026-08-04',14900]]
+    .forEach(([d,a]) => tx.push({id:id++, date:d, merchant:'유튜브 프리미엄', cat:'문화/여가', amount:a}));
+  tx.push({id:id++, date:'2026-08-09', merchant:'삼성전자스토어', cat:'쇼핑', amount:892000});
+  tx.push({id:id++, date:'2026-08-21', merchant:'튼튼치과', cat:'의료/건강', amount:420000});
+  return tx.sort((a,b) => a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id);
+}
+
+class Component extends DCLogic {
+  state = {
+    screen:'dashboard', theme:'light', readOnly:false, month:'2026-08',
+    dismissed:{}, overrides:{}, filter:'전체', q:'', uStep:1, mapping:null, cycle:'yearly'
+  };
+
+  componentDidMount(){
+    try {
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) this.setState({theme:'dark'});
+    } catch(e){}
+  }
+
+  tx(){ if (!this._tx) this._tx = buildTx(); return this._tx; }
+  catOf(t){ return this.state.overrides[t.id] || t.cat; }
+  rows(){ return this.tx().map(t => ({...t, cat:this.catOf(t), month:t.date.slice(0,7)})); }
+
+  totals(month){
+    const out = {}; CATS.forEach(([c]) => out[c] = 0);
+    this.rows().filter(t => t.month === month).forEach(t => out[t.cat] += t.amount);
+    return out;
+  }
+
+  signals(month){
+    const all = this.rows(), cur = all.filter(t => t.month === month);
+    const pi = MONTHS.indexOf(month), prev = pi > 0 ? MONTHS[pi-1] : null;
+    const tCur = this.totals(month), tPrev = prev ? this.totals(prev) : null;
+    const out = [];
+
+    if (tPrev) CATS.forEach(([c]) => {
+      const d = tCur[c] - tPrev[c];
+      if (tPrev[c] > 0 && d >= 30000 && d / tPrev[c] >= 0.5) {
+        const by = {};
+        cur.filter(t => t.cat === c).forEach(t => by[t.merchant] = (by[t.merchant]||0) + t.amount);
+        const top = Object.keys(by).sort((a,b) => by[b]-by[a])[0];
+        const cnt = cur.filter(t => t.cat === c && t.merchant === top).length;
+        out.push({key:'category_spike', label:'카테고리 급증', cat:c, impact:d, impactLabel:'늘어난 금액',
+          rule:'전월 대비 +50% 이상 · 증가액 30,000원 이상',
+          sentence:`${c}에 ${Number(month.slice(5))}월 들어 ${won(tCur[c])}을 썼습니다. 전월보다 ${won(d)}(+${Math.round(d/tPrev[c]*100)}%) 많습니다. 늘어난 몫의 가장 큰 조각은 ${top} ${cnt}건입니다.`});
+      }
+    });
+
+    const firstSeen = {};
+    [...all].sort((a,b) => a.date < b.date ? -1 : 1).forEach(t => { if (!firstSeen[t.merchant]) firstSeen[t.merchant] = t.date; });
+    cur.forEach(t => {
+      if (firstSeen[t.merchant] !== t.date) return;
+      const pool = all.filter(x => x.cat === t.cat && x.id !== t.id).map(x => x.amount);
+      if (!pool.length) return;
+      const med = median(pool);
+      if (t.amount >= med*3 && t.amount >= 50000) out.push({key:'new_merchant_large', label:'첫 가맹점 큰 금액', cat:t.cat, impact:t.amount,
+        impactLabel:'거래 금액', merchant:t.merchant, date:t.date, txId:t.id, rule:'처음 보는 가맹점 · 카테고리 중앙값 3배 이상 · 50,000원 이상',
+        sentence:`${t.merchant}에서 ${won(t.amount)}을 처음 결제했습니다. ${t.cat} 카테고리 평소 결제(중앙값 ${won(med)})의 ${(t.amount/med).toFixed(1)}배입니다.`});
+    });
+
+    cur.forEach(t => {
+      if (!tCur[t.cat]) return;
+      const share = t.amount / tCur[t.cat];
+      if (share >= 0.3 && t.amount >= 50000 && tCur[t.cat] >= 100000) out.push({key:'outlier_transaction', label:'튀는 단일 결제', cat:t.cat, impact:t.amount,
+        impactLabel:'거래 금액', merchant:t.merchant, date:t.date, txId:t.id, rule:'단일 거래가 카테고리 월 지출의 30% 이상 · 50,000원 이상',
+        sentence:`${Number(t.date.slice(5,7))}월 ${Number(t.date.slice(8))}일 ${t.merchant} ${won(t.amount)} 한 건이 ${t.cat} 이번 달 지출의 ${Math.round(share*100)}%를 차지합니다.`});
+    });
+
+    const byMerchant = {};
+    all.forEach(t => (byMerchant[t.merchant] = byMerchant[t.merchant] || []).push(t));
+    Object.keys(byMerchant).forEach(m => {
+      const g = byMerchant[m].slice().sort((a,b) => a.date < b.date ? -1 : 1);
+      if (g.length < 3) return;
+      const perMonth = {}; g.forEach(t => perMonth[t.month] = (perMonth[t.month]||0)+1);
+      if (Object.keys(perMonth).some(k => perMonth[k] > 1)) return;
+      const ok = arr => {
+        const am = arr.map(t => t.amount), mu = mean(am);
+        if (Math.max(...am.map(a => Math.abs(a-mu))) / mu > 0.10) return false;
+        for (let i=1;i<arr.length;i++){ const d = days(arr[i-1].date, arr[i].date); if (d < 25 || d > 35) return false; }
+        return arr.length >= 3;
+      };
+      const last = g[g.length-1], head = g.slice(0, -1);
+      if (ok(g)) {
+        out.push({key:'recurring_payment', label:'반복 결제', cat:last.cat, impact:null, impactLabel:'영향도 없음',
+          merchant:m, date:last.date, count:g.length, amount:last.amount,
+          cadence:`매달 ${Number(last.date.slice(8))}일`, rule:'편차 10% 이내 · 간격 25~35일 · 3회 이상',
+          sentence:`${m} ${won(last.amount)}이 ${g.length}개월째 매달 ${Number(last.date.slice(8))}일에 빠져나갑니다.`});
+      } else if (ok(head) && last.month === month) {
+        const before = median(head.map(t => t.amount)), up = last.amount - before;
+        if (up / before >= 0.10) out.push({key:'recurring_price_up', label:'구독료 인상', cat:last.cat, impact:up*12,
+          impactLabel:'1년 추가 부담', merchant:m, date:last.date, rule:'반복 결제 조건 + 최근 금액 10% 이상 인상',
+          sentence:`${ga(m)} ${won(before)}에서 ${won(last.amount)}으로 올랐습니다. 그대로 두면 1년에 ${won(up*12)}을 더 냅니다.`});
+      }
+    });
+
+    out.forEach(s => { s.color = CATCOLOR[s.cat]; s.id = s.key + '|' + (s.merchant||s.cat); });
+    const seen = {};
+    return out.sort((a,b) => (b.impact||0) - (a.impact||0)).filter(s => {
+      if (!s.txId) return true;
+      if (seen[s.txId]) return false;
+      seen[s.txId] = 1; return true;
+    });
+  }
+
+  visible(list){ return list.filter(s => !this.state.dismissed[s.id]); }
+  go(screen){ return e => { if (e && e.preventDefault) e.preventDefault(); this.setState({screen}); }; }
+
+  renderVals(){
+    const st = this.state, layout = this.props.dashboardLayout || 'chart-first';
+    const insight = this.props.insightStyle || 'compact';
+    const uploadFlow = this.props.uploadFlow || 'stepper';
+    const readOnly = st.readOnly, canWrite = !readOnly;
+    const month = st.month, mi = MONTHS.indexOf(month), prev = mi > 0 ? MONTHS[mi-1] : null;
+    const rows = this.rows(), cur = rows.filter(t => t.month === month);
+    const tCur = this.totals(month), tPrev = prev ? this.totals(prev) : null;
+    const total = Object.values(tCur).reduce((a,b)=>a+b,0);
+    const totalPrev = tPrev ? Object.values(tPrev).reduce((a,b)=>a+b,0) : 0;
+    const sigAll = this.signals(month), sig = this.visible(sigAll);
+    const carded = sig.filter(s => s.key !== 'recurring_payment');
+    const subs = sigAll.filter(s => s.key === 'recurring_payment');
+    const monthLabel = `${month.slice(0,4)}년 ${Number(month.slice(5))}월`;
+
+    const navBase = 'display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;border-radius:10px;padding:8px 9px;font:400 14px/1.4 var(--font-core);cursor:pointer;';
+    const navItem = (id, label, dot) => ({
+      id, label, dot, go:this.go(id),
+      style: navBase + (st.screen === id
+        ? 'background:var(--surface);color:var(--ink);font-weight:500'
+        : 'background:none;color:var(--text-secondary)')
+    });
+
+    const catRows = CATS.map(([c,color]) => {
+      const d = tPrev ? tCur[c] - tPrev[c] : 0;
+      const pct = total ? tCur[c]/total : 0;
+      return {name:c, color, amount:won(tCur[c]),
+        barStyle:{width:Math.max(pct*100,0.6)+'%', height:'100%', borderRadius:'9999px', background:color},
+        delta: !tPrev || !tPrev[c] ? '—' : (d >= 0 ? '+' : '−') + Math.abs(Math.round(d/tPrev[c]*100)) + '%',
+        deltaStyle:{font:'400 12px/1.4 var(--font-core)', textAlign:'right', fontVariantNumeric:'tabular-nums',
+          color: !tPrev || !tPrev[c] ? 'var(--text-muted)' : d > 0 ? 'var(--brand-red-dark)' : 'var(--success-accent)'}};
+    }).sort((a,b) => 0);
+
+    const maxMonth = Math.max(...MONTHS.map(m => Object.values(this.totals(m)).reduce((a,b)=>a+b,0)));
+    const monthBars = MONTHS.map(m => {
+      const v = Object.values(this.totals(m)).reduce((a,b)=>a+b,0);
+      return {label:Number(m.slice(5))+'월', total:wonShort(v),
+        barStyle:{width:'100%', maxWidth:'56px', height:Math.max(v/maxMonth*82,4)+'%', borderRadius:'8px 8px 4px 4px',
+          background: m === month ? 'var(--ink)' : 'var(--hairline-strong)'},
+        labelStyle:{font:(m===month?'500':'400')+' 12px/1.3 var(--font-core)', color:m===month?'var(--ink)':'var(--text-tertiary)'}};
+    });
+
+    const cardBase = 'background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;display:flex;flex-direction:column;';
+    const mkCard = s => ({
+      ...s,
+      impact: s.impact == null ? '—' : won(s.impact),
+      showImpact: insight !== 'sentence' && s.impact != null,
+      showFoot: insight !== 'compact' && !!s.merchant,
+      openTx: e => { if (e && e.preventDefault) e.preventDefault(); this.setState({screen:'transactions', q:s.merchant || '', filter:'전체'}); },
+      openDetail: e => { if (e && e.preventDefault) e.preventDefault(); this.setState({screen:'signal', detail:s.id}); },
+      dismiss: e => { if (e && e.stopPropagation) e.stopPropagation(); if (readOnly) return; this.setState(p => ({dismissed:{...p.dismissed, [s.id]:1}})); },
+      cardStyle: cardBase + 'cursor:pointer;' + (insight === 'compact' ? 'padding:14px 16px;gap:7px' : 'padding:16px 18px;gap:11px'),
+      textStyle: insight === 'metric'
+        ? {font:'400 13px/1.55 var(--font-core)', color:'var(--text-secondary)', textWrap:'pretty'}
+        : {font:'400 14px/1.6 var(--font-core)', color:'var(--text-body)', textWrap:'pretty'},
+      date: s.date ? s.date.slice(5).replace('-','/') : ''
+    });
+
+    const filters = ['전체', ...CATS.map(([c]) => c)];
+    const q = st.q.trim();
+    const txList = rows.filter(t => (st.filter === '전체' || t.cat === st.filter) && (!q || t.merchant.includes(q)));
+    const firstSeen = {};
+    [...rows].sort((a,b) => a.date < b.date ? -1 : 1).forEach(t => { if (!firstSeen[t.merchant]) firstSeen[t.merchant] = t.date; });
+
+    const topCat = CATS.map(([c]) => c).sort((a,b) => tCur[b]-tCur[a])[0];
+    const spike = sigAll.find(s => s.key === 'category_spike');
+    const priceUp = sigAll.find(s => s.key === 'recurring_price_up');
+    const outlier = sigAll.find(s => s.key === 'outlier_transaction');
+    const newM = sigAll.find(s => s.key === 'new_merchant_large');
+
+    const csvColumns = ['이용일자','가맹점명','이용금액','승인번호','할부','카드번호'];
+    const map = st.mapping || {거래일자:'이용일자', 가맹점:'가맹점명', 금액:'이용금액', 카드:'카드번호'};
+    const conf = {거래일자:'확신 98%', 가맹점:'확신 96%', 금액:'확신 99%', 카드:'확신 71%'};
+
+    const asOfDay = 17;
+    const mtdCur = cur.filter(t => Number(t.date.slice(8)) <= asOfDay).reduce((a,t) => a+t.amount, 0);
+    const mtdPrev = prev ? rows.filter(t => t.month === prev && Number(t.date.slice(8)) <= asOfDay).reduce((a,t) => a+t.amount, 0) : 0;
+    const mtdMax = Math.max(mtdCur, mtdPrev, 1);
+
+    const donutData = CATS.map(([c,color]) => ({c, color, v:tCur[c]})).filter(d => d.v > 0).sort((a,b) => b.v-a.v);
+    let acc = 0; const stops = [];
+    donutData.forEach(d => {
+      const from = acc/total*360, to = (acc+d.v)/total*360;
+      stops.push(`${d.color} ${from.toFixed(2)}deg ${to.toFixed(2)}deg`); acc += d.v;
+    });
+
+    const gran = st.gran || 'week';
+    const monthTotal = m => Object.values(this.totals(m)).reduce((a,b) => a+b, 0);
+    let flowBars, flowNote;
+    if (gran === 'week') {
+      const start = new Date('2026-05-04T00:00:00');
+      const bins = [];
+      for (let i=0;i<16;i++) bins.push({s:new Date(start.getTime() + i*7*86400000), v:0});
+      rows.forEach(t => {
+        const i = Math.floor((new Date(t.date+'T00:00:00') - start) / (7*86400000));
+        if (i >= 0 && i < bins.length) bins[i].v += t.amount;
+      });
+      const shown = bins.filter(b => b.v > 0).slice(-12);
+      const mx = Math.max(...shown.map(b => b.v), 1);
+      flowBars = shown.map(b => {
+        const inMonth = `${b.s.getFullYear()}-${String(b.s.getMonth()+1).padStart(2,'0')}` === month;
+        return {label:(b.s.getMonth()+1)+'/'+b.s.getDate(), total:'',
+          barStyle:{width:'100%', maxWidth:'30px', height:Math.max(b.v/mx*82,4)+'%', borderRadius:'6px 6px 3px 3px',
+            background: inMonth ? 'var(--ink)' : 'var(--hairline-strong)'},
+          labelStyle:{font:'400 10px/1.3 var(--font-core)', color:'var(--text-tertiary)', whiteSpace:'nowrap'}};
+      });
+      flowNote = `주 평균 ${won(shown.reduce((a,b) => a+b.v, 0)/shown.length)}`;
+    } else {
+      flowBars = monthBars;
+      flowNote = `월 평균 ${won(MONTHS.reduce((a,m) => a+monthTotal(m), 0)/MONTHS.length)}`;
+    }
+
+    const biggest = [...cur].sort((a,b) => b.amount-a.amount).slice(0,5).map(t => ({
+      date:t.date.slice(5).replace('-','/'), merchant:t.merchant, cat:t.cat, color:CATCOLOR[t.cat],
+      amount:won(t.amount), share:total ? Math.round(t.amount/total*100)+'%' : '—'
+    }));
+
+    const mAgg = {};
+    cur.forEach(t => { const g = mAgg[t.merchant] = mAgg[t.merchant] || {v:0, n:0, cat:t.cat}; g.v += t.amount; g.n++; });
+    const mTop = Object.keys(mAgg).map(k => ({merchant:k, ...mAgg[k]})).sort((a,b) => b.v-a.v).slice(0,6);
+    const mTopMax = Math.max(...mTop.map(m => m.v), 1);
+    const topMerchants = mTop.map(m => ({merchant:m.merchant, count:m.n + '건', amount:won(m.v),
+      color:CATCOLOR[m.cat],
+      barStyle:{width:Math.max(m.v/mTopMax*100,2)+'%', height:'6px', borderRadius:'9999px', background:CATCOLOR[m.cat], opacity:0.85}}));
+
+    const detail = sigAll.find(s => s.id === st.detail) || null;
+    let detailRows = [], detailFacts = [], detailHead = '', detailWhy = '';
+    if (detail) {
+      detailHead = detail.label;
+      if (detail.key === 'category_spike') {
+        detailRows = rows.filter(t => t.cat === detail.cat && (t.month === month || t.month === prev));
+        detailFacts = [{k:`${monthLabel} ${detail.cat}`, v:won(tCur[detail.cat])},
+          {k:'전월 같은 카테고리', v:won(tPrev[detail.cat])},
+          {k:'증가율', v:'+' + Math.round((tCur[detail.cat]-tPrev[detail.cat])/tPrev[detail.cat]*100) + '%'},
+          {k:'임계값', v:'+50% AND 30,000원'}];
+        detailWhy = '두 조건을 모두 넘겨야 신호가 됩니다. 비율만 크고 금액이 작으면(예: 3,000원 → 6,000원) 행동을 바꿀 이유가 없기 때문입니다.';
+      } else if (detail.key === 'recurring_payment' || detail.key === 'recurring_price_up') {
+        detailRows = rows.filter(t => t.merchant === detail.merchant);
+        const amts = detailRows.map(t => t.amount);
+        detailFacts = [{k:'결제 횟수', v:detailRows.length + '회'},
+          {k:'금액 편차', v:Math.round(Math.max(...amts.map(a => Math.abs(a-mean(amts))))/mean(amts)*100) + '% (허용 10%)'},
+          {k:'간격', v:'25~35일 조건 통과'},
+          {k:'영향도', v:detail.impact == null ? '없음 — 카드에 올리지 않음' : won(detail.impact)}];
+        detailWhy = detail.key === 'recurring_payment'
+          ? '구독을 쓰는 것은 평소와 다른 소비가 아니라 평소 그 자체입니다. 그래서 영향도가 없고 인사이트 카드에 올라오지 않습니다.'
+          : '반복 결제 조건을 통과한 뒤 최근 금액만 10% 이상 올랐을 때만 신호가 됩니다. 변화한 것은 구독이 아니라 가격입니다.';
+      } else {
+        detailRows = rows.filter(t => t.cat === detail.cat && t.month === month);
+        detailFacts = [{k:'해당 거래', v:won(detail.impact)},
+          {k:`${detail.cat} 이번 달 합계`, v:won(tCur[detail.cat])},
+          {k:'차지하는 비중', v:Math.round(detail.impact/tCur[detail.cat]*100) + '%'},
+          {k:'임계값', v:detail.key === 'outlier_transaction' ? '카테고리 월 지출의 30%' : '카테고리 중앙값의 3배'}];
+        detailWhy = detail.key === 'outlier_transaction'
+          ? '카테고리 합계가 아니라 한 건이 그 합계를 만들었을 때만 짚습니다. 평소 씀씀이가 늘어난 것과 큰 결제 한 번은 다른 이야기입니다.'
+          : '처음 보는 가맹점이라도 금액이 평소 수준이면 알리지 않습니다. 새롭고 큰 것만 신호입니다.';
+      }
+      detailRows = detailRows.sort((a,b) => a.date < b.date ? 1 : -1).slice(0,14).map(t => {
+        const hit = detail.merchant ? t.merchant === detail.merchant : t.month === month;
+        return {date:t.date.slice(2), merchant:t.merchant, cat:t.cat, color:CATCOLOR[t.cat], amount:won(t.amount),
+          rowStyle:'display:grid;grid-template-columns:88px 1fr 148px 116px;gap:12px;align-items:center;padding:9px 16px;border-top:1px solid var(--hairline-soft);'
+            + (hit ? 'background:var(--surface-soft)' : ''),
+          mark: hit ? '증거' : '',
+          markStyle:{font:'400 11px/1.4 var(--font-core)', color:'var(--text-tertiary)'}};
+      });
+    }
+
+    return {
+      theme: st.theme, isDark: st.theme === 'dark', readOnly, canWrite,
+      isSignal: st.screen === 'signal', isMobile: st.screen === 'mobile',
+      donutStyle: {width:'148px', height:'148px', borderRadius:'9999px', flex:'0 0 148px',
+        background:'conic-gradient(' + stops.join(',') + ')',
+        mask:'radial-gradient(circle, transparent 55px, #000 56px)',
+        WebkitMask:'radial-gradient(circle, transparent 55px, #000 56px)'},
+      donutTotal: wonShort(total), donutCount: donutData.length + '개 카테고리',
+      flowBars, flowNote, gran,
+      flowTabs: [['week','주'],['month','월']].map(([id,label]) => ({label, go:() => this.setState({gran:id}),
+        style:'border:none;border-radius:9999px;padding:4px 11px;font:500 12px/1.3 var(--font-core);cursor:pointer;' + (gran === id
+          ? 'background:var(--primary);color:var(--on-primary)' : 'background:var(--surface);color:var(--text-secondary)')})),
+      mtdLabel: `${Number(month.slice(5))}월 ${asOfDay}일 기준`,
+      mtdRows: [
+        {label:'이번 달 오늘까지', value:won(mtdCur), barStyle:{width:mtdCur/mtdMax*100+'%', height:'10px', borderRadius:'9999px', background:'var(--ink)'}},
+        {label:'지난달 같은 시점', value:prev ? won(mtdPrev) : '—', barStyle:{width:mtdPrev/mtdMax*100+'%', height:'10px', borderRadius:'9999px', background:'var(--hairline-strong)'}}
+      ],
+      mtdVerdict: !prev ? '비교할 전월이 없습니다.'
+        : mtdCur >= mtdPrev ? `같은 시점보다 ${won(mtdCur-mtdPrev)} 앞서 있습니다. 이 속도면 월말에 ${won(mtdCur/asOfDay*31)} 근처입니다.`
+        : `같은 시점보다 ${won(mtdPrev-mtdCur)} 덜 썼습니다. 이 속도면 월말에 ${won(mtdCur/asOfDay*31)} 근처입니다.`,
+      biggest, topMerchants,
+
+      detailHead, detailFacts, detailRows, detailWhy,
+      detailSentence: detail ? detail.sentence : '',
+      detailKey: detail ? detail.key : '', detailRule: detail ? detail.rule : '',
+      detailCat: detail ? detail.cat : '', detailCatColor: detail ? detail.color : 'transparent',
+      detailImpact: detail ? (detail.impact == null ? '영향도 없음' : won(detail.impact)) : '',
+      detailImpactLabel: detail ? detail.impactLabel : '',
+      detailMissing: !detail,
+      backToReview: this.go('review'),
+
+      mTotal: won(total), mMonth: monthLabel, mMtd: mtdCur >= mtdPrev ? `지난달 같은 시점 +${won(mtdCur-mtdPrev)}` : `지난달 같은 시점 −${won(mtdPrev-mtdCur)}`,
+      mCats: donutData.slice(0,5).map(d => ({name:d.c, amount:won(d.v), color:d.color,
+        barStyle:{width:Math.max(d.v/total*100,2)+'%', height:'8px', borderRadius:'9999px', background:d.color}})),
+      mSignals: carded.slice(0,3).map(s => ({label:s.label, sentence:s.sentence, color:s.color,
+        impact:s.impact == null ? '' : won(s.impact)})),
+      mTx: cur.slice(0,6).map(t => ({merchant:t.merchant, cat:t.cat, color:CATCOLOR[t.cat],
+        date:t.date.slice(5).replace('-','/'), amount:won(t.amount)})),
+      mTabs: [['홈',true],['거래',false],['리뷰',false],['설정',false]].map(([label,on]) => ({label,
+        style:'flex:1;text-align:center;font:' + (on ? '500' : '400') + ' 11px/1.4 var(--font-core);color:' + (on ? 'var(--ink)' : 'var(--text-muted)')})),
+      mobileNotes: [
+        {k:'< 480px', v:'1열. 총지출 한 숫자와 신호 카드만 남기고 표는 카드로 접습니다.'},
+        {k:'480 – 767px', v:'카테고리 2열, 거래 목록은 날짜·가맹점·금액 3열로 줄입니다.'},
+        {k:'768 – 1023px', v:'사이드바가 아이콘 레일로 접히고 대시보드는 2열.'},
+        {k:'≥ 1024px', v:'지금 보고 있는 밀집형 2열 대시보드.'}
+      ],
+      themeLabel: st.theme === 'dark' ? '다크' : '라이트',
+      toggleTheme: () => this.setState(p => ({theme: p.theme === 'dark' ? 'light' : 'dark'})),
+      lockLabel: readOnly ? '켬' : '끔',
+      lockToggleStyle: 'border-radius:9999px;padding:5px 12px;font:500 12px/1.3 var(--font-core);cursor:pointer;' + (readOnly
+        ? 'background:var(--brand-yellow);border:1px solid var(--brand-yellow-deep);color:var(--yellow-dark)'
+        : 'background:var(--surface);border:1px solid var(--hairline-strong);color:var(--text-body)'),
+      toggleLock: () => this.setState(p => ({readOnly: !p.readOnly})),
+      planLabel: readOnly ? '체험 만료 · 읽기 전용' : '체험 중 · 3일 남음',
+
+      navMain: [navItem('dashboard','대시보드','var(--ink)'), navItem('transactions','거래 목록','#1F9C8B'),
+        navItem('review','AI 리뷰','#F2735A'), navItem('report','월간 리포트','#6B4FD8'),
+        navItem('upload','명세서 업로드','var(--brand-yellow)'), navItem('pricing','요금제','#2557E6')],
+      navState: [navItem('empty','빈 상태 (첫 방문)','var(--hairline-strong)'),
+        navItem('mobile','모바일 화면','#6B4FD8')],
+
+      isDash: st.screen === 'dashboard', isTx: st.screen === 'transactions', isReview: st.screen === 'review',
+      isReport: st.screen === 'report', isUpload: st.screen === 'upload', isPricing: st.screen === 'pricing',
+      isEmpty: st.screen === 'empty',
+      pageTitle: {dashboard:'대시보드', transactions:'거래 목록', review:'AI 리뷰', report:'월간 리포트',
+        upload:'명세서 업로드', pricing:'요금제', empty:'FinSight 시작하기',
+        signal:detailHead || '신호 상세', mobile:'모바일 화면'}[st.screen],
+      pageSub: {dashboard:`${monthLabel} · 카드 2장 · 거래 ${cur.length}건`,
+        transactions:'분류가 틀렸으면 그 자리에서 고치세요. 고친 내용은 내 계정에만 적용됩니다.',
+        review:'결정론적 SQL이 찾은 신호를 문장으로 옮겼습니다.', report:'한 달치 신호를 모아 서술형으로 읽습니다.',
+        upload:'컬럼 매핑은 자동, 검증은 결정론적으로.', pricing:'월 4,900원 또는 연 49,000원',
+        empty:'명세서 하나로 7일 체험이 시작됩니다.',
+        signal:'이 문장이 어떤 거래에서 나왔는지 그대로 펼쳐 보여줍니다.',
+        mobile:'같은 데이터, 세로 한 열. 숫자부터 읽히게 쌓았습니다.'}[st.screen],
+      showMonthSwitch: ['dashboard','review','report'].includes(st.screen),
+      monthChips: MONTHS.map(m => ({label:Number(m.slice(5))+'월', go:() => this.setState({month:m}),
+        style:'border:none;border-radius:9999px;padding:5px 12px;font:500 12px/1.3 var(--font-core);cursor:pointer;' + (m === month
+          ? 'background:var(--canvas);color:var(--ink);box-shadow:var(--shadow-1)' : 'background:none;color:var(--text-secondary)')})),
+      goUpload: this.go('upload'), goPricing: this.go('pricing'), goDash: this.go('dashboard'), goReview: this.go('review'),
+      monthLabel,
+
+      kpis: [
+        {label:'이번 달 지출', value:won(total),
+          delta: totalPrev ? `전월 ${totalPrev > total ? '−' : '+'}${won(Math.abs(total-totalPrev))}` : '비교할 전월 없음',
+          deltaStyle:{font:'400 12px/1.4 var(--font-core)', color: total > totalPrev ? 'var(--brand-red-dark)' : 'var(--success-accent)'}},
+        {label:'가장 큰 카테고리', value:topCat, delta:won(tCur[topCat]) + ` · 전체의 ${Math.round(tCur[topCat]/total*100)}%`,
+          deltaStyle:{font:'400 12px/1.4 var(--font-core)', color:'var(--text-tertiary)'}},
+        {label:'거래 건수', value:String(cur.length) + '건', delta:`하루 평균 ${(cur.length/31).toFixed(1)}건`,
+          deltaStyle:{font:'400 12px/1.4 var(--font-core)', color:'var(--text-tertiary)'}},
+        {label:'반복 결제', value:String(subs.length) + '건',
+          delta:'월 ' + won(subs.reduce((a,s) => a + s.amount, 0)),
+          deltaStyle:{font:'400 12px/1.4 var(--font-core)', color:'var(--text-tertiary)'}}
+      ],
+      dashCols: layout === 'chart-first' ? 'repeat(auto-fit,minmax(420px,1fr))' : 'repeat(auto-fit,minmax(360px,1fr))',
+      insightCols: layout === 'chart-first' ? '1fr' : '1fr',
+      catRows, monthBars,
+      topSignals: carded.slice(0, layout === 'chart-first' ? 4 : 3).map(mkCard),
+      signalCount: carded.length + '건',
+      hasDismissed: Object.keys(st.dismissed).length > 0,
+      restoreAll: () => this.setState({dismissed:{}}),
+
+      allSignals: sig.filter(s => s.key !== 'recurring_payment').map(mkCard),
+      subs: subs.map(s => ({merchant:s.merchant, cadence:s.cadence, count:s.count + '회', amount:won(s.amount)})),
+      reviewSummary: `${monthLabel}에 ${won(total)}을 썼습니다. ${spike ? `${spike.cat} 지출이 전월보다 ${won(spike.impact)} 늘어난 것이 가장 큰 변화이고, ` : ''}${priceUp ? `${priceUp.merchant} 구독료 인상은 1년 기준 ${won(priceUp.impact)}짜리 결정입니다. ` : ''}${outlier ? `${outlier.merchant} 한 건이 ${outlier.cat} 지출의 ${Math.round(outlier.impact/tCur[outlier.cat]*100)}%를 차지합니다.` : ''}`,
+      signalTypes: ['category_spike','new_merchant_large','outlier_transaction','recurring_payment','recurring_price_up'].map(k => {
+        const on = sigAll.some(s => s.key === k);
+        return {label:k, chipStyle:'font:400 12px/1.4 var(--font-mono);border-radius:9999px;padding:4px 11px;' + (on
+          ? 'background:var(--surface);border:1px solid var(--hairline);color:var(--text-body)'
+          : 'background:none;border:1px dashed var(--hairline);color:var(--text-muted)')};
+      }),
+
+      q: st.q, setQ: e => this.setState({q:e.target.value}),
+      filterChips: filters.map(f => ({label:f, go:() => this.setState({filter:f}),
+        style:'border-radius:9999px;padding:6px 12px;font:500 12px/1.3 var(--font-core);cursor:pointer;' + (st.filter === f
+          ? 'background:var(--primary);border:1px solid var(--primary);color:var(--on-primary)'
+          : 'background:none;border:1px solid var(--hairline);color:var(--text-secondary)')})),
+      catNames: CATS.map(([c]) => c),
+      txCountLabel: `${txList.length}건 · 합계 ${won(txList.reduce((a,t)=>a+t.amount,0))}`,
+      txRows: txList.slice(0, 40).map(t => {
+        const edited = !!st.overrides[t.id], isNew = firstSeen[t.merchant] === t.date;
+        return {date:t.date.slice(2), merchant:t.merchant, cat:t.cat, color:CATCOLOR[t.cat], amount:won(t.amount),
+          setCat: e => { if (readOnly) return; const v = e.target.value; this.setState(p => ({overrides:{...p.overrides, [t.id]:v}})); },
+          selectStyle:{font:'400 13px/1.3 var(--font-core)', color:'var(--text-body)', background:'none',
+            border:'1px solid transparent', borderRadius:'9999px', padding:'4px 8px', width:'100%',
+            outline:'none', cursor: readOnly ? 'not-allowed' : 'pointer', opacity: readOnly ? 0.55 : 1,
+            appearance:'none', WebkitAppearance:'none'},
+          tag: edited ? '수정됨' : isNew ? '첫 결제' : '',
+          tagStyle:{font:'400 11px/1.4 var(--font-core)', borderRadius:'9999px', padding: edited || isNew ? '3px 9px' : '0',
+            background: edited ? 'var(--teal-light)' : isNew ? 'var(--surface)' : 'none',
+            color: edited ? 'var(--moss-dark)' : 'var(--text-tertiary)'}};
+      }),
+      txFootnote: `${txList.length > 40 ? '앞 40건만 표시합니다. ' : ''}분류를 고치면 대시보드와 AI 리뷰가 그 자리에서 다시 계산됩니다.${readOnly ? ' 지금은 읽기 전용이라 수정이 잠겨 있습니다.' : ''}`,
+
+      reportRange: `${Number(month.slice(5))}월 1일 ~ 31일 · 거래 ${cur.length}건`,
+      reportStats: [{label:'총지출', value:won(total)},
+        {label:'전월 대비', value:(total>totalPrev?'+':'−') + won(Math.abs(total-totalPrev))},
+        {label:'인사이트 신호', value:carded.length + '건'}],
+      reportParas: [
+        {head:'한 달을 한 문장으로', body:`${monthLabel}에 ${won(total)}을 썼습니다. ${ga(topCat)} ${won(tCur[topCat])}으로 가장 컸고, 전월과 비교하면 ${totalPrev ? (total>totalPrev?'':'−') + won(Math.abs(total-totalPrev)) + ' 차이입니다' : '비교할 달이 없습니다'}.`},
+        spike ? {head:'가장 큰 변화', body:spike.sentence + ' 다음 달 같은 속도로 쓰면 이 카테고리만 ' + won(tCur[spike.cat]) + ' 선에서 굳습니다.'} : null,
+        priceUp ? {head:'조용히 오른 것', body:priceUp.sentence + ' 유지할지 정리할지는 이번 달에 정하는 편이 낫습니다.'} : null,
+        newM ? {head:'처음 본 지출', body:newM.sentence + ' 한 번짜리 결제였다면 다음 달 숫자는 자연스럽게 내려갑니다.'} : null,
+        {head:'평소 그 자체', body:subs.length ? `반복 결제 ${subs.length}건, 월 ${won(subs.reduce((a,s)=>a+s.amount,0))}이 매달 같은 날 빠져나갑니다. 이건 변화가 아니라 고정비라서 신호로 올리지 않습니다.` : '반복 결제로 잡힌 항목이 없습니다.'}
+      ].filter(Boolean),
+      reportFootnote: '임계값은 thresholds.ts 한 파일에서 옵니다 · 신호 판정은 SQL, 문장은 LLM',
+
+      steps: [1,2,3].map(n => ({num:String(n), label:['파일 올리기','컬럼 매핑','검증 결과'][n-1],
+        numStyle:'width:22px;height:22px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font:500 12px/1 var(--font-core);' + (st.uStep >= n
+          ? 'background:var(--primary);color:var(--on-primary)' : 'background:var(--surface);color:var(--text-tertiary)'),
+        labelStyle:'font:' + (st.uStep === n ? '500' : '400') + ' 13px/1.4 var(--font-core);color:' + (st.uStep === n ? 'var(--ink)' : 'var(--text-tertiary)')})),
+      uStep1: st.uStep === 1, uStep2: st.uStep === 2, uStep3: st.uStep === 3,
+      mapCols: uploadFlow === 'stepper' ? 'minmax(0,1fr) minmax(280px,0.72fr)' : 'minmax(0,1fr)',
+      pickFile: () => this.setState({uStep:2}),
+      confirmMap: () => this.setState({uStep:3}),
+      resetUpload: () => this.setState({uStep:1, mapping:null}),
+      loadSample: () => this.setState({screen:'dashboard'}),
+      fileName: 'card_2026_08.csv · 214줄',
+      csvColumns,
+      mapRows: ['거래일자','가맹점','금액','카드'].map(f => ({field:f, column:map[f], conf:conf[f],
+        setCol: e => { const v = e.target.value; this.setState(p => ({mapping:{...(p.mapping||map), [f]:v}})); },
+        confStyle:{font:'400 12px/1.4 var(--font-core)', textAlign:'right',
+          color: conf[f] < '확신 9' ? 'var(--text-tertiary)' : 'var(--success-accent)'}})),
+      previewRows: [['2026-08-02','스타벅스 강남２',5100],['2026-08-04','유튜브 프리미엄',14900],
+        ['2026-08-09','삼성전자스토어',892000],['2026-08-11','이마트 성수',63400],['2026-08-12','서울시버스',1500]]
+        .map(([d,m,a]) => ({date:d.slice(5), merchant:m, amount:won(a)})),
+      savedLabel: '211줄을 저장했습니다 · 3줄은 거절했습니다',
+      validation: [{label:'저장', value:'211줄', note:'날짜·금액·가맹점 모두 통과'},
+        {label:'거절', value:'3줄', note:'사유를 아래에 적었습니다'},
+        {label:'자동 분류', value:'196줄', note:'나머지 15줄은 기타로 폴백'}],
+      rejects: [{line:'L-42', reason:'이용금액이 비어 있습니다 — 취소된 승인으로 보입니다'},
+        {line:'L-118', reason:'이용일자가 2026-13-04 — 날짜로 읽을 수 없습니다'},
+        {line:'L-203', reason:'같은 승인번호가 앞줄에 이미 있습니다 (중복)'}],
+
+      emptySteps: [
+        {num:'01', head:'CSV 내려받기', body:'카드사 앱에서 이용내역을 CSV로 저장합니다. 카드 4장까지 각각 올릴 수 있습니다.'},
+        {num:'02', head:'올리고 확인', body:'컬럼은 자동으로 맞춰집니다. 어긋난 것만 직접 고르면 됩니다.'},
+        {num:'03', head:'문장으로 받기', body:'급증·첫 가맹점·튀는 결제·구독 인상을 찾아 문장으로 알려줍니다.'}
+      ].map(e => ({...e, style:'background:var(--canvas);border:1px solid var(--hairline-soft);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:6px'})),
+      sampleSentences: ['카페/간식에 8월 들어 142,600원을 썼습니다. 전월보다 73,100원(+105%) 많습니다.',
+        '유튜브 프리미엄이 10,450원에서 14,900원으로 올랐습니다. 그대로 두면 1년에 53,400원을 더 냅니다.',
+        '8월 21일 튼튼치과 420,000원 한 건이 의료/건강 이번 달 지출의 88%를 차지합니다.'],
+
+      pricingHead: readOnly ? '체험이 끝났습니다. 계속 쓰려면 결제하세요' : '체험 중에는 결제하지 않아도 전 기능이 열려 있습니다',
+      cycle: st.cycle,
+      cycleTabs: [{id:'monthly', label:'월 결제'}, {id:'yearly', label:'연 결제'}],
+      setCycle: v => this.setState({cycle: v === 'monthly' ? 'monthly' : 'yearly'}),
+      monthlyPrice: '4,900원', yearlyPrice: '49,000원',
+      monthlyVariant: st.cycle === 'monthly' ? 'featured' : 'standard',
+      yearlyVariant: st.cycle === 'yearly' ? 'featured' : 'standard',
+      monthlyBlurb: '한 달씩 끊어 쓰고 언제든 멈춥니다.',
+      yearlyBlurb: '같은 기능, 두 달치가 빠집니다.',
+      monthlyCta: st.cycle === 'monthly' ? '월 4,900원으로 결제' : '월 결제로 바꾸기',
+      yearlyCta: st.cycle === 'yearly' ? '연 49,000원으로 결제' : '연 결제로 바꾸기',
+      monthlyBadge: st.cycle === 'monthly' ? '선택' : null,
+      yearlyBadge: st.cycle === 'yearly' ? '선택 · 17% 절약' : '17% 절약',
+      cycleCompare: st.cycle === 'yearly' ? '연 49,000원 = 월 4,083원' : '월 4,900원 × 12 = 58,800원',
+      cycleCompareNote: st.cycle === 'yearly' ? '월 결제로 1년 쓰는 것보다 9,800원 적습니다.' : '연 결제로 바꾸면 9,800원(17%) 적게 냅니다.',
+      planFeatures: ['업로드 횟수 제한 없음','카드 4장까지','신호 5종 전체','월간 리포트','분류 수정 무제한','데이터는 내 계정에만'],
+      pay: () => this.setState({readOnly:false, screen:'dashboard'}),
+      payNote: '결제는 Polar 테스트 모드로 처리됩니다 · 계좌·마이데이터 연동은 하지 않습니다'
+    };
+  }
+}
+</script>
+</body>
+</html>

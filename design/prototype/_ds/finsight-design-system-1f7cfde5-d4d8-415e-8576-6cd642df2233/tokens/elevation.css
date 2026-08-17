@@ -1,0 +1,10 @@
+:root{
+  --shadow-0:none;
+  --shadow-1:rgba(5,0,56,0.04) 0px 1px 2px 0px;
+  --shadow-2:rgba(5,0,56,0.06) 0px 4px 12px 0px;
+  --shadow-3:rgba(5,0,56,0.08) 0px 12px 32px -4px;
+  --shadow-4:rgba(5,0,56,0.12) 0px 16px 48px -8px;
+  --motion-fast:150ms; /* @kind other */
+  --motion-base:200ms; /* @kind other */
+  --ease-standard:cubic-bezier(0.2,0,0.2,1); /* @kind other */
+}

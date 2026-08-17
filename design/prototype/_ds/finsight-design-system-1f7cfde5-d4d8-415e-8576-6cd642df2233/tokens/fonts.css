@@ -1,0 +1,13 @@
+/* Finsight core face: Roobert PRO (licensed; binaries not shipped in this project).
+   SUBSTITUTION: Hanken Grotesk (Google Fonts) stands in — nearest free geometric sans
+   with a slightly rounded character and a 400/500/600 ladder. To restore the real face:
+   drop woff2 files in assets/fonts/ and replace the @import below with @font-face rules. */
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+:root{
+  --font-core:'Hanken Grotesk','Roobert PRO','Noto Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+  --font-display:var(--font-core);
+  --font-mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --weight-regular:400; /* @kind font */
+  --weight-medium:500; /* @kind font */
+  --weight-semibold:600; /* @kind font */
+}

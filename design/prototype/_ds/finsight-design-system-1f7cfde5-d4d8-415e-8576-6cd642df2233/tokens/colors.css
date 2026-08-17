@@ -1,0 +1,26 @@
+:root{
+  /* brand + accent */
+  --brand-yellow:#FBD24E;--brand-yellow-deep:#E8B818;--yellow-light:#FEF6DC;--yellow-dark:#6B5310;
+  --brand-blue:#2557E6;--blue-pressed:#1A3FAC;
+  --brand-coral:#F2735A;--coral-light:#FDE7E1;--coral-dark:#7A2617;
+  --brand-rose:#F5C6D6;--rose-light:#FCEBF1;
+  --brand-teal:#1F9C8B;--teal-light:#DDF2EE;--moss-dark:#10453D;
+  --brand-pink:#FBE4EC;--brand-orange-light:#FDE8D3;--brand-mint:#E3F3E0;
+  /* surface */
+  --canvas:#FFFFFF;--surface:#F4F4F6;--surface-soft:#FAFAFB;--surface-yellow:#FEF6DC;
+  --surface-pricing-featured:#EEEBFB;
+  --hairline:#E4E4E9;--hairline-soft:#EFEFF2;--hairline-strong:#C9C9D1;
+  /* text */
+  --ink-deep:#050038;--ink:#1A1A24;--charcoal:#2E2E38;--slate:#56566B;--steel:#6E6E85;
+  --stone:#8A8A9E;--muted:#A8A8B8;--on-dark:#FFFFFF;--on-dark-muted:rgba(255,255,255,0.72);
+  /* action */
+  --primary:#0B0B12;--on-primary:#FFFFFF;--footer-bg:#050038;
+  /* semantic */
+  --success-accent:#17A46A;--brand-red:#FDE6E6;--brand-red-dark:#C7392F;
+  /* semantic aliases */
+  --text-heading:var(--ink);--text-body:var(--charcoal);--text-secondary:var(--slate);
+  --text-tertiary:var(--steel);--text-muted:var(--muted);--text-link:var(--brand-blue);
+  --surface-page:var(--canvas);--surface-card:var(--canvas);--surface-section:var(--surface-soft);
+  --border-default:var(--hairline);--border-quiet:var(--hairline-soft);--border-input:var(--hairline-strong);
+  --accent-brand:var(--brand-yellow);
+}
