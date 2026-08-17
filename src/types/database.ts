@@ -211,12 +211,14 @@ export type Database = {
       }
       upload_jobs: {
         Row: {
+          card_label_mismatch_warning: string | null
           card_label: string
           duplicate_count: number
           failed_reason: string | null
           header_hash: string | null
           id: string
           inserted_count: number
+          mapping_attempt_count: number
           mapping: Json | null
           original_filename: string
           skipped_rows: number
@@ -226,12 +228,14 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          card_label_mismatch_warning?: string | null
           card_label: string
           duplicate_count?: number
           failed_reason?: string | null
           header_hash?: string | null
           id?: string
           inserted_count?: number
+          mapping_attempt_count?: number
           mapping?: Json | null
           original_filename: string
           skipped_rows?: number
@@ -241,12 +245,14 @@ export type Database = {
           user_id: string
         }
         Update: {
+          card_label_mismatch_warning?: string | null
           card_label?: string
           duplicate_count?: number
           failed_reason?: string | null
           header_hash?: string | null
           id?: string
           inserted_count?: number
+          mapping_attempt_count?: number
           mapping?: Json | null
           original_filename?: string
           skipped_rows?: number

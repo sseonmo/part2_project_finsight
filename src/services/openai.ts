@@ -5,6 +5,7 @@ import OpenAI from "openai";
 import { CATEGORIES, toCategory, type Category } from "@/lib/categories";
 import type { ColumnMapping } from "@/lib/csv/mapping";
 import { normalizeHeaderForMapping } from "@/lib/csv/parse";
+import type { Signal, SignalType } from "@/lib/signals";
 
 export const OPENAI_MODELS = {
   classify: "gpt-5.6-luna",
@@ -29,6 +30,19 @@ const COLUMN_MAPPING_SYSTEM_PROMPT = [
   '반드시 JSON 객체만 반환한다: {"date":"헤더명","amount":"헤더명","merchant":"헤더명","type":"헤더명 또는 생략"}',
   "헤더에 존재하는 컬럼명만 값으로 사용한다.",
 ].join("\n");
+
+const NARRATIVE_SYSTEM_PROMPT = [
+  "너는 개인 가계부의 결정론적 신호를 한국어 한 문장으로 설명한다.",
+  "입력의 amount, impact, ratio, total, count 값은 모두 SQL과 순수 함수가 이미 계산한 값이다.",
+  "어떤 수치도 새로 계산하거나 만들지 말고, 입력에 있는 숫자만 사용한다.",
+  "무엇을 지적할지도 고르지 않는다. 받은 신호 각각에 대해서만 문장을 쓴다.",
+  '반드시 JSON 객체만 반환한다: {"narratives":[{"id":"입력 id","narrative":"문장"}]}',
+].join("\n");
+
+export type SignalForNarrative = Signal & {
+  id: string;
+  type: SignalType;
+};
 
 function getRequiredEnv(name: string): string {
   const value = process.env[name];
@@ -228,4 +242,103 @@ export async function inferColumnMapping(
   });
 
   return toColumnMapping(payload, header);
+}
+
+function maybeSanitizeMerchantField(key: string, value: unknown): unknown {
+  if (
+    typeof value === "string" &&
+    key.toLocaleLowerCase("en-US").includes("merchant")
+  ) {
+    return sanitizeMerchantName(value);
+  }
+
+  return value;
+}
+
+function sanitizeNarrativePayload(value: unknown, key = ""): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeNarrativePayload(item, key));
+  }
+
+  if (!isRecord(value)) {
+    return maybeSanitizeMerchantField(key, value);
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([entryKey, entryValue]) => [
+      entryKey,
+      sanitizeNarrativePayload(entryValue, entryKey),
+    ]),
+  );
+}
+
+function targetKeyForNarrative(signal: SignalForNarrative): string {
+  return signal.type === "new_merchant_large" ||
+    signal.type === "recurring_payment" ||
+    signal.type === "recurring_price_up"
+    ? sanitizeMerchantName(signal.targetKey)
+    : signal.targetKey;
+}
+
+function extractNarratives(
+  payload: unknown,
+  inputIds: Set<string>,
+): Record<string, string> {
+  const result: Record<string, string> = {};
+
+  if (!isRecord(payload)) {
+    return result;
+  }
+
+  if (Array.isArray(payload.narratives)) {
+    for (const item of payload.narratives) {
+      if (!isRecord(item)) {
+        continue;
+      }
+
+      if (typeof item.id !== "string" || typeof item.narrative !== "string") {
+        continue;
+      }
+
+      if (inputIds.has(item.id) && item.narrative.trim()) {
+        result[item.id] = item.narrative.trim();
+      }
+    }
+
+    return result;
+  }
+
+  for (const [id, narrative] of Object.entries(payload)) {
+    if (inputIds.has(id) && typeof narrative === "string" && narrative.trim()) {
+      result[id] = narrative.trim();
+    }
+  }
+
+  return result;
+}
+
+export async function describeSignals(
+  signals: SignalForNarrative[],
+): Promise<Record<string, string>> {
+  if (signals.length === 0) {
+    return {};
+  }
+
+  const payload = await createJsonChatCompletion({
+    model: OPENAI_MODELS.narrative,
+    system: NARRATIVE_SYSTEM_PROMPT,
+    payload: signals.map((signal) => ({
+      id: signal.id,
+      type: signal.type,
+      period: signal.period,
+      targetKey: targetKeyForNarrative(signal),
+      impact: signal.impact,
+      payload: sanitizeNarrativePayload(signal.payload),
+    })),
+  });
+
+  return extractNarratives(
+    payload,
+    new Set(signals.map((signal) => signal.id)),
+  );
 }

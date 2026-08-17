@@ -21,6 +21,7 @@ vi.mock("server-only", () => ({}));
 
 import {
   classifyMerchantBatch,
+  describeSignals,
   inferColumnMapping,
   OPENAI_MODELS,
   sanitizeMerchantName,
@@ -109,6 +110,70 @@ describe("OpenAI service wrapper", () => {
     expect(chatCompletionsCreateMock).not.toHaveBeenCalledWith(
       expect.objectContaining({ model: OPENAI_MODELS.columnMapping }),
     );
+  });
+
+  it("uses the narrative model and sends precomputed signal numbers for descriptions", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    mockJsonResponse({
+      narratives: [{ id: "signal-1", narrative: "스타벅스 결제가 50,000원입니다." }],
+    });
+
+    await expect(
+      describeSignals([
+        {
+          id: "signal-1",
+          type: "outlier_transaction",
+          period: "2026-03-01",
+          targetKey: "tx-1",
+          impact: 50_000,
+          payload: {
+            merchantNormalized: "스타\n벅\t스\u0000강남",
+            amount: 50_000,
+            shareOfCategory: 0.5,
+          },
+        },
+      ]),
+    ).resolves.toEqual({
+      "signal-1": "스타벅스 결제가 50,000원입니다.",
+    });
+
+    expect(chatCompletionsCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ model: OPENAI_MODELS.narrative }),
+    );
+    expect(JSON.stringify(chatCompletionsCreateMock.mock.calls[0]?.[0])).toContain(
+      "스타 벅 스 강남",
+    );
+    expect(JSON.stringify(chatCompletionsCreateMock.mock.calls[0]?.[0])).toContain(
+      "50000",
+    );
+  });
+
+  it("returns only provided signal narratives and leaves omissions to the caller", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    mockJsonResponse({
+      narratives: [{ id: "signal-1", narrative: "첫 문장" }],
+    });
+
+    await expect(
+      describeSignals([
+        {
+          id: "signal-1",
+          type: "category_spike",
+          period: "2026-03-01",
+          targetKey: "식비",
+          impact: 60_000,
+          payload: { category: "식비", increaseAmount: 60_000 },
+        },
+        {
+          id: "signal-2",
+          type: "outlier_transaction",
+          period: "2026-03-01",
+          targetKey: "tx-2",
+          impact: 70_000,
+          payload: { merchantNormalized: "누락가맹점", amount: 70_000 },
+        },
+      ]),
+    ).resolves.toEqual({ "signal-1": "첫 문장" });
   });
 
   it("returns null when inferred mapping contains columns outside the header", async () => {
