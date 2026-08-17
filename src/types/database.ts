@@ -280,7 +280,66 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_category_amount_medians: {
+        Args: {
+          p_period: string
+          p_user_id: string
+        }
+        Returns: {
+          category: Database["public"]["Enums"]["transaction_category"]
+          median_amount: number
+          period: string
+        }[]
+      }
+      get_category_monthly_totals: {
+        Args: {
+          p_periods: string[]
+          p_user_id: string
+        }
+        Returns: {
+          category: Database["public"]["Enums"]["transaction_category"]
+          period: string
+          total_amount: number
+          transaction_count: number
+        }[]
+      }
+      get_merchant_history: {
+        Args: {
+          p_until_period: string
+          p_user_id: string
+        }
+        Returns: {
+          amount: number
+          category: Database["public"]["Enums"]["transaction_category"]
+          id: string
+          merchant_normalized: string
+          period: string
+          transacted_on: string
+        }[]
+      }
+      get_period_transactions: {
+        Args: {
+          p_period: string
+          p_user_id: string
+        }
+        Returns: {
+          amount: number
+          category: Database["public"]["Enums"]["transaction_category"]
+          id: string
+          merchant_normalized: string
+          period: string
+          transacted_on: string
+        }[]
+      }
+      get_seen_merchants_before_period: {
+        Args: {
+          p_period: string
+          p_user_id: string
+        }
+        Returns: {
+          merchant_normalized: string
+        }[]
+      }
     }
     Enums: {
       spending_signal_type:
@@ -471,4 +530,3 @@ export const Constants = {
     },
   },
 } as const
-
