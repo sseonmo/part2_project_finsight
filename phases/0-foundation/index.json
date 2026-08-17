@@ -13,7 +13,10 @@
     {
       "step": 1,
       "name": "design-tokens",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-17T16:04:14+0900",
+      "summary": "DESIGN 토큰을 globals.css의 --surface/--text/--cat-* 변수로 옮기고 Pretendard, theme 초기화, Button, categories.ts(CATEGORIES/CATEGORY_COLORS/CATEGORY_TOKENS/toCategory)를 추가함",
+      "completed_at": "2026-08-17T16:13:10+0900"
     },
     {
       "step": 2,
