@@ -10,6 +10,17 @@
             "statusMessage": "위험 명령어 검사"
           }
         ]
+      },
+      {
+        "matcher": "^apply_patch$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/env node \"$(git rev-parse --show-toplevel)/scripts/hooks/tdd_guard_adapter.mjs\"",
+            "timeout": 5,
+            "statusMessage": "TDD Guard 검사 중..."
+          }
+        ]
       }
     ],
     "Stop": [

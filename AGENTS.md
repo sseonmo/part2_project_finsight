@@ -52,3 +52,16 @@ python3 scripts/execute.py <phase-dir> --push   # 완료 후 브랜치 push
 - 이 파일(`AGENTS.md`)과 `docs/*.md` 가 매 step 프롬프트의 guardrail 로 주입된다
 - step 은 `phases/<phase-dir>/index.json` 의 자기 status 를 `completed`/`error`/`blocked` 로 갱신할 것
 - step 안에서 커밋하지 말 것. 커밋은 harness 가 코드와 메타데이터를 분리해 수행한다
+
+## Hook (`.codex/hooks.json`)
+
+- **TDD Guard** — 테스트 파일이 없는 구현 코드는 `apply_patch` 단계에서 차단된다. 테스트를 먼저 쓸 것. 판정 로직은 `scripts/hooks/vendor/tdd-rules.mjs`(vendored)이고 Node·Python·Java 만 검사한다
+- **위험 명령어 차단** — `rm -rf`, `git push --force`, `git reset --hard`, `DROP TABLE` 은 Bash 단계에서 차단된다
+- hook 은 신뢰 등록된 것만 실행된다. 처음 한 번은 `codex` 를 대화형으로 띄워 `/hooks` 에서 승인할 것. **hook 파일을 수정하면 해시가 바뀌어 재승인이 필요하다**
+
+## 테스트 실행
+
+python3 -m pytest scripts/          # harness·hook (Python)
+node --test scripts/hooks/*.test.mjs  # TDD Guard 어댑터 (Node)
+
+`package.json` 이 생기기 전까지는 위 두 명령을 직접 쓴다.
