@@ -75,6 +75,7 @@
   --app-dot-size: 16px;
   --font-size-wordmark: 18px;
   --font-size-title: 20px;
+  --font-size-section-title: 15px;
   --font-size-body-sm: 13px;
   --font-size-body-xs: 12px;
   --font-size-label: 11px;
@@ -381,6 +382,258 @@ a:hover {
 
 .app-page-placeholder {
   min-height: var(--line-width);
+}
+
+.dashboard-uploads {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.dashboard-uploads__cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.progress-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.progress-bar__header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.progress-bar__label {
+  color: var(--text-body);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.4;
+}
+
+.progress-bar__value {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-body-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+.progress-bar__track {
+  background: var(--surface);
+  border-radius: var(--radius-full);
+  height: var(--space-xs);
+  overflow: hidden;
+  width: 100%;
+}
+
+.progress-bar__fill {
+  background: var(--ink);
+  border-radius: inherit;
+  height: 100%;
+  transition: width 300ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.upload-progress-card,
+.upload-dialog__panel {
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-xl);
+}
+
+.upload-progress-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+}
+
+.upload-progress-card__header {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--space-md);
+  justify-content: space-between;
+}
+
+.upload-progress-card__title,
+.upload-dialog__title,
+.upload-dialog__guide-title {
+  color: var(--ink);
+  font-weight: 500;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.upload-progress-card__title,
+.upload-dialog__guide-title {
+  font-size: var(--font-size-section-title);
+}
+
+.upload-dialog__title {
+  font-size: var(--font-size-title);
+}
+
+.upload-progress-card__subtitle,
+.upload-dialog__subtitle,
+.upload-progress-card__message {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.4;
+  margin: var(--space-xxs) 0 0;
+}
+
+.upload-progress-card__job {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-label);
+  line-height: 1.4;
+}
+
+.upload-progress-card__terminal {
+  align-items: center;
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: space-between;
+}
+
+.upload-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.upload-summary__list {
+  display: grid;
+  gap: var(--space-xs);
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.upload-summary__item {
+  background: var(--surface-soft);
+  border: var(--line-width) solid var(--hairline-soft);
+  border-radius: var(--radius-lg);
+  color: var(--text-body);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.4;
+  padding: var(--space-sm);
+}
+
+.upload-summary__warning,
+.upload-dialog__error {
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-lg);
+  line-height: 1.4;
+  margin: 0;
+  padding: var(--space-sm);
+}
+
+.upload-summary__warning {
+  background: var(--surface-yellow);
+  color: var(--ink);
+  font-size: var(--font-size-body-sm);
+}
+
+.upload-dialog {
+  align-items: center;
+  background: color-mix(in srgb, var(--ink) 22%, transparent);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: var(--space-lg);
+  position: fixed;
+  z-index: 20;
+}
+
+.upload-dialog__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-height: calc(100vh - var(--space-xxl));
+  max-width: min(100%, 48rem);
+  overflow: auto;
+  padding: var(--space-xl);
+  width: 100%;
+}
+
+.upload-dialog__header,
+.upload-dialog__actions,
+.upload-dialog__card-row {
+  align-items: center;
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: space-between;
+}
+
+.upload-dialog__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.upload-dialog__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.upload-dialog__label {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.upload-dialog__input {
+  background: var(--surface);
+  border: var(--line-width) solid var(--hairline-strong);
+  border-radius: var(--radius-full);
+  color: var(--ink);
+  min-height: var(--button-height-lg);
+  padding-inline: var(--space-md);
+  width: 100%;
+}
+
+.upload-dialog__input:focus-visible {
+  outline: var(--focus-ring-width) solid var(--brand-blue);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.upload-dialog__card-row {
+  align-items: stretch;
+}
+
+.upload-dialog__guide {
+  background: var(--surface-soft);
+  border: var(--line-width) solid var(--hairline-soft);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+}
+
+.upload-dialog__guide-list {
+  color: var(--text-body);
+  display: flex;
+  flex-direction: column;
+  font-size: var(--font-size-body-sm);
+  gap: var(--space-xs);
+  line-height: 1.4;
+  margin: 0;
+  padding-left: var(--space-lg);
+}
+
+.upload-dialog__error {
+  background: color-mix(in srgb, var(--brand-red-dark) 10%, var(--canvas));
+  color: var(--brand-red-dark);
+  font-size: var(--font-size-body-sm);
 }
 
 .app-sidebar {

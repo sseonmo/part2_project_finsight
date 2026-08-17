@@ -13,7 +13,20 @@ vi.mock("@/inngest/client", () => ({
   },
 }));
 
-function createSupabaseMock(job: { id: string; status: string } | null) {
+function createSupabaseMock(input: {
+  job: { id: string; status: string } | null;
+  profile?: {
+    subscription_status: "trialing" | "active" | "canceled";
+    trial_started_at: string | null;
+    current_period_end: string | null;
+  };
+}) {
+  const { job } = input;
+  const profile = input.profile ?? {
+    subscription_status: "active",
+    trial_started_at: "2026-08-17T00:00:00.000Z",
+    current_period_end: null,
+  };
   const update = vi.fn(() => ({
     eq: vi.fn(() => ({
       eq: vi.fn(() => ({
@@ -27,7 +40,20 @@ function createSupabaseMock(job: { id: string; status: string } | null) {
   const eqUser = vi.fn(() => ({ single }));
   const eqId = vi.fn(() => ({ eq: eqUser }));
   const select = vi.fn(() => ({ eq: eqId }));
-  const from = vi.fn(() => ({ select, update }));
+  const profileSingle = vi.fn().mockResolvedValue({ data: profile, error: null });
+  const from = vi.fn((table: string) => {
+    if (table === "profiles") {
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: profileSingle,
+          })),
+        })),
+      };
+    }
+
+    return { select, update };
+  });
 
   createServerClientMock.mockResolvedValue({
     auth: {
@@ -44,12 +70,13 @@ function createSupabaseMock(job: { id: string; status: string } | null) {
 
 describe("POST /api/uploads/[id]/start", () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.resetModules();
     vi.clearAllMocks();
   });
 
   it("rejects job ids that do not belong to the current user", async () => {
-    const supabase = createSupabaseMock(null);
+    const supabase = createSupabaseMock({ job: null });
     const { POST } = await import("./route");
 
     const response = await POST(new Request("https://finsight.test"), {
@@ -62,8 +89,30 @@ describe("POST /api/uploads/[id]/start", () => {
     expect(inngestSendMock).not.toHaveBeenCalled();
   });
 
+  it("rejects expired users before starting an owned pending job", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-17T00:00:00.000Z"));
+    const supabase = createSupabaseMock({
+      job: { id: "job-1", status: "pending" },
+      profile: {
+        subscription_status: "trialing",
+        trial_started_at: "2026-08-01T00:00:00.000Z",
+        current_period_end: null,
+      },
+    });
+    const { POST } = await import("./route");
+
+    const response = await POST(new Request("https://finsight.test"), {
+      params: Promise.resolve({ id: "job-1" }),
+    });
+
+    expect(response.status).toBe(403);
+    expect(supabase.update).not.toHaveBeenCalled();
+    expect(inngestSendMock).not.toHaveBeenCalled();
+  });
+
   it("emits the upload event for a pending owned job", async () => {
-    createSupabaseMock({ id: "job-1", status: "pending" });
+    createSupabaseMock({ job: { id: "job-1", status: "pending" } });
     inngestSendMock.mockResolvedValue({});
     const { POST } = await import("./route");
 
@@ -79,7 +128,7 @@ describe("POST /api/uploads/[id]/start", () => {
   });
 
   it("does not re-kick jobs that are already in progress", async () => {
-    createSupabaseMock({ id: "job-1", status: "categorizing" });
+    createSupabaseMock({ job: { id: "job-1", status: "categorizing" } });
     const { POST } = await import("./route");
 
     const response = await POST(new Request("https://finsight.test"), {

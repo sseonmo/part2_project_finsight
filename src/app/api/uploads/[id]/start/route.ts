@@ -1,10 +1,20 @@
 import { NextResponse } from "next/server";
 
 import { inngest } from "@/inngest/client";
+import {
+  evaluateEntitlement,
+  type SubscriptionStatus,
+} from "@/lib/entitlement";
 import { createServerClient } from "@/services/supabase";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
+};
+
+type ProfileEntitlementFields = {
+  subscription_status: SubscriptionStatus;
+  trial_started_at: string | null;
+  current_period_end: string | null;
 };
 
 function jsonError(message: string, status: number): NextResponse {
@@ -32,6 +42,31 @@ export async function POST(_request: Request, context: RouteContext) {
 
   if (jobError || !job) {
     return jsonError("업로드 작업을 찾을 수 없습니다.", 404);
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("subscription_status, trial_started_at, current_period_end")
+    .eq("user_id", user.id)
+    .single<ProfileEntitlementFields>();
+
+  if (profileError || !profile) {
+    return jsonError("프로필을 확인하지 못했습니다.", 403);
+  }
+
+  const entitlement = evaluateEntitlement({
+    subscriptionStatus: profile.subscription_status,
+    trialStartedAt: profile.trial_started_at
+      ? new Date(profile.trial_started_at)
+      : null,
+    currentPeriodEnd: profile.current_period_end
+      ? new Date(profile.current_period_end)
+      : null,
+    now: new Date(),
+  });
+
+  if (!entitlement.canWrite) {
+    return jsonError("체험 또는 구독이 만료되어 업로드할 수 없습니다.", 403);
   }
 
   if (job.status !== "pending") {
