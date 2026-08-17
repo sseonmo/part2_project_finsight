@@ -54,7 +54,7 @@ class StepExecutor:
     """Phase 디렉토리 안의 step들을 순차 실행하는 하네스."""
 
     MAX_RETRIES = 3
-    CLAUDE_TIMEOUT = 1800  # Claude 호출 제한 시간 (초)
+    CODEX_TIMEOUT = 1800  # Codex 호출 제한 시간 (초)
     FEAT_MSG = "feat({phase}): step {num} — {name}"
     CHORE_MSG = "chore({phase}): step {num} output"
     SETUP_MSG = "chore({phase}): step 정의 추가"
@@ -226,9 +226,9 @@ class StepExecutor:
 
     def _load_guardrails(self) -> str:
         sections = []
-        claude_md = ROOT / "CLAUDE.md"
-        if claude_md.exists():
-            sections.append(f"## 프로젝트 규칙 (CLAUDE.md)\n\n{claude_md.read_text(encoding='utf-8')}")
+        agents_md = ROOT / "AGENTS.md"
+        if agents_md.exists():
+            sections.append(f"## 프로젝트 규칙 (AGENTS.md)\n\n{agents_md.read_text(encoding='utf-8')}")
         docs_dir = ROOT / "docs"
         if docs_dir.is_dir():
             for doc in sorted(docs_dir.glob("*.md")):
@@ -270,9 +270,9 @@ class StepExecutor:
             f"6. 커밋하지 마라. execute.py가 status/summary 확인 후 코드 변경과 메타데이터를 분리 커밋한다.\n\n---\n\n"
         )
 
-    # --- Claude 호출 ---
+    # --- Codex 호출 ---
 
-    def _invoke_claude(self, step: dict, preamble: str) -> dict:
+    def _invoke_codex(self, step: dict, preamble: str) -> dict:
         step_num, step_name = step["step"], step["name"]
         step_file = self._phase_dir / f"step{step_num}.md"
 
@@ -281,25 +281,27 @@ class StepExecutor:
             sys.exit(1)
 
         # 프롬프트는 stdin으로 전달한다. argv로 넘기면 guardrails(문서 전체)가
-        # 커질 경우 ARG_MAX를 초과할 수 있다.
+        # 커질 경우 ARG_MAX를 초과할 수 있다. 마지막 "-"는 프롬프트를 stdin에서
+        # 읽으라는 지시다. 이게 없으면 codex가 "Reading additional input from
+        # stdin..." 상태로 멈춰 타임아웃까지 통째로 대기한다.
         prompt = preamble + step_file.read_text(encoding="utf-8")
-        cmd = ["claude", "-p", "--dangerously-skip-permissions", "--output-format", "json"]
+        cmd = ["codex", "exec", "--dangerously-bypass-approvals-and-sandbox", "--json", "-"]
         try:
             result = subprocess.run(
                 cmd, cwd=self._root, capture_output=True, text=True,
-                input=prompt, timeout=self.CLAUDE_TIMEOUT,
+                input=prompt, timeout=self.CODEX_TIMEOUT,
             )
             exit_code, stdout, stderr = result.returncode, result.stdout, result.stderr
         except subprocess.TimeoutExpired as e:
             exit_code = -1
             stdout = self._decode(e.stdout)
-            stderr = f"Claude 호출이 {self.CLAUDE_TIMEOUT}초 안에 완료되지 않아 중단됨"
+            stderr = f"Codex 호출이 {self.CODEX_TIMEOUT}초 안에 완료되지 않아 중단됨"
         except FileNotFoundError:
-            print(f"\n  ERROR: 'claude' CLI를 찾을 수 없습니다. PATH를 확인하세요.")
+            print(f"\n  ERROR: 'codex' CLI를 찾을 수 없습니다. PATH를 확인하세요.")
             sys.exit(1)
 
         if exit_code != 0:
-            print(f"\n  WARN: Claude가 비정상 종료됨 (code {exit_code})")
+            print(f"\n  WARN: Codex가 비정상 종료됨 (code {exit_code})")
             if stderr:
                 print(f"  stderr: {stderr[:500]}")
 
@@ -325,10 +327,10 @@ class StepExecutor:
 
     @staticmethod
     def _fallback_error(output: dict) -> str:
-        """Claude 세션이 status를 갱신하지 않았을 때 재시도 프롬프트에 넣을 에러 메시지."""
+        """Codex 세션이 status를 갱신하지 않았을 때 재시도 프롬프트에 넣을 에러 메시지."""
         if output["exitCode"] == 0:
             return "Step did not update status"
-        msg = f"Claude 프로세스 비정상 종료 (code {output['exitCode']})"
+        msg = f"Codex 프로세스 비정상 종료 (code {output['exitCode']})"
         detail = (output.get("stderr") or "").strip()[:500]
         return f"{msg}: {detail}" if detail else msg
 
@@ -382,7 +384,7 @@ class StepExecutor:
                 tag += f" [retry {attempt}/{self.MAX_RETRIES}]"
 
             with progress_indicator(tag) as pi:
-                output = self._invoke_claude(step, preamble)
+                output = self._invoke_codex(step, preamble)
             elapsed = int(pi.elapsed)  # elapsed는 with 블록을 빠져나온 뒤에 확정된다
 
             index = self._read_json(self._index_file)

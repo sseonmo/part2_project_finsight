@@ -24,12 +24,12 @@ import execute as ex
 
 @pytest.fixture
 def tmp_project(tmp_path):
-    """phases/, CLAUDE.md, docs/ 를 갖춘 임시 프로젝트 구조."""
+    """phases/, AGENTS.md, docs/ 를 갖춘 임시 프로젝트 구조."""
     phases_dir = tmp_path / "phases"
     phases_dir.mkdir()
 
-    claude_md = tmp_path / "CLAUDE.md"
-    claude_md.write_text("# Rules\n- rule one\n- rule two")
+    agents_md = tmp_path / "AGENTS.md"
+    agents_md.write_text("# Rules\n- rule one\n- rule two")
 
     docs_dir = tmp_path / "docs"
     docs_dir.mkdir()
@@ -146,7 +146,7 @@ class TestJsonHelpers:
 # ---------------------------------------------------------------------------
 
 class TestLoadGuardrails:
-    def test_loads_claude_md_and_docs(self, executor, tmp_project):
+    def test_loads_agents_md_and_docs(self, executor, tmp_project):
         with patch.object(ex, "ROOT", tmp_project):
             result = executor._load_guardrails()
         assert "# Rules" in result
@@ -166,11 +166,11 @@ class TestLoadGuardrails:
         guide_pos = result.index("guide")
         assert arch_pos < guide_pos
 
-    def test_no_claude_md(self, executor, tmp_project):
-        (tmp_project / "CLAUDE.md").unlink()
+    def test_no_agents_md(self, executor, tmp_project):
+        (tmp_project / "AGENTS.md").unlink()
         with patch.object(ex, "ROOT", tmp_project):
             result = executor._load_guardrails()
-        assert "CLAUDE.md" not in result
+        assert "AGENTS.md" not in result
         assert "Architecture" in result
 
     def test_no_docs_dir(self, executor, tmp_project):
@@ -579,11 +579,11 @@ def _status(root, *extra):
 
 @pytest.fixture
 def git_repo(tmp_project):
-    """CLAUDE.md/docs 만 커밋된 저장소. phases/ 는 통째로 untracked 로 남는다."""
+    """AGENTS.md/docs 만 커밋된 저장소. phases/ 는 통째로 untracked 로 남는다."""
     _git(tmp_project, "init", "-q")
     _git(tmp_project, "config", "user.email", "t@example.com")
     _git(tmp_project, "config", "user.name", "tester")
-    _git(tmp_project, "add", "CLAUDE.md", "docs")
+    _git(tmp_project, "add", "AGENTS.md", "docs")
     _git(tmp_project, "commit", "-qm", "init")
     return tmp_project
 
@@ -652,23 +652,26 @@ class TestRunOrder:
 
 
 # ---------------------------------------------------------------------------
-# _invoke_claude (mocked)
+# _invoke_codex (mocked)
 # ---------------------------------------------------------------------------
 
-class TestInvokeClaude:
-    def test_invokes_claude_with_correct_args(self, executor):
+class TestInvokeCodex:
+    def test_invokes_codex_with_correct_args(self, executor):
         mock_result = MagicMock(returncode=0, stdout='{"result": "ok"}', stderr="")
         step = {"step": 2, "name": "ui"}
         preamble = "PREAMBLE\n"
 
         with patch("subprocess.run", return_value=mock_result) as mock_run:
-            output = executor._invoke_claude(step, preamble)
+            output = executor._invoke_codex(step, preamble)
 
         cmd = mock_run.call_args[0][0]
-        assert cmd[0] == "claude"
-        assert "-p" in cmd
-        assert "--dangerously-skip-permissions" in cmd
-        assert "--output-format" in cmd
+        assert cmd[0] == "codex"
+        assert cmd[1] == "exec"
+        assert "--dangerously-bypass-approvals-and-sandbox" in cmd
+        assert "--json" in cmd
+        # "-" 는 프롬프트를 stdin 에서 읽으라는 지시이자, codex 가
+        # "Reading additional input from stdin..." 으로 멈추지 않게 하는 장치다.
+        assert cmd[-1] == "-"
 
     def test_prompt_passed_via_stdin(self, executor):
         """프롬프트는 argv가 아닌 stdin으로 전달한다 (ARG_MAX 초과 방지)."""
@@ -676,7 +679,7 @@ class TestInvokeClaude:
         step = {"step": 2, "name": "ui"}
 
         with patch("subprocess.run", return_value=mock_result) as mock_run:
-            executor._invoke_claude(step, "PREAMBLE\n")
+            executor._invoke_codex(step, "PREAMBLE\n")
 
         cmd = mock_run.call_args[0][0]
         stdin_input = mock_run.call_args[1]["input"]
@@ -688,10 +691,10 @@ class TestInvokeClaude:
     def test_timeout_returns_failed_output(self, executor):
         """타임아웃 시 traceback 없이 실패 output을 기록하고 반환한다."""
         step = {"step": 2, "name": "ui"}
-        exc = subprocess.TimeoutExpired(cmd="claude", timeout=1800)
+        exc = subprocess.TimeoutExpired(cmd="codex", timeout=1800)
 
         with patch("subprocess.run", side_effect=exc):
-            output = executor._invoke_claude(step, "preamble")
+            output = executor._invoke_codex(step, "preamble")
 
         assert output["exitCode"] != 0
         assert "1800" in output["stderr"]
@@ -701,13 +704,13 @@ class TestInvokeClaude:
         data = json.loads(output_file.read_text())
         assert data["exitCode"] != 0
 
-    def test_claude_cli_missing_exits(self, executor):
-        """claude CLI가 없으면 깔끔한 에러 메시지와 함께 종료한다."""
+    def test_codex_cli_missing_exits(self, executor):
+        """codex CLI가 없으면 깔끔한 에러 메시지와 함께 종료한다."""
         step = {"step": 2, "name": "ui"}
 
-        with patch("subprocess.run", side_effect=FileNotFoundError("claude")):
+        with patch("subprocess.run", side_effect=FileNotFoundError("codex")):
             with pytest.raises(SystemExit) as exc_info:
-                executor._invoke_claude(step, "preamble")
+                executor._invoke_codex(step, "preamble")
         assert exc_info.value.code == 1
 
     def test_saves_output_json(self, executor):
@@ -715,7 +718,7 @@ class TestInvokeClaude:
         step = {"step": 2, "name": "ui"}
 
         with patch("subprocess.run", return_value=mock_result):
-            executor._invoke_claude(step, "preamble")
+            executor._invoke_codex(step, "preamble")
 
         output_file = executor._phase_dir / "step2-output.json"
         assert output_file.exists()
@@ -727,7 +730,7 @@ class TestInvokeClaude:
     def test_nonexistent_step_file_exits(self, executor):
         step = {"step": 99, "name": "nonexistent"}
         with pytest.raises(SystemExit) as exc_info:
-            executor._invoke_claude(step, "preamble")
+            executor._invoke_codex(step, "preamble")
         assert exc_info.value.code == 1
 
     def test_timeout_is_1800(self, executor):
@@ -735,7 +738,7 @@ class TestInvokeClaude:
         step = {"step": 2, "name": "ui"}
 
         with patch("subprocess.run", return_value=mock_result) as mock_run:
-            executor._invoke_claude(step, "preamble")
+            executor._invoke_codex(step, "preamble")
 
         assert mock_run.call_args[1]["timeout"] == 1800
 
