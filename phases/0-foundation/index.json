@@ -21,7 +21,10 @@
     {
       "step": 2,
       "name": "db-schema",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-17T16:13:10+0900",
+      "summary": "Supabase 마이그레이션 20260817072000_init.sql/20260817072100_rls.sql/20260817072200_storage.sql로 8개 테이블, enum(transaction_category, transaction_type, upload_job_status, subscription_status, spending_signal_type), RLS/Storage 정책을 만들고 src/types/database.ts의 Database 타입을 생성함",
+      "completed_at": "2026-08-17T16:21:27+0900"
     },
     {
       "step": 3,
