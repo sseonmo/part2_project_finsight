@@ -13,7 +13,10 @@
     {
       "step": 1,
       "name": "upload-dialog",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-18T01:00:47+0900",
+      "summary": "Added UploadDialog(cardLabels,onUploadStarted), DashboardUploads(initialJobs), UploadProgressCard(initialJob), ProgressBar(value,label), and UploadSummary(summary,cardLabelMismatchWarning); dashboard/page.tsx queries upload_jobs for card labels and pending/parsing/categorizing/needs_mapping jobs, with insight card slot intentionally empty below summaries.",
+      "completed_at": "2026-08-18T01:11:49+0900"
     },
     {
       "step": 2,
