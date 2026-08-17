@@ -61,7 +61,10 @@
     {
       "step": 7,
       "name": "inngest-pipeline",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-17T17:11:39+0900",
+      "summary": "업로드 라우트 4종(signed-url·start·[id]·mapping)과 /api/inngest, Inngest 워커 process-upload(step.run 9개, 분류는 배치당 스텝 1개)를 추가하고 openai.ts에 describeSignals를 더함. AC(db reset·build·lint·test 190)는 세션 중단 후 수동 검증으로 통과 확인",
+      "completed_at": "2026-08-17T20:58:00+0900"
     }
   ],
   "created_at": "2026-08-17T15:57:58+0900"
