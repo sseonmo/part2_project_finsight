@@ -1,0 +1,7 @@
+export const CSV_MAPPING_SAMPLE_SIZE = 20;
+export const CSV_SAMPLE_SUCCESS_RATE_MIN = 0.9;
+export const CSV_FULL_FAILURE_RATE_MAX = 0.2;
+
+export const SANITY_DATE_ANOMALY_RATE_MAX = 0.05;
+export const SANITY_AMOUNT_ANOMALY_RATE_MAX = 0.3;
+export const SANITY_LOOKBACK_YEARS = 10;
