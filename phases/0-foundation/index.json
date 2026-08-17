@@ -45,7 +45,10 @@
     {
       "step": 5,
       "name": "merchant-classify",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-17T16:44:27+0900",
+      "summary": "normalizeMerchant, MERCHANT_SEED_RULES/matchSeedRule, resolveCategories, OpenAI 래퍼(OPENAI_MODELS, CLASSIFY_BATCH_SIZE=100, sanitizeMerchantName, classifyMerchantBatch, inferColumnMapping)를 추가하고 OpenAI SDK는 vi.mock으로 모킹함",
+      "completed_at": "2026-08-17T16:54:11+0900"
     },
     {
       "step": 6,
