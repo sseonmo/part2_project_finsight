@@ -211,15 +211,15 @@ export type Database = {
       }
       upload_jobs: {
         Row: {
-          card_label_mismatch_warning: string | null
           card_label: string
+          card_label_mismatch_warning: string | null
           duplicate_count: number
           failed_reason: string | null
           header_hash: string | null
           id: string
           inserted_count: number
-          mapping_attempt_count: number
           mapping: Json | null
+          mapping_attempt_count: number
           original_filename: string
           skipped_rows: number
           status: Database["public"]["Enums"]["upload_job_status"]
@@ -228,15 +228,15 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          card_label_mismatch_warning?: string | null
           card_label: string
+          card_label_mismatch_warning?: string | null
           duplicate_count?: number
           failed_reason?: string | null
           header_hash?: string | null
           id?: string
           inserted_count?: number
-          mapping_attempt_count?: number
           mapping?: Json | null
+          mapping_attempt_count?: number
           original_filename: string
           skipped_rows?: number
           status?: Database["public"]["Enums"]["upload_job_status"]
@@ -245,15 +245,15 @@ export type Database = {
           user_id: string
         }
         Update: {
-          card_label_mismatch_warning?: string | null
           card_label?: string
+          card_label_mismatch_warning?: string | null
           duplicate_count?: number
           failed_reason?: string | null
           header_hash?: string | null
           id?: string
           inserted_count?: number
-          mapping_attempt_count?: number
           mapping?: Json | null
+          mapping_attempt_count?: number
           original_filename?: string
           skipped_rows?: number
           status?: Database["public"]["Enums"]["upload_job_status"]
@@ -287,10 +287,7 @@ export type Database = {
     }
     Functions: {
       get_category_amount_medians: {
-        Args: {
-          p_period: string
-          p_user_id: string
-        }
+        Args: { p_period: string; p_user_id: string }
         Returns: {
           category: Database["public"]["Enums"]["transaction_category"]
           median_amount: number
@@ -298,10 +295,7 @@ export type Database = {
         }[]
       }
       get_category_monthly_totals: {
-        Args: {
-          p_periods: string[]
-          p_user_id: string
-        }
+        Args: { p_periods: string[]; p_user_id: string }
         Returns: {
           category: Database["public"]["Enums"]["transaction_category"]
           period: string
@@ -310,10 +304,7 @@ export type Database = {
         }[]
       }
       get_merchant_history: {
-        Args: {
-          p_until_period: string
-          p_user_id: string
-        }
+        Args: { p_until_period: string; p_user_id: string }
         Returns: {
           amount: number
           category: Database["public"]["Enums"]["transaction_category"]
@@ -324,10 +315,7 @@ export type Database = {
         }[]
       }
       get_period_transactions: {
-        Args: {
-          p_period: string
-          p_user_id: string
-        }
+        Args: { p_period: string; p_user_id: string }
         Returns: {
           amount: number
           category: Database["public"]["Enums"]["transaction_category"]
@@ -338,12 +326,16 @@ export type Database = {
         }[]
       }
       get_seen_merchants_before_period: {
-        Args: {
-          p_period: string
-          p_user_id: string
-        }
+        Args: { p_period: string; p_user_id: string }
         Returns: {
           merchant_normalized: string
+        }[]
+      }
+      get_transaction_months: {
+        Args: { p_user_id: string }
+        Returns: {
+          period: string
+          transaction_count: number
         }[]
       }
     }
@@ -536,3 +528,4 @@ export const Constants = {
     },
   },
 } as const
+
