@@ -110,7 +110,8 @@ sha256(user_id | card_label | transacted_on | amount | merchant_normalized | occ
 - LLM 호출은 미매칭 고유 가맹점 100개 배치 단위로만 한다
 
 ## AI 리뷰
-- 신호 탐지: `src/lib/signals/*.sql.ts` — 결정론적 SQL. LLM 관여 없음
+- 신호 탐지: **집계는 SQL(`src/lib/signals/queries.ts`), 판정은 순수 함수(`src/lib/signals/detect-*.ts`)**. LLM 관여 없음
+  - SQL은 카테고리별 월 합계·가맹점별 거래 목록 같은 **원시 집계**만 내고, `thresholds.ts` 를 읽어 신호를 판정·생성하는 것은 외부 의존이 없는 TS 함수다. 판정까지 SQL에 넣으면 경계값(+49/+50/+51%) 픽스처 테스트에 Postgres가 필요해지는데, ADR-004가 임계값을 상수로 못박은 근거가 바로 "테스트할 수 있어야 한다"였다. 결정론적이라는 성질은 그대로다 — 같은 입력에 같은 신호가 나오고, 무엇을 지적할지는 여전히 코드가 정한다
 - 우선순위: **원화 영향도 점수**. `recurring_payment` 은 `impact` 가 **NULL** 이고 카드·코칭 문단 선정 쿼리는 `impact IS NOT NULL` 을 조건에 넣는다
 - LLM 역할: 선별된 신호 목록을 받아 문장으로 옮기기만 한다. 수치 계산·생성 금지, 무엇을 지적할지 선택 금지
 - 호출 단위: 업로드당 배치 1회. `recurring_payment` 은 배치에 포함하지 않는다(`narrative` 없이 SQL로만 렌더)
