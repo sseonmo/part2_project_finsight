@@ -1,7 +1,47 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import localFont from "next/font/local";
 
 import "./globals.css";
+
+const pretendard = localFont({
+  src: [
+    {
+      path: "./fonts/PretendardVariable.woff2",
+      style: "normal",
+      weight: "45 920",
+    },
+  ],
+  display: "swap",
+  variable: "--font-pretendard",
+});
+
+const themeInitializationScript = `
+(function () {
+  try {
+    var storedTheme = window.localStorage.getItem("theme");
+    var prefersDark =
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var theme =
+      storedTheme === "light" || storedTheme === "dark"
+        ? storedTheme
+        : prefersDark
+          ? "dark"
+          : "light";
+
+    document.documentElement.dataset.theme = theme;
+  } catch (error) {
+    var fallbackPrefersDark =
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    document.documentElement.dataset.theme = fallbackPrefersDark
+      ? "dark"
+      : "light";
+  }
+})();
+`;
 
 export const metadata: Metadata = {
   title: "finsight",
@@ -15,8 +55,13 @@ type RootLayoutProps = Readonly<{
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="ko">
-      <body>{children}</body>
+    <html lang="ko" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{ __html: themeInitializationScript }}
+        />
+      </head>
+      <body className={pretendard.variable}>{children}</body>
     </html>
   );
 }

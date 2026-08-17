@@ -1,5 +1,153 @@
 @import "tailwindcss";
 
+:root {
+  --font-core: var(--font-pretendard), -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  --font-display: var(--font-core);
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --surface-page: #FFFFFF;
+  --canvas: #FFFFFF;
+  --surface-soft: #FAFAFB;
+  --surface: #F4F4F6;
+  --surface-yellow: #FEF6DC;
+
+  --hairline-soft: #EFEFF2;
+  --hairline: #E4E4E9;
+  --hairline-strong: #C9C9D1;
+
+  --ink: #1A1A24;
+  --text-body: #2E2E38;
+  --text-secondary: #56566B;
+  --text-tertiary: #6E6E85;
+  --text-muted: #A8A8B8;
+  --text-link: #2557E6;
+  --blue-pressed: #1A3FAC;
+
+  --primary: #0B0B12;
+  --on-primary: #FFFFFF;
+  --brand-yellow: #FBD24E;
+
+  --brand-red-dark: #C7392F;
+  --success-accent: #17A46A;
+
+  --brand-blue: #2557E6;
+  --charcoal: var(--text-body);
+
+  --cat-food: #F1664B;
+  --cat-cafe-snack: #B38D12;
+  --cat-grocery: #1F9C8B;
+  --cat-transport: #2557E6;
+  --cat-housing-telecom: #6B4FD8;
+  --cat-shopping: #D9508B;
+  --cat-health: #17A46A;
+  --cat-culture-leisure: #E07A2F;
+  --cat-finance-insurance: #56566B;
+  --cat-other: #9090A5;
+
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 20px;
+  --space-xl: 24px;
+  --space-xxl: 32px;
+
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  --button-height-sm: 36px;
+  --button-height-md: 40px;
+  --button-height-lg: 44px;
+}
+
+[data-theme="dark"] {
+  --surface-page: #0E0E15;
+  --canvas: #14141C;
+  --surface-soft: #191922;
+  --surface: #1E1E28;
+  --surface-yellow: #2A2313;
+
+  --hairline-soft: #242430;
+  --hairline: #2C2C39;
+  --hairline-strong: #3C3C4C;
+
+  --ink: #F1F1F5;
+  --text-body: #E2E2E9;
+  --text-secondary: #ADADBE;
+  --text-tertiary: #9797AA;
+  --text-muted: #63637A;
+  --text-link: #7A9BFF;
+  --blue-pressed: #A7BCFF;
+
+  --primary: #F1F1F5;
+  --on-primary: #0B0B12;
+  --brand-yellow: #FBD24E;
+
+  --brand-red-dark: #FF8D80;
+  --success-accent: #4FD79A;
+
+  --brand-blue: #2557E6;
+  --charcoal: var(--text-body);
+
+  --cat-food: #F2735A;
+  --cat-cafe-snack: #E8B818;
+  --cat-grocery: #1F9C8B;
+  --cat-transport: #2557E6;
+  --cat-housing-telecom: #6B4FD8;
+  --cat-shopping: #D9508B;
+  --cat-health: #17A46A;
+  --cat-culture-leisure: #E07A2F;
+  --cat-finance-insurance: #65657D;
+  --cat-other: #A8A8B8;
+}
+
+@theme inline {
+  --color-surface-page: var(--surface-page);
+  --color-canvas: var(--canvas);
+  --color-surface-soft: var(--surface-soft);
+  --color-surface: var(--surface);
+  --color-surface-yellow: var(--surface-yellow);
+  --color-hairline-soft: var(--hairline-soft);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
+  --color-ink: var(--ink);
+  --color-text-body: var(--text-body);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-muted: var(--text-muted);
+  --color-text-link: var(--text-link);
+  --color-blue-pressed: var(--blue-pressed);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-brand-yellow: var(--brand-yellow);
+  --color-brand-red-dark: var(--brand-red-dark);
+  --color-success-accent: var(--success-accent);
+  --color-brand-blue: var(--brand-blue);
+  --color-cat-food: var(--cat-food);
+  --color-cat-cafe-snack: var(--cat-cafe-snack);
+  --color-cat-grocery: var(--cat-grocery);
+  --color-cat-transport: var(--cat-transport);
+  --color-cat-housing-telecom: var(--cat-housing-telecom);
+  --color-cat-shopping: var(--cat-shopping);
+  --color-cat-health: var(--cat-health);
+  --color-cat-culture-leisure: var(--cat-culture-leisure);
+  --color-cat-finance-insurance: var(--cat-finance-insurance);
+  --color-cat-other: var(--cat-other);
+  --font-sans: var(--font-core);
+  --spacing-xxs: var(--space-xxs);
+  --spacing-xs: var(--space-xs);
+  --spacing-sm: var(--space-sm);
+  --spacing-md: var(--space-md);
+  --spacing-lg: var(--space-lg);
+  --spacing-xl: var(--space-xl);
+  --spacing-xxl: var(--space-xxl);
+  --radius-panel: var(--radius-lg);
+  --radius-card: var(--radius-xl);
+  --radius-pill: var(--radius-full);
+}
+
 *,
 *::before,
 *::after {
@@ -12,8 +160,20 @@ body {
   min-height: 100%;
 }
 
+html {
+  background: var(--surface-page);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
 body {
   min-height: 100vh;
+  background: var(--surface-page);
+  color: var(--text-body);
+  font-family: var(--font-core);
 }
 
 button,
@@ -21,4 +181,119 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+a {
+  color: var(--text-link);
+}
+
+a:hover {
+  color: var(--blue-pressed);
+}
+
+[data-theme="dark"] select option { background:#1E1E28; color:#F1F1F5 }
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.finsight-button {
+  --button-bg: transparent;
+  --button-border: transparent;
+  --button-fg: var(--ink);
+  --button-height: var(--button-height-md);
+  --button-padding-inline: var(--space-lg);
+
+  align-items: center;
+  background: var(--button-bg);
+  border: 1px solid var(--button-border);
+  border-radius: var(--radius-full);
+  color: var(--button-fg);
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 500;
+  gap: var(--space-xs);
+  justify-content: center;
+  min-height: var(--button-height);
+  padding-inline: var(--button-padding-inline);
+  text-decoration: none;
+  transition:
+    background-color 150ms cubic-bezier(0.2, 0, 0.2, 1),
+    border-color 150ms cubic-bezier(0.2, 0, 0.2, 1),
+    color 150ms cubic-bezier(0.2, 0, 0.2, 1),
+    opacity 150ms cubic-bezier(0.2, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.finsight-button:focus-visible {
+  outline: 2px solid var(--brand-blue);
+  outline-offset: 2px;
+}
+
+.finsight-button:disabled,
+.finsight-button[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.finsight-button--sm {
+  --button-height: var(--button-height-sm);
+  --button-padding-inline: var(--space-md);
+}
+
+.finsight-button--md {
+  --button-height: var(--button-height-md);
+}
+
+.finsight-button--lg {
+  --button-height: var(--button-height-lg);
+  --button-padding-inline: var(--space-xl);
+}
+
+.finsight-button--primary {
+  --button-bg: var(--primary);
+  --button-border: var(--primary);
+  --button-fg: var(--on-primary);
+}
+
+.finsight-button--primary:active:not(:disabled) {
+  --button-bg: var(--charcoal);
+  --button-border: var(--charcoal);
+}
+
+.finsight-button--secondary {
+  --button-bg: var(--canvas);
+  --button-border: var(--hairline-strong);
+  --button-fg: var(--ink);
+}
+
+.finsight-button--secondary:hover:not(:disabled),
+.finsight-button--ghost:hover:not(:disabled),
+.finsight-button--danger:hover:not(:disabled) {
+  --button-bg: var(--surface);
+}
+
+.finsight-button--ghost {
+  --button-fg: var(--text-secondary);
+
+  border-radius: var(--space-xs);
+}
+
+.finsight-button--yellow {
+  --button-bg: var(--brand-yellow);
+  --button-border: var(--brand-yellow);
+  --button-fg: var(--primary);
+}
+
+[data-theme="dark"] .finsight-button--yellow {
+  --button-fg: var(--on-primary);
+}
+
+.finsight-button--yellow:active:not(:disabled) {
+  opacity: 0.86;
+}
+
+.finsight-button--danger {
+  --button-border: var(--brand-red-dark);
+  --button-fg: var(--brand-red-dark);
 }
