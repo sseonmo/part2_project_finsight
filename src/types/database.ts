@@ -303,6 +303,42 @@ export type Database = {
           transaction_count: number
         }[]
       }
+      get_dashboard_category_breakdown: {
+        Args: { p_period: string; p_user_id: string }
+        Returns: {
+          category: Database["public"]["Enums"]["transaction_category"]
+          total_amount: number
+          transaction_count: number
+        }[]
+      }
+      get_dashboard_monthly_flow: {
+        Args: { p_months: number; p_until_period: string; p_user_id: string }
+        Returns: {
+          period: string
+          total_amount: number
+        }[]
+      }
+      get_dashboard_summary: {
+        Args: { p_period: string; p_through_day?: number; p_user_id: string }
+        Returns: {
+          active_days: number
+          deposit_total: number
+          refund_total: number
+          top_category: Database["public"]["Enums"]["transaction_category"]
+          top_category_amount: number
+          total_expense: number
+          transaction_count: number
+        }[]
+      }
+      get_dashboard_top_merchants: {
+        Args: { p_limit: number; p_period: string; p_user_id: string }
+        Returns: {
+          category: Database["public"]["Enums"]["transaction_category"]
+          merchant_normalized: string
+          total_amount: number
+          transaction_count: number
+        }[]
+      }
       get_merchant_history: {
         Args: { p_until_period: string; p_user_id: string }
         Returns: {

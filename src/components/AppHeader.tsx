@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export type TransactionMonthOption = {
   period: string;
@@ -182,12 +182,18 @@ export function PathAwareAppHeader({
   months,
 }: PathAwareAppHeaderProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const config = getHeaderConfig(pathname);
+  const dashboardMonth =
+    pathname === "/dashboard" ? searchParams.get("month") : null;
 
   return (
     <AppHeader
       currentYearMonth={
-        getPathYearMonth(pathname) ?? months[0]?.yearMonth ?? null
+        getPathYearMonth(pathname) ??
+        dashboardMonth ??
+        months[0]?.yearMonth ??
+        null
       }
       entitlement={entitlement}
       months={months}
