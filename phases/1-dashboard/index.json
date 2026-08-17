@@ -1,0 +1,12 @@
+{
+  "project": "FinSight",
+  "phase": "1-dashboard",
+  "steps": [
+    { "step": 0, "name": "app-shell", "status": "pending" },
+    { "step": 1, "name": "upload-dialog", "status": "pending" },
+    { "step": 2, "name": "dashboard", "status": "pending" },
+    { "step": 3, "name": "transactions", "status": "pending" },
+    { "step": 4, "name": "uploads-history", "status": "pending" },
+    { "step": 5, "name": "manual-mapping", "status": "pending" }
+  ]
+}

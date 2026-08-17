@@ -4,6 +4,18 @@
       "dir": "0-foundation",
       "status": "completed",
       "completed_at": "2026-08-17T20:58:00+0900"
+    },
+    {
+      "dir": "1-dashboard",
+      "status": "pending"
+    },
+    {
+      "dir": "2-review",
+      "status": "pending"
+    },
+    {
+      "dir": "3-billing",
+      "status": "pending"
     }
   ]
 }

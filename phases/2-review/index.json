@@ -1,0 +1,10 @@
+{
+  "project": "FinSight",
+  "phase": "2-review",
+  "steps": [
+    { "step": 0, "name": "ai-review", "status": "pending" },
+    { "step": 1, "name": "signal-detail", "status": "pending" },
+    { "step": 2, "name": "subscriptions", "status": "pending" },
+    { "step": 3, "name": "monthly-report", "status": "pending" }
+  ]
+}

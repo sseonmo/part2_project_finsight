@@ -1,0 +1,10 @@
+{
+  "project": "FinSight",
+  "phase": "3-billing",
+  "steps": [
+    { "step": 0, "name": "billing-checkout", "status": "pending" },
+    { "step": 1, "name": "polar-webhook", "status": "pending" },
+    { "step": 2, "name": "account-settings", "status": "pending" },
+    { "step": 3, "name": "landing-final", "status": "pending" }
+  ]
+}
