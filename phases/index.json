@@ -17,7 +17,8 @@
     },
     {
       "dir": "3-billing",
-      "status": "pending"
+      "status": "blocked",
+      "blocked_at": "2026-08-18T21:00:28+0900"
     }
   ]
 }
