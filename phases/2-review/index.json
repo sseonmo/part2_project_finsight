@@ -21,7 +21,10 @@
     {
       "step": 2,
       "name": "subscriptions",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-18T10:41:18+0900",
+      "summary": "get_recurring_signals_latest RPC와 fetchRecurringSignalsLatest 래퍼를 추가하고 /dashboard/subscriptions에서 recurring_payment·recurring_price_up을 target_key별 한 행으로 렌더",
+      "completed_at": "2026-08-18T10:52:30+0900"
     },
     {
       "step": 3,
