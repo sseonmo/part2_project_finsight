@@ -55,3 +55,31 @@ export function evaluateEntitlement(input: EntitlementInput): Entitlement {
         : entitlement("expired", false, null);
   }
 }
+
+export type SubscriptionSummary =
+  | { kind: "trialing"; endsAt: Date }
+  | { kind: "subscribed"; renewsAt: Date | null }
+  | { kind: "canceled"; accessEndsAt: Date }
+  | { kind: "expired" };
+
+// 화면 문구를 위해 "구독 중"과 "해지했지만 기간이 남음"을 나눈다.
+// entitlement.state 는 둘 다 active 라 구분이 없고, 상태 문자열 비교는 이 파일 밖으로 나가지 않는다.
+export function summarizeSubscription(
+  input: EntitlementInput,
+): SubscriptionSummary {
+  const { state, trialEndsAt } = evaluateEntitlement(input);
+
+  if (state === "expired") {
+    return { kind: "expired" };
+  }
+
+  if (state === "trialing" && trialEndsAt) {
+    return { kind: "trialing", endsAt: trialEndsAt };
+  }
+
+  if (input.subscriptionStatus === "canceled" && input.currentPeriodEnd) {
+    return { kind: "canceled", accessEndsAt: input.currentPeriodEnd };
+  }
+
+  return { kind: "subscribed", renewsAt: input.currentPeriodEnd };
+}

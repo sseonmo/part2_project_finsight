@@ -73,6 +73,12 @@ const HEADER_CONFIG = [
     title: "업로드 이력",
   },
   {
+    match: (pathname: string) => pathname === "/settings",
+    showMonthPicker: false,
+    subtitle: "계정과 구독 상태를 관리합니다.",
+    title: "설정",
+  },
+  {
     match: (pathname: string) => pathname === "/dashboard",
     ...DEFAULT_HEADER_CONFIG,
   },

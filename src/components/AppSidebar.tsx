@@ -118,12 +118,16 @@ export function AppSidebar({ email, latestYearMonth }: AppSidebarProps) {
 
       <div className="app-sidebar__bottom">
         <ThemeToggle />
-        <div className="app-sidebar__user">
-          <span className="app-sidebar__user-label">사용자</span>
+        <Link
+          aria-current={pathname === "/settings" ? "page" : undefined}
+          className="app-sidebar__user"
+          href="/settings"
+        >
+          <span className="app-sidebar__user-label">설정</span>
           <span className="app-sidebar__user-email">
             {email ?? "이메일 없음"}
           </span>
-        </div>
+        </Link>
       </div>
     </aside>
   );

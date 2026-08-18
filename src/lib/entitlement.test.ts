@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { evaluateEntitlement, type EntitlementInput } from "./entitlement";
+import {
+  evaluateEntitlement,
+  summarizeSubscription,
+  type EntitlementInput,
+} from "./entitlement";
 
 const NOW = new Date("2026-08-17T00:00:00.000Z");
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -224,5 +228,71 @@ describe("evaluateEntitlement", () => {
       canWrite: false,
       trialEndsAt: null,
     });
+  });
+});
+
+describe("summarizeSubscription", () => {
+  it("reports the trial end date while the trial is running", () => {
+    const trialStartedAt = new Date(NOW.getTime() - DAY_MS);
+
+    expect(
+      summarizeSubscription({
+        subscriptionStatus: "trialing",
+        trialStartedAt,
+        currentPeriodEnd: null,
+        now: NOW,
+      }),
+    ).toEqual({
+      kind: "trialing",
+      endsAt: new Date(trialStartedAt.getTime() + 7 * DAY_MS),
+    });
+  });
+
+  it("reports the next billing date for an active subscription", () => {
+    const currentPeriodEnd = new Date(NOW.getTime() + 12 * DAY_MS);
+
+    expect(
+      summarizeSubscription({
+        subscriptionStatus: "active",
+        trialStartedAt: new Date(NOW.getTime() - 20 * DAY_MS),
+        currentPeriodEnd,
+        now: NOW,
+      }),
+    ).toEqual({ kind: "subscribed", renewsAt: currentPeriodEnd });
+  });
+
+  it("separates a canceled-but-still-paid period from an active subscription", () => {
+    const currentPeriodEnd = new Date(NOW.getTime() + DAY_MS);
+
+    expect(
+      summarizeSubscription({
+        subscriptionStatus: "canceled",
+        trialStartedAt: new Date(NOW.getTime() - 20 * DAY_MS),
+        currentPeriodEnd,
+        now: NOW,
+      }),
+    ).toEqual({ kind: "canceled", accessEndsAt: currentPeriodEnd });
+  });
+
+  it("reports expiry once the canceled period is over", () => {
+    expect(
+      summarizeSubscription({
+        subscriptionStatus: "canceled",
+        trialStartedAt: new Date(NOW.getTime() - 20 * DAY_MS),
+        currentPeriodEnd: new Date(NOW.getTime() - 1),
+        now: NOW,
+      }),
+    ).toEqual({ kind: "expired" });
+  });
+
+  it("reports expiry once the trial is over", () => {
+    expect(
+      summarizeSubscription({
+        subscriptionStatus: "trialing",
+        trialStartedAt: new Date(NOW.getTime() - 8 * DAY_MS),
+        currentPeriodEnd: null,
+        now: NOW,
+      }),
+    ).toEqual({ kind: "expired" });
   });
 });
