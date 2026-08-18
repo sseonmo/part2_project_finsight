@@ -55,14 +55,35 @@ class StepExecutor:
     """Phase 디렉토리 안의 step들을 순차 실행하는 하네스."""
 
     MAX_RETRIES = 3
-    CODEX_TIMEOUT = 1800  # Codex 호출 제한 시간 (초)
+    # 실행 엔진. 한쪽 CLI 가 사용량 한도로 막혀도 같은 step 정의를 다른 쪽으로 이어 돌린다.
+    # 프롬프트는 어느 쪽이든 stdin 으로 넘긴다(ARG_MAX 회피).
+    AGENTS = {
+        "codex": {
+            "label": "Codex",
+            # 마지막 "-" 는 프롬프트를 stdin 에서 읽으라는 지시다.
+            "cmd": ["codex", "exec", "--dangerously-bypass-approvals-and-sandbox", "--json", "-"],
+        },
+        "claude": {
+            "label": "Claude",
+            # -p 가 없으면 대화형 TUI 가 떠서 하네스가 매달린다.
+            # claude 는 -p 일 때 stdin 을 프롬프트로 읽으므로 codex 의 "-" 같은 인자가 없다.
+            "cmd": ["claude", "-p", "--dangerously-skip-permissions", "--output-format", "json"],
+        },
+    }
+    CODEX_TIMEOUT = 1800  # 에이전트 호출 제한 시간 (초)
     KILL_GRACE = 10  # 타임아웃 후 프로세스 그룹이 정리되기를 기다리는 시간 (초)
     FEAT_MSG = "feat({phase}): step {num} — {name}"
     CHORE_MSG = "chore({phase}): step {num} output"
     SETUP_MSG = "chore({phase}): step 정의 추가"
     TZ = timezone(timedelta(hours=9))
 
-    def __init__(self, phase_dir_name: str, *, auto_push: bool = False):
+    def __init__(self, phase_dir_name: str, *, auto_push: bool = False,
+                 agent: str = "codex"):
+        if agent not in self.AGENTS:
+            print(f"ERROR: 알 수 없는 에이전트 '{agent}'. "
+                  f"가능한 값: {', '.join(self.AGENTS)}")
+            sys.exit(1)
+        self._agent = agent
         self._root = str(ROOT)
         self._phases_dir = ROOT / "phases"
         self._phase_dir = self._phases_dir / phase_dir_name
@@ -287,7 +308,8 @@ class StepExecutor:
         # 읽으라는 지시다. 이게 없으면 codex가 "Reading additional input from
         # stdin..." 상태로 멈춰 타임아웃까지 통째로 대기한다.
         prompt = preamble + step_file.read_text(encoding="utf-8")
-        cmd = ["codex", "exec", "--dangerously-bypass-approvals-and-sandbox", "--json", "-"]
+        agent = self.AGENTS[self._agent]
+        cmd = list(agent["cmd"])
 
         # start_new_session=True 로 codex를 새 프로세스 그룹의 리더로 만든다.
         # codex는 내부에서 /bin/zsh를 띄우고 그 손자들이 stdout 파이프를 상속받는데,
@@ -300,7 +322,7 @@ class StepExecutor:
                 start_new_session=True,
             )
         except FileNotFoundError:
-            print(f"\n  ERROR: 'codex' CLI를 찾을 수 없습니다. PATH를 확인하세요.")
+            print(f"\n  ERROR: '{cmd[0]}' CLI를 찾을 수 없습니다. PATH를 확인하세요.")
             sys.exit(1)
 
         try:
@@ -309,10 +331,11 @@ class StepExecutor:
         except subprocess.TimeoutExpired:
             exit_code = -1
             stdout = self._kill_process_group(proc)
-            stderr = f"Codex 호출이 {self.CODEX_TIMEOUT}초 안에 완료되지 않아 중단됨"
+            stderr = (f"{agent['label']} 호출이 {self.CODEX_TIMEOUT}초 안에 "
+                      f"완료되지 않아 중단됨")
 
         if exit_code != 0:
-            print(f"\n  WARN: Codex가 비정상 종료됨 (code {exit_code})")
+            print(f"\n  WARN: {agent['label']}가 비정상 종료됨 (code {exit_code})")
             if stderr:
                 print(f"  stderr: {stderr[:500]}")
 
@@ -353,12 +376,12 @@ class StepExecutor:
 
         return ""
 
-    @staticmethod
-    def _fallback_error(output: dict) -> str:
-        """Codex 세션이 status를 갱신하지 않았을 때 재시도 프롬프트에 넣을 에러 메시지."""
+    def _fallback_error(self, output: dict) -> str:
+        """에이전트가 status를 갱신하지 않았을 때 재시도 프롬프트에 넣을 에러 메시지."""
         if output["exitCode"] == 0:
             return "Step did not update status"
-        msg = f"Codex 프로세스 비정상 종료 (code {output['exitCode']})"
+        label = self.AGENTS[self._agent]["label"]
+        msg = f"{label} 프로세스 비정상 종료 (code {output['exitCode']})"
         detail = (output.get("stderr") or "").strip()[:500]
         return f"{msg}: {detail}" if detail else msg
 
@@ -515,9 +538,11 @@ def main():
     parser = argparse.ArgumentParser(description="Harness Step Executor")
     parser.add_argument("phase_dir", help="Phase directory name (e.g. 0-mvp)")
     parser.add_argument("--push", action="store_true", help="Push branch after completion")
+    parser.add_argument("--agent", choices=sorted(StepExecutor.AGENTS), default="codex",
+                        help="Step 을 실행할 CLI (default: codex)")
     args = parser.parse_args()
 
-    StepExecutor(args.phase_dir, auto_push=args.push).run()
+    StepExecutor(args.phase_dir, auto_push=args.push, agent=args.agent).run()
 
 
 if __name__ == "__main__":

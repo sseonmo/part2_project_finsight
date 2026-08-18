@@ -922,3 +922,95 @@ class TestCheckBlockers:
         with pytest.raises(SystemExit) as exc_info:
             inst._check_blockers()
         assert exc_info.value.code == 2
+
+
+# ---------------------------------------------------------------------------
+# 에이전트 선택 (codex / claude)
+# ---------------------------------------------------------------------------
+
+class TestAgentSelection:
+    """실행 엔진을 교체할 수 있어야 한다.
+
+    codex 사용량 한도처럼 한쪽 CLI 가 막혀도 같은 step 정의를 다른 에이전트로
+    이어 돌릴 수 있어야 한다. 기본값은 기존 동작(codex)을 유지한다.
+    """
+
+    def test_defaults_to_codex(self, executor):
+        """플래그를 주지 않으면 기존과 동일하게 codex 를 쓴다."""
+        assert executor._agent == "codex"
+
+    def test_claude_agent_command(self, tmp_project, phase_dir):
+        with patch.object(ex, "ROOT", tmp_project):
+            inst = ex.StepExecutor("0-mvp", agent="claude")
+        inst._root = str(tmp_project)
+        inst._phase_dir = phase_dir
+
+        with patch("subprocess.Popen", return_value=_mock_codex_proc()) as mock_popen:
+            inst._invoke_codex({"step": 2, "name": "ui"}, "preamble")
+
+        cmd = mock_popen.call_args[0][0]
+        assert cmd[0] == "claude"
+        # -p 가 없으면 대화형 TUI 가 떠서 하네스가 통째로 매달린다.
+        assert "-p" in cmd
+        # 하네스는 승인 프롬프트에 답할 사람이 없다.
+        assert "--dangerously-skip-permissions" in cmd
+        # codex 의 "-" 는 claude 에 없는 인자다. 붙이면 프롬프트로 해석된다.
+        assert "-" not in cmd
+
+    def test_claude_agent_passes_prompt_via_stdin(self, tmp_project, phase_dir):
+        """프롬프트는 argv 가 아닌 stdin 이다 (guardrails 가 ARG_MAX 를 넘길 수 있다)."""
+        with patch.object(ex, "ROOT", tmp_project):
+            inst = ex.StepExecutor("0-mvp", agent="claude")
+        inst._root = str(tmp_project)
+        inst._phase_dir = phase_dir
+
+        proc = _mock_codex_proc(stdout="{}")
+        with patch("subprocess.Popen", return_value=proc) as mock_popen:
+            inst._invoke_codex({"step": 2, "name": "ui"}, "PREAMBLE\n")
+
+        sent = proc.communicate.call_args[1]["input"]
+        assert sent.startswith("PREAMBLE\n")
+        assert "UI를 구현하세요" in sent
+        assert not any("PREAMBLE" in str(a) for a in mock_popen.call_args[0][0])
+
+    def test_claude_agent_runs_in_its_own_session(self, tmp_project, phase_dir):
+        """타임아웃 때 손자까지 그룹째 죽여야 하는 것은 에이전트와 무관하다."""
+        with patch.object(ex, "ROOT", tmp_project):
+            inst = ex.StepExecutor("0-mvp", agent="claude")
+        inst._root = str(tmp_project)
+        inst._phase_dir = phase_dir
+
+        with patch("subprocess.Popen", return_value=_mock_codex_proc()) as mock_popen:
+            inst._invoke_codex({"step": 2, "name": "ui"}, "preamble")
+
+        assert mock_popen.call_args[1]["start_new_session"] is True
+
+    def test_unknown_agent_rejected(self, tmp_project):
+        with patch.object(ex, "ROOT", tmp_project):
+            with pytest.raises(SystemExit):
+                ex.StepExecutor("0-mvp", agent="gemini")
+
+    def test_error_message_names_the_agent(self, tmp_project, phase_dir):
+        """재시도 프롬프트·error_message 가 어느 CLI 가 죽었는지 밝혀야 한다."""
+        with patch.object(ex, "ROOT", tmp_project):
+            inst = ex.StepExecutor("0-mvp", agent="claude")
+
+        msg = inst._fallback_error({"exitCode": 1, "stderr": ""})
+        assert "Claude" in msg
+        assert "Codex" not in msg
+
+    def test_main_passes_agent_flag(self, tmp_project):
+        with patch("sys.argv", ["execute.py", "0-mvp", "--agent", "claude"]):
+            with patch.object(ex, "ROOT", tmp_project):
+                with patch.object(ex.StepExecutor, "run"):
+                    with patch.object(ex.StepExecutor, "__init__", return_value=None) as init:
+                        ex.main()
+        assert init.call_args[1]["agent"] == "claude"
+
+    def test_main_defaults_to_codex(self, tmp_project):
+        with patch("sys.argv", ["execute.py", "0-mvp"]):
+            with patch.object(ex, "ROOT", tmp_project):
+                with patch.object(ex.StepExecutor, "run"):
+                    with patch.object(ex.StepExecutor, "__init__", return_value=None) as init:
+                        ex.main()
+        assert init.call_args[1]["agent"] == "codex"
