@@ -29,7 +29,10 @@
     {
       "step": 3,
       "name": "monthly-report",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-18T10:52:30+0900",
+      "summary": "POST /api/reports/[yearMonth]가 describeMonthlyReport(facts) 1회 호출로 MonthlyReportSection[]을 JSON 문자열 narrative에 저장하며 monthly_reports.generation_started_at과 claim_monthly_report_generation RPC로 중복 생성을 막음",
+      "completed_at": "2026-08-18T11:07:36+0900"
     }
   ],
   "created_at": "2026-08-18T09:28:35+0900"
