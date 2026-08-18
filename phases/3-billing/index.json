@@ -13,7 +13,10 @@
     {
       "step": 1,
       "name": "polar-webhook",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-18T20:24:32+0900",
+      "summary": "POST /api/webhooks/polar (runtime nodejs, 미들웨어 매처가 /api 제외라 통과). 서명 검증은 src/services/polar.ts 의 verifyPolarWebhook() — @polar-sh/sdk/webhooks 의 validateEvent(rawBody, headers, POLAR_WEBHOOK_SECRET) 를 감싸 {status:'verified'|'invalid_signature'|'unsupported'} 를 돌려준다. request.text() 로 raw body 를 읽고 검증 실패는 401(본문 파싱 없음). 멱등키는 Standard Webhooks 의 webhook-id 헤더이고, 새 테이블 public.processed_webhook_events(event_id pk, event_type, received_at) 에 INSERT 충돌(23505)로 판정한다(select 후 insert 아님). 이후 처리 실패 시 그 row 를 지우고 400/500 을 돌려준다. 처리 이벤트 6종: subscription.created/active/uncanceled → active, subscription.canceled → canceled(current_period_end 유지), subscription.revoked → canceled(endedAt ?? endsAt), subscription.updated → cancelAtPeriodEnd/endedAt 로 판정(해지 이벤트와 순서가 뒤집혀도 권한이 되살아나지 않는다). 그 외 이벤트는 로그만 남기고 200. user_id 는 event.data.metadata.user_id 에서만 읽고(없으면 400) 이메일 추정 없음. profiles 갱신은 service role 클라이언트로 subscription_status/current_period_end/polar_customer_id 만 쓰고 trial_started_at 은 건드리지 않는다. processed_webhook_events 는 RLS on + 정책 없음(service role 전용). 필요한 env: POLAR_WEBHOOK_SECRET(이미 .env.example 에 있음). src/types/database.ts 재생성 완료.",
+      "completed_at": "2026-08-18T20:32:22+0900"
     },
     {
       "step": 2,
