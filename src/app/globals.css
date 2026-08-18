@@ -79,6 +79,7 @@
   --font-size-kpi-value: 26px;
   --font-size-insight-impact: 24px;
   --font-size-section-title: 15px;
+  --font-size-detail-copy: 18px;
   --font-size-body: 14px;
   --font-size-copy: 15px;
   --font-size-body-sm: 13px;
@@ -1594,6 +1595,276 @@ a:hover {
 .review-recurring-table td:nth-child(n + 2) {
   text-align: right;
   white-space: nowrap;
+}
+
+.signal-detail-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-inline: auto;
+  max-width: 880px;
+  width: 100%;
+}
+
+.signal-detail-back a {
+  color: var(--text-link);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.signal-detail-back a:hover {
+  color: var(--blue-pressed);
+}
+
+.signal-detail-hero,
+.signal-detail-panel,
+.signal-detail-not-found {
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-xl);
+}
+
+.signal-detail-hero {
+  padding: var(--space-xl);
+}
+
+.signal-detail-hero__meta {
+  align-items: center;
+  color: var(--text-tertiary);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  gap: var(--space-xs);
+  letter-spacing: var(--letter-spacing-normal);
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.signal-detail-hero__key {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  text-transform: none;
+}
+
+.signal-detail-hero h1 {
+  color: var(--ink);
+  font-size: var(--font-size-title);
+  font-weight: 500;
+  letter-spacing: var(--letter-spacing-normal);
+  line-height: 1.25;
+  margin: var(--space-xs) 0 0;
+  overflow-wrap: anywhere;
+}
+
+.signal-detail-narrative {
+  color: var(--text-body);
+  font-size: var(--font-size-detail-copy);
+  font-weight: 400;
+  line-height: 1.55;
+  margin: var(--space-lg) 0 0;
+}
+
+.signal-detail-panel {
+  padding: var(--space-lg);
+}
+
+.signal-detail-panel__header {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--space-md);
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.signal-detail-section-title {
+  color: var(--ink);
+  font-size: var(--font-size-section-title);
+  font-weight: 500;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.signal-detail-panel__subtitle,
+.signal-detail-panel__meta,
+.signal-detail-empty {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.4;
+  margin: var(--space-xxs) 0 0;
+}
+
+.signal-detail-panel__meta {
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+.signal-detail-metrics {
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: var(--space-md) 0 0;
+}
+
+.signal-detail-metric {
+  background: var(--surface-soft);
+  border: var(--line-width) solid var(--hairline-soft);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+  min-height: 5rem;
+  padding: var(--space-md);
+}
+
+.signal-detail-metric dt {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.signal-detail-metric dd {
+  color: var(--ink);
+  font-size: var(--font-size-body);
+  line-height: 1.4;
+  margin: 0;
+  min-height: 1.4em;
+  text-align: right;
+}
+
+.signal-detail-condition {
+  background: var(--surface-soft);
+  border-color: var(--hairline-soft);
+}
+
+.signal-detail-condition p {
+  color: var(--text-body);
+  font-size: var(--font-size-copy);
+  line-height: 1.65;
+  margin: var(--space-sm) 0 0;
+}
+
+.signal-detail-subtotals {
+  align-items: center;
+  background: var(--surface-soft);
+  border: var(--line-width) solid var(--hairline-soft);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.signal-detail-subtotals span {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.4;
+}
+
+.signal-detail-subtotals strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.signal-detail-table-wrap {
+  overflow-x: auto;
+}
+
+.signal-detail-table {
+  border-collapse: collapse;
+  color: var(--text-body);
+  font-size: var(--font-size-body);
+  line-height: 1.4;
+  min-width: 48rem;
+  width: 100%;
+}
+
+.signal-detail-table th {
+  background: var(--surface-soft);
+  border-bottom: var(--line-width) solid var(--hairline);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  line-height: 1.4;
+  padding: var(--space-sm);
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.signal-detail-table td {
+  border-bottom: var(--line-width) solid var(--hairline-soft);
+  padding: var(--space-sm);
+  vertical-align: middle;
+}
+
+.signal-detail-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.signal-detail-evidence-row--highlighted td {
+  background: var(--surface-soft);
+}
+
+.signal-detail-table__date,
+.signal-detail-table__amount {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.signal-detail-merchant {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+  min-width: 0;
+}
+
+.signal-detail-merchant__raw {
+  color: var(--ink);
+}
+
+.signal-detail-merchant__normalized {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-body-xs);
+  overflow-wrap: anywhere;
+}
+
+.signal-detail-category {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-xs);
+  white-space: nowrap;
+}
+
+.signal-detail-category__dot {
+  border: var(--line-width) solid var(--canvas);
+  border-radius: var(--radius-full);
+  display: inline-block;
+  height: 0.625rem;
+  width: 0.625rem;
+}
+
+.signal-detail-not-found {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-inline: auto;
+  max-width: 880px;
+  padding: var(--space-xl);
+  width: 100%;
+}
+
+.signal-detail-not-found p {
+  color: var(--ink);
+  font-size: var(--font-size-title);
+  font-weight: 500;
+  line-height: 1.25;
+  margin: 0;
 }
 
 .transactions-page {
