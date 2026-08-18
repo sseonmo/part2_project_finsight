@@ -5,6 +5,7 @@ execute.py 리팩터링 안전망 테스트.
 
 import json
 import os
+import signal
 import subprocess
 import sys
 import textwrap
@@ -655,16 +656,27 @@ class TestRunOrder:
 # _invoke_codex (mocked)
 # ---------------------------------------------------------------------------
 
+def _mock_codex_proc(stdout='{"result": "ok"}', stderr="", returncode=0, communicate=None):
+    """codex Popen 핸들 대역. communicate 로 side_effect 를 직접 줄 수 있다."""
+    proc = MagicMock()
+    proc.pid = 4242
+    proc.returncode = returncode
+    if communicate is None:
+        proc.communicate.return_value = (stdout, stderr)
+    else:
+        proc.communicate.side_effect = communicate
+    return proc
+
+
 class TestInvokeCodex:
     def test_invokes_codex_with_correct_args(self, executor):
-        mock_result = MagicMock(returncode=0, stdout='{"result": "ok"}', stderr="")
         step = {"step": 2, "name": "ui"}
         preamble = "PREAMBLE\n"
 
-        with patch("subprocess.run", return_value=mock_result) as mock_run:
-            output = executor._invoke_codex(step, preamble)
+        with patch("subprocess.Popen", return_value=_mock_codex_proc()) as mock_popen:
+            executor._invoke_codex(step, preamble)
 
-        cmd = mock_run.call_args[0][0]
+        cmd = mock_popen.call_args[0][0]
         assert cmd[0] == "codex"
         assert cmd[1] == "exec"
         assert "--dangerously-bypass-approvals-and-sandbox" in cmd
@@ -673,16 +685,29 @@ class TestInvokeCodex:
         # "Reading additional input from stdin..." 으로 멈추지 않게 하는 장치다.
         assert cmd[-1] == "-"
 
-    def test_prompt_passed_via_stdin(self, executor):
-        """프롬프트는 argv가 아닌 stdin으로 전달한다 (ARG_MAX 초과 방지)."""
-        mock_result = MagicMock(returncode=0, stdout="{}", stderr="")
+    def test_runs_codex_in_its_own_session(self, executor):
+        """codex 를 새 세션(프로세스 그룹)의 리더로 띄운다.
+
+        이게 없으면 타임아웃 때 codex 가 만든 손자(zsh 등)를 그룹째 죽일 수 없고,
+        손자가 stdout 파이프를 물고 있는 한 하네스가 통째로 매달린다.
+        """
         step = {"step": 2, "name": "ui"}
 
-        with patch("subprocess.run", return_value=mock_result) as mock_run:
+        with patch("subprocess.Popen", return_value=_mock_codex_proc()) as mock_popen:
+            executor._invoke_codex(step, "preamble")
+
+        assert mock_popen.call_args[1]["start_new_session"] is True
+
+    def test_prompt_passed_via_stdin(self, executor):
+        """프롬프트는 argv가 아닌 stdin으로 전달한다 (ARG_MAX 초과 방지)."""
+        step = {"step": 2, "name": "ui"}
+        proc = _mock_codex_proc(stdout="{}")
+
+        with patch("subprocess.Popen", return_value=proc) as mock_popen:
             executor._invoke_codex(step, "PREAMBLE\n")
 
-        cmd = mock_run.call_args[0][0]
-        stdin_input = mock_run.call_args[1]["input"]
+        cmd = mock_popen.call_args[0][0]
+        stdin_input = proc.communicate.call_args[1]["input"]
         assert "PREAMBLE" in stdin_input
         assert "UI를 구현하세요" in stdin_input
         # argv에는 프롬프트가 포함되지 않아야 한다
@@ -691,9 +716,12 @@ class TestInvokeCodex:
     def test_timeout_returns_failed_output(self, executor):
         """타임아웃 시 traceback 없이 실패 output을 기록하고 반환한다."""
         step = {"step": 2, "name": "ui"}
-        exc = subprocess.TimeoutExpired(cmd="codex", timeout=1800)
+        timeout = subprocess.TimeoutExpired(cmd="codex", timeout=1800)
+        proc = _mock_codex_proc(communicate=[timeout, ("partial", "")])
 
-        with patch("subprocess.run", side_effect=exc):
+        with patch("subprocess.Popen", return_value=proc), \
+                patch("os.getpgid", return_value=4242), \
+                patch("os.killpg"):
             output = executor._invoke_codex(step, "preamble")
 
         assert output["exitCode"] != 0
@@ -704,20 +732,56 @@ class TestInvokeCodex:
         data = json.loads(output_file.read_text())
         assert data["exitCode"] != 0
 
+    def test_timeout_kills_the_whole_process_group(self, executor):
+        """타임아웃이면 codex 손자까지 그룹째 정리한다.
+
+        proc.kill() 로 자식만 죽이면 손자가 파이프를 물고 있어 communicate 가
+        반환하지 않는다. 실제로 이 때문에 step 하나가 6시간 넘게 매달린 적이 있다.
+        """
+        step = {"step": 2, "name": "ui"}
+        timeout = subprocess.TimeoutExpired(cmd="codex", timeout=1800)
+        proc = _mock_codex_proc(communicate=[timeout, ("partial", "")])
+
+        with patch("subprocess.Popen", return_value=proc), \
+                patch("os.getpgid", return_value=4242), \
+                patch("os.killpg") as mock_killpg:
+            executor._invoke_codex(step, "preamble")
+
+        assert mock_killpg.call_count >= 1
+        pgid, sig = mock_killpg.call_args_list[0][0]
+        assert pgid == 4242
+        assert sig == signal.SIGTERM
+
+    def test_timeout_escalates_to_sigkill_when_group_survives(self, executor):
+        """SIGTERM 뒤에도 파이프가 안 닫히면 SIGKILL 로 올린다."""
+        step = {"step": 2, "name": "ui"}
+        timeout = subprocess.TimeoutExpired(cmd="codex", timeout=1800)
+        proc = _mock_codex_proc(communicate=timeout)  # 계속 막힌다
+
+        with patch("subprocess.Popen", return_value=proc), \
+                patch("os.getpgid", return_value=4242), \
+                patch("os.killpg") as mock_killpg:
+            output = executor._invoke_codex(step, "preamble")
+
+        sent = [call[0][1] for call in mock_killpg.call_args_list]
+        assert signal.SIGTERM in sent
+        assert signal.SIGKILL in sent
+        # 그래도 하네스는 반환해야 한다 — 여기서 멈추면 재시도가 영영 안 돈다
+        assert output["exitCode"] != 0
+
     def test_codex_cli_missing_exits(self, executor):
         """codex CLI가 없으면 깔끔한 에러 메시지와 함께 종료한다."""
         step = {"step": 2, "name": "ui"}
 
-        with patch("subprocess.run", side_effect=FileNotFoundError("codex")):
+        with patch("subprocess.Popen", side_effect=FileNotFoundError("codex")):
             with pytest.raises(SystemExit) as exc_info:
                 executor._invoke_codex(step, "preamble")
         assert exc_info.value.code == 1
 
     def test_saves_output_json(self, executor):
-        mock_result = MagicMock(returncode=0, stdout='{"ok": true}', stderr="")
         step = {"step": 2, "name": "ui"}
 
-        with patch("subprocess.run", return_value=mock_result):
+        with patch("subprocess.Popen", return_value=_mock_codex_proc(stdout='{"ok": true}')):
             executor._invoke_codex(step, "preamble")
 
         output_file = executor._phase_dir / "step2-output.json"
@@ -734,13 +798,13 @@ class TestInvokeCodex:
         assert exc_info.value.code == 1
 
     def test_timeout_is_1800(self, executor):
-        mock_result = MagicMock(returncode=0, stdout="{}", stderr="")
         step = {"step": 2, "name": "ui"}
+        proc = _mock_codex_proc(stdout="{}")
 
-        with patch("subprocess.run", return_value=mock_result) as mock_run:
+        with patch("subprocess.Popen", return_value=proc):
             executor._invoke_codex(step, "preamble")
 
-        assert mock_run.call_args[1]["timeout"] == 1800
+        assert proc.communicate.call_args[1]["timeout"] == 1800
 
 
 # ---------------------------------------------------------------------------

@@ -10,6 +10,7 @@ import argparse
 import contextlib
 import json
 import os
+import signal
 import subprocess
 import sys
 import threading
@@ -55,6 +56,7 @@ class StepExecutor:
 
     MAX_RETRIES = 3
     CODEX_TIMEOUT = 1800  # Codex 호출 제한 시간 (초)
+    KILL_GRACE = 10  # 타임아웃 후 프로세스 그룹이 정리되기를 기다리는 시간 (초)
     FEAT_MSG = "feat({phase}): step {num} — {name}"
     CHORE_MSG = "chore({phase}): step {num} output"
     SETUP_MSG = "chore({phase}): step 정의 추가"
@@ -286,19 +288,28 @@ class StepExecutor:
         # stdin..." 상태로 멈춰 타임아웃까지 통째로 대기한다.
         prompt = preamble + step_file.read_text(encoding="utf-8")
         cmd = ["codex", "exec", "--dangerously-bypass-approvals-and-sandbox", "--json", "-"]
+
+        # start_new_session=True 로 codex를 새 프로세스 그룹의 리더로 만든다.
+        # codex는 내부에서 /bin/zsh를 띄우고 그 손자들이 stdout 파이프를 상속받는데,
+        # subprocess.run의 timeout은 자식만 kill한 뒤 파이프가 닫히기를 기다리므로
+        # 손자가 살아 있으면 영원히 반환하지 않는다. 그룹째 죽여야 타임아웃이 실제로 듣는다.
         try:
-            result = subprocess.run(
-                cmd, cwd=self._root, capture_output=True, text=True,
-                input=prompt, timeout=self.CODEX_TIMEOUT,
+            proc = subprocess.Popen(
+                cmd, cwd=self._root, text=True,
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                start_new_session=True,
             )
-            exit_code, stdout, stderr = result.returncode, result.stdout, result.stderr
-        except subprocess.TimeoutExpired as e:
-            exit_code = -1
-            stdout = self._decode(e.stdout)
-            stderr = f"Codex 호출이 {self.CODEX_TIMEOUT}초 안에 완료되지 않아 중단됨"
         except FileNotFoundError:
             print(f"\n  ERROR: 'codex' CLI를 찾을 수 없습니다. PATH를 확인하세요.")
             sys.exit(1)
+
+        try:
+            stdout, stderr = proc.communicate(input=prompt, timeout=self.CODEX_TIMEOUT)
+            exit_code = proc.returncode
+        except subprocess.TimeoutExpired:
+            exit_code = -1
+            stdout = self._kill_process_group(proc)
+            stderr = f"Codex 호출이 {self.CODEX_TIMEOUT}초 안에 완료되지 않아 중단됨"
 
         if exit_code != 0:
             print(f"\n  WARN: Codex가 비정상 종료됨 (code {exit_code})")
@@ -316,14 +327,31 @@ class StepExecutor:
 
         return output
 
-    @staticmethod
-    def _decode(data) -> str:
-        """TimeoutExpired가 담아주는 부분 출력(bytes 또는 str)을 str로 정규화한다."""
-        if data is None:
+    def _kill_process_group(self, proc) -> str:
+        """codex와 그것이 띄운 손자 프로세스까지 그룹째 정리하고 남은 stdout을 회수한다.
+
+        proc.kill()만으로는 부족하다 — codex가 실행한 /bin/zsh 손자들이 같은 stdout
+        파이프를 물고 있으면 communicate()가 반환하지 않아 하네스가 통째로 매달린다.
+        SIGTERM으로 정리되지 않으면 SIGKILL로 한 번 더 보낸다.
+        """
+        try:
+            pgid = os.getpgid(proc.pid)
+        except (ProcessLookupError, OSError):
             return ""
-        if isinstance(data, bytes):
-            return data.decode("utf-8", errors="replace")
-        return data
+
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            try:
+                os.killpg(pgid, sig)
+            except (ProcessLookupError, OSError):
+                break
+
+            try:
+                stdout, _ = proc.communicate(timeout=self.KILL_GRACE)
+                return stdout or ""
+            except subprocess.TimeoutExpired:
+                continue  # 아직 파이프를 물고 있다 — 더 센 시그널로 재시도
+
+        return ""
 
     @staticmethod
     def _fallback_error(output: dict) -> str:
