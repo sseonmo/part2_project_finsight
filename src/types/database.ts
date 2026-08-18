@@ -370,6 +370,18 @@ export type Database = {
           transacted_on: string
         }[]
       }
+      get_recurring_signals_latest: {
+        Args: { p_user_id: string }
+        Returns: {
+          id: string
+          impact: number
+          narrative: string
+          payload: Json
+          period: string
+          target_key: string
+          type: Database["public"]["Enums"]["spending_signal_type"]
+        }[]
+      }
       get_seen_merchants_before_period: {
         Args: { p_period: string; p_user_id: string }
         Returns: {

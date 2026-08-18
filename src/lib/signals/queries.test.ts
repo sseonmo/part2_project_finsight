@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   fetchCategoryAmountMedians,
   fetchCategoryMonthlyTotals,
+  fetchRecurringSignalsLatest,
   fetchMerchantHistory,
   fetchPeriodTransactions,
   fetchSeenMerchantsBeforePeriod,
@@ -103,6 +104,44 @@ describe("signal aggregate query wrappers", () => {
     expect(client.rpc).toHaveBeenCalledWith("get_seen_merchants_before_period", {
       p_user_id: "user-1",
       p_period: "2026-03-01",
+    });
+  });
+
+  it("calls the latest recurring signals RPC and maps snake_case columns", async () => {
+    const payload = {
+      intervalDays: [31, 30],
+      latestAmount: 17_000,
+      merchantNormalized: "NETFLIX",
+      occurrenceCount: 3,
+    };
+    const client = supabaseMock([
+      {
+        id: "signal-recurring",
+        impact: null,
+        narrative: null,
+        payload,
+        period: "2026-03-01",
+        target_key: "NETFLIX",
+        type: "recurring_payment",
+      },
+    ]);
+
+    await expect(
+      fetchRecurringSignalsLatest(client, "user-1"),
+    ).resolves.toEqual([
+      {
+        id: "signal-recurring",
+        impact: null,
+        narrative: null,
+        payload,
+        period: "2026-03-01",
+        targetKey: "NETFLIX",
+        type: "recurring_payment",
+      },
+    ]);
+
+    expect(client.rpc).toHaveBeenCalledWith("get_recurring_signals_latest", {
+      p_user_id: "user-1",
     });
   });
 

@@ -5,10 +5,25 @@ import type { Database } from "@/types/database";
 import type {
   CategoryAmountMedian,
   CategoryMonthlyTotal,
+  SignalType,
   SignalTransaction,
 } from "./types";
 
 export type SignalAggregateClient = Pick<SupabaseClient<Database>, "rpc">;
+type RecurringSignalType = Extract<
+  SignalType,
+  "recurring_payment" | "recurring_price_up"
+>;
+
+export type RecurringSignalLatest = {
+  id: string;
+  type: RecurringSignalType;
+  period: string;
+  targetKey: string;
+  payload: Database["public"]["Functions"]["get_recurring_signals_latest"]["Returns"][number]["payload"];
+  impact: number | null;
+  narrative: string | null;
+};
 
 function throwIfRpcError(error: { message?: string } | null): void {
   if (error) {
@@ -109,4 +124,25 @@ export async function fetchSeenMerchantsBeforePeriod(
   throwIfRpcError(error);
 
   return (data ?? []).map((row) => row.merchant_normalized);
+}
+
+export async function fetchRecurringSignalsLatest(
+  client: SignalAggregateClient,
+  userId: string,
+): Promise<RecurringSignalLatest[]> {
+  const { data, error } = await client.rpc("get_recurring_signals_latest", {
+    p_user_id: userId,
+  });
+
+  throwIfRpcError(error);
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    impact: row.impact === null ? null : Number(row.impact),
+    narrative: row.narrative,
+    payload: row.payload,
+    period: row.period,
+    targetKey: row.target_key,
+    type: row.type as RecurringSignalType,
+  }));
 }

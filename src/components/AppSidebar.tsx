@@ -49,6 +49,12 @@ function navItems(latestYearMonth: string | null): NavItem[] {
       match: (pathname) => pathname.startsWith("/dashboard/report"),
     },
     {
+      dotClassName: "app-sidebar__dot--subscriptions",
+      href: "/dashboard/subscriptions",
+      label: "반복 지출",
+      match: (pathname) => pathname.startsWith("/dashboard/subscriptions"),
+    },
+    {
       dotClassName: "app-sidebar__dot--billing",
       href: "/dashboard/billing",
       label: "요금제",

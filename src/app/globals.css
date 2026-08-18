@@ -753,6 +753,10 @@ a:hover {
   background: var(--cat-housing-telecom);
 }
 
+.app-sidebar__dot--subscriptions {
+  background: var(--cat-shopping);
+}
+
 .app-sidebar__dot--billing {
   background: var(--cat-cafe-snack);
 }
@@ -1595,6 +1599,165 @@ a:hover {
 .review-recurring-table td:nth-child(n + 2) {
   text-align: right;
   white-space: nowrap;
+}
+
+.subscriptions-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.subscriptions-panel {
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+}
+
+.subscriptions-panel__header {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--space-md);
+  justify-content: space-between;
+}
+
+.subscriptions-panel__meta {
+  align-items: flex-end;
+  color: var(--text-tertiary);
+  display: flex;
+  flex-direction: column;
+  font-size: var(--font-size-body-sm);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.subscriptions-panel__meta .tabular-nums {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.subscriptions-empty {
+  background: var(--surface-soft);
+  border: var(--line-width) solid var(--hairline-soft);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+.subscriptions-empty h3 {
+  color: var(--ink);
+  font-size: var(--font-size-section-title);
+  font-weight: 500;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.subscriptions-empty p {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.4;
+  margin: var(--space-xs) 0 0;
+}
+
+.subscriptions-table-wrap {
+  overflow-x: auto;
+}
+
+.subscriptions-table {
+  border-collapse: collapse;
+  color: var(--text-body);
+  font-size: var(--font-size-body);
+  line-height: 1.4;
+  min-width: 48rem;
+  width: 100%;
+}
+
+.subscriptions-table th {
+  background: var(--surface-soft);
+  border-bottom: var(--line-width) solid var(--hairline);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  line-height: 1.4;
+  padding: var(--space-sm);
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.subscriptions-table td {
+  border-bottom: var(--line-width) solid var(--hairline-soft);
+  padding: var(--space-sm);
+  vertical-align: top;
+}
+
+.subscriptions-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.subscriptions-table th:nth-child(n + 2),
+.subscriptions-table td:nth-child(n + 2) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.subscriptions-merchant {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.subscriptions-merchant__header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.subscriptions-merchant__name {
+  color: var(--ink);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.subscriptions-merchant__narrative {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.subscriptions-table__amount,
+.subscriptions-table__duration,
+.subscriptions-price-up {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+}
+
+.subscriptions-table__amount,
+.subscriptions-table__interval,
+.subscriptions-table__duration {
+  color: var(--ink);
+}
+
+.subscriptions-table__secondary,
+.subscriptions-price-up__amounts {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-body-xs);
+  line-height: 1.4;
+}
+
+.subscriptions-price-up {
+  margin-top: var(--space-xs);
+}
+
+.subscriptions-price-up__impact {
+  color: var(--brand-red-dark);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.4;
 }
 
 .signal-detail-page {
@@ -2453,7 +2616,8 @@ a:hover {
   .dashboard-insight-card__header,
   .review-summary-card,
   .review-signal-card__header,
-  .review-panel__header {
+  .review-panel__header,
+  .subscriptions-panel__header {
     align-items: flex-start;
     flex-direction: column;
   }
