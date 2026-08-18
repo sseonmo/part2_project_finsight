@@ -213,6 +213,9 @@ export type Database = {
         Row: {
           card_label: string
           card_label_mismatch_warning: string | null
+          created_at: string
+          date_format: string | null
+          date_format_resolved_by: string | null
           duplicate_count: number
           failed_reason: string | null
           header_hash: string | null
@@ -230,6 +233,9 @@ export type Database = {
         Insert: {
           card_label: string
           card_label_mismatch_warning?: string | null
+          created_at?: string
+          date_format?: string | null
+          date_format_resolved_by?: string | null
           duplicate_count?: number
           failed_reason?: string | null
           header_hash?: string | null
@@ -247,6 +253,9 @@ export type Database = {
         Update: {
           card_label?: string
           card_label_mismatch_warning?: string | null
+          created_at?: string
+          date_format?: string | null
+          date_format_resolved_by?: string | null
           duplicate_count?: number
           failed_reason?: string | null
           header_hash?: string | null

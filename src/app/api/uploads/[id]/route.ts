@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+import {
+  evaluateEntitlement,
+  type SubscriptionStatus,
+} from "@/lib/entitlement";
 import { createServerClient } from "@/services/supabase";
 
 const UPLOAD_BUCKET = "transaction-csv-uploads";
@@ -8,6 +12,12 @@ const UPLOAD_JOB_SELECT =
 
 type RouteContext = {
   params: Promise<{ id: string }>;
+};
+
+type ProfileEntitlementFields = {
+  subscription_status: SubscriptionStatus;
+  trial_started_at: string | null;
+  current_period_end: string | null;
 };
 
 function jsonError(message: string, status: number): NextResponse {
@@ -67,19 +77,55 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
   const { data: job, error } = await supabase
     .from("upload_jobs")
-    .delete()
+    .select("id, storage_key")
     .eq("id", id)
     .eq("user_id", user.id)
-    .select("id, storage_key")
     .single();
 
   if (error || !job) {
     return jsonError("업로드 작업을 찾을 수 없습니다.", 404);
   }
 
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("subscription_status, trial_started_at, current_period_end")
+    .eq("user_id", user.id)
+    .single<ProfileEntitlementFields>();
+
+  if (profileError || !profile) {
+    return jsonError("프로필을 확인하지 못했습니다.", 403);
+  }
+
+  const entitlement = evaluateEntitlement({
+    subscriptionStatus: profile.subscription_status,
+    trialStartedAt: profile.trial_started_at
+      ? new Date(profile.trial_started_at)
+      : null,
+    currentPeriodEnd: profile.current_period_end
+      ? new Date(profile.current_period_end)
+      : null,
+    now: new Date(),
+  });
+
+  if (!entitlement.canWrite) {
+    return jsonError("체험 또는 구독이 만료되어 업로드를 삭제할 수 없습니다.", 403);
+  }
+
+  const { data: deletedJob, error: deleteError } = await supabase
+    .from("upload_jobs")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .select("id, storage_key")
+    .single();
+
+  if (deleteError || !deletedJob) {
+    return jsonError("업로드 작업을 찾을 수 없습니다.", 404);
+  }
+
   const { error: storageError } = await supabase.storage
     .from(UPLOAD_BUCKET)
-    .remove([job.storage_key]);
+    .remove([deletedJob.storage_key]);
 
   if (storageError) {
     return jsonError("원본 파일을 삭제하지 못했습니다.", 500);

@@ -66,6 +66,8 @@ type UploadJob = {
   headerHash: string | null;
   mapping: ColumnMapping | null;
   mappingAttemptCount: number;
+  dateFormat: string | null;
+  dateFormatResolvedBy: "scan" | "assumed-iso" | null;
 };
 
 type UploadJobPatch = Partial<UploadJob> & {
@@ -205,6 +207,12 @@ function toColumnMapping(value: unknown): ColumnMapping | null {
   }
 
   return mapping;
+}
+
+function toDateFormatResolvedBy(
+  value: string | null,
+): "scan" | "assumed-iso" | null {
+  return value === "scan" || value === "assumed-iso" ? value : null;
 }
 
 export function classifyMappingFailure(
@@ -517,6 +525,11 @@ export async function runProcessUploadPipeline(input: {
     const trial = applyMapping(csvHeader, rows, job.mapping);
     const failureRate = trial.total === 0 ? 0 : trial.failed / trial.total;
 
+    await repository.updateJob(job.id, {
+      dateFormat: trial.dateFormat,
+      dateFormatResolvedBy: trial.dateFormatResolvedBy,
+    });
+
     if (trial.total > 0 && failureRate > CSV_FULL_FAILURE_RATE_MAX) {
       const failure = classifyMappingFailure({
         kind: "full",
@@ -685,6 +698,8 @@ function toUploadJob(
     headerHash: row.header_hash,
     mapping: toColumnMapping(row.mapping),
     mappingAttemptCount: row.mapping_attempt_count,
+    dateFormat: row.date_format,
+    dateFormatResolvedBy: toDateFormatResolvedBy(row.date_format_resolved_by),
   };
 }
 
@@ -720,6 +735,12 @@ function toUploadJobUpdate(patch: UploadJobPatch): TablesUpdate<"upload_jobs"> {
   }
   if (patch.cardLabelMismatchWarning !== undefined) {
     update.card_label_mismatch_warning = patch.cardLabelMismatchWarning;
+  }
+  if (patch.dateFormat !== undefined) {
+    update.date_format = patch.dateFormat;
+  }
+  if (patch.dateFormatResolvedBy !== undefined) {
+    update.date_format_resolved_by = patch.dateFormatResolvedBy;
   }
 
   return update;

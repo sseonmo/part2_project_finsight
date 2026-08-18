@@ -1559,6 +1559,109 @@ a:hover {
   color: var(--text-tertiary);
 }
 
+.uploads-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.uploads-panel {
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+}
+
+.uploads-panel__header {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--space-md);
+  justify-content: space-between;
+}
+
+.upload-history-table-wrap {
+  overflow-x: auto;
+}
+
+.upload-history-table {
+  border-collapse: collapse;
+  color: var(--text-body);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.4;
+  min-width: 68rem;
+  width: 100%;
+}
+
+.upload-history-table th {
+  background: var(--surface-soft);
+  border-bottom: var(--line-width) solid var(--hairline);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  line-height: 1.4;
+  padding: var(--space-sm);
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.upload-history-table td {
+  border-bottom: var(--line-width) solid var(--hairline-soft);
+  padding: var(--space-sm);
+  vertical-align: top;
+}
+
+.upload-history-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.upload-history-file,
+.upload-history-status,
+.upload-history-date-format,
+.upload-history-delete {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.upload-history-file__name {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.upload-history-file__created,
+.upload-history-status__detail,
+.upload-history-muted,
+.upload-history-date-format__detail,
+.upload-history-date-format__recovery,
+.upload-history-delete__hint,
+.upload-history-delete__error {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-xs);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.upload-history-file__created {
+  color: var(--text-tertiary);
+}
+
+.upload-history-date-format__code {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-body-sm);
+}
+
+.upload-history-date-format__recovery {
+  color: var(--text-tertiary);
+}
+
+.upload-history-delete__error {
+  color: var(--brand-red-dark);
+}
+
 @media (max-width: 767px) {
   .app-sidebar {
     display: none;
@@ -1628,6 +1731,7 @@ a:hover {
   }
 
   .transactions-panel__header,
+  .uploads-panel__header,
   .transactions-pagination {
     align-items: flex-start;
     flex-direction: column;

@@ -29,6 +29,8 @@ export type MappingTrial = {
   failed: number;
   total: number;
   successRate: number;
+  dateFormat: string;
+  dateFormatResolvedBy: "scan" | "assumed-iso";
 };
 
 function buildHeaderIndex(header: string[]): Map<string, number> {
@@ -71,12 +73,22 @@ export function applyMapping(
   const total = rows.length;
 
   if (dateIndex === null || amountIndex === null || merchantIndex === null) {
-    return { parsed: [], failed: total, total, successRate: total === 0 ? 0 : 0 };
+    const dateDecision = decideDateFormat([]);
+
+    return {
+      parsed: [],
+      failed: total,
+      total,
+      successRate: 0,
+      dateFormat: dateDecision.format,
+      dateFormatResolvedBy: dateDecision.ambiguousResolvedBy,
+    };
   }
 
-  const dateFormat = decideDateFormat(
+  const dateDecision = decideDateFormat(
     rows.map((row) => cellAt(row, dateIndex) ?? ""),
-  ).format;
+  );
+  const dateFormat = dateDecision.format;
   const parsed: ParsedRow[] = [];
   let failed = 0;
 
@@ -121,5 +133,7 @@ export function applyMapping(
     failed,
     total,
     successRate: total === 0 ? 0 : parsed.length / total,
+    dateFormat,
+    dateFormatResolvedBy: dateDecision.ambiguousResolvedBy,
   };
 }

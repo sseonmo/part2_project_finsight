@@ -18,6 +18,15 @@ function createSupabaseMock(
     uncategorized_count: number;
     card_label_mismatch_warning: string | null;
   } | null,
+  profile: {
+    subscription_status: "trialing" | "active" | "canceled";
+    trial_started_at: string | null;
+    current_period_end: string | null;
+  } | null = {
+    subscription_status: "active",
+    trial_started_at: "2026-08-17T00:00:00.000Z",
+    current_period_end: null,
+  },
 ) {
   const remove = vi.fn().mockResolvedValue({ data: [], error: null });
   const deleteEqUser = vi.fn(() => ({
@@ -31,7 +40,17 @@ function createSupabaseMock(
   const eqUser = vi.fn(() => ({ single }));
   const eqId = vi.fn(() => ({ eq: eqUser }));
   const select = vi.fn(() => ({ eq: eqId }));
-  const from = vi.fn(() => ({ select, delete: deleteFn }));
+  const profileSingle = vi.fn().mockResolvedValue({
+    data: profile,
+    error: profile ? null : {},
+  });
+  const profileEqUser = vi.fn(() => ({ single: profileSingle }));
+  const profileSelect = vi.fn(() => ({ eq: profileEqUser }));
+  const from = vi.fn((table: string) =>
+    table === "profiles"
+      ? { select: profileSelect }
+      : { select, delete: deleteFn },
+  );
 
   createServerClientMock.mockResolvedValue({
     auth: {
@@ -46,7 +65,7 @@ function createSupabaseMock(
     },
   });
 
-  return { eqId, eqUser, deleteEqId, deleteEqUser, remove };
+  return { eqId, eqUser, deleteEqId, deleteEqUser, profileEqUser, remove };
 }
 
 const OWNED_JOB = {
@@ -127,5 +146,27 @@ describe("/api/uploads/[id]", () => {
     expect(supabase.deleteEqId).toHaveBeenCalledWith("id", "job-1");
     expect(supabase.deleteEqUser).toHaveBeenCalledWith("user_id", "user-1");
     expect(supabase.remove).toHaveBeenCalledWith(["user-1/job-1/server.csv"]);
+  });
+
+  it("rejects DELETE for expired users before deleting the job", async () => {
+    const supabase = createSupabaseMock(OWNED_JOB, {
+      subscription_status: "trialing",
+      trial_started_at: "2026-08-01T00:00:00.000Z",
+      current_period_end: null,
+    });
+    const { DELETE } = await import("./route");
+
+    const response = await DELETE(new Request("https://finsight.test"), {
+      params: Promise.resolve({ id: "job-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body).toEqual({
+      error: "체험 또는 구독이 만료되어 업로드를 삭제할 수 없습니다.",
+    });
+    expect(supabase.profileEqUser).toHaveBeenCalledWith("user_id", "user-1");
+    expect(supabase.deleteEqId).not.toHaveBeenCalled();
+    expect(supabase.remove).not.toHaveBeenCalled();
   });
 });

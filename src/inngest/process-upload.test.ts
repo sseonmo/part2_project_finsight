@@ -27,6 +27,8 @@ type Job = {
   headerHash: string | null;
   mapping: ColumnMapping | null;
   mappingAttemptCount: number;
+  dateFormat: string | null;
+  dateFormatResolvedBy: "scan" | "assumed-iso" | null;
 };
 
 type TransactionRecord = {
@@ -63,6 +65,8 @@ function makeJob(overrides: Partial<Job> = {}): Job {
     headerHash: overrides.headerHash ?? null,
     mapping: overrides.mapping ?? null,
     mappingAttemptCount: overrides.mappingAttemptCount ?? 0,
+    dateFormat: overrides.dateFormat ?? null,
+    dateFormatResolvedBy: overrides.dateFormatResolvedBy ?? null,
   };
 }
 
@@ -314,6 +318,29 @@ describe("process upload pipeline", () => {
 
     expect(repository.job.status).toBe("needs_mapping");
     expect(repository.savedFingerprints).toEqual([]);
+  });
+
+  it("stores the date format from the full-file mapping trial", async () => {
+    classifyMerchantBatchMock.mockResolvedValue({});
+    describeSignalsMock.mockResolvedValue({});
+    const repository = createRepository({
+      fingerprint: MAPPING,
+      bytes: csv([
+        ...Array.from({ length: 20 }, (_, index) =>
+          row("03/04/2026", `모호${index}`),
+        ),
+        row("13/04/2026", "판별가맹점"),
+      ]),
+    });
+
+    await runWithRepository(repository);
+
+    expect(repository.updates).toContainEqual(
+      expect.objectContaining({
+        dateFormat: "DD/MM/YYYY",
+        dateFormatResolvedBy: "scan",
+      }),
+    );
   });
 
   it("fails sanity-check failures and does not save a fingerprint", async () => {

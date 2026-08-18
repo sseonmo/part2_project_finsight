@@ -102,4 +102,28 @@ describe("csv mapping", () => {
     expect(trial.parsed[0]?.transactedOn).toBe("2026-03-04");
     expect(trial.parsed[20]?.transactedOn).toBe("2026-03-14");
   });
+
+  it("returns the scanned DD/MM/YYYY date format decision", () => {
+    const trial = applyMapping(HEADER, [
+      row("03/04/2026"),
+      row("13/04/2026"),
+    ], MAPPING);
+
+    expect(trial).toMatchObject({
+      dateFormat: "DD/MM/YYYY",
+      dateFormatResolvedBy: "scan",
+    });
+  });
+
+  it("returns the assumed MM/DD/YYYY date format decision when every date is ambiguous", () => {
+    const trial = applyMapping(HEADER, [
+      row("03/04/2026"),
+      row("04/05/2026"),
+    ], MAPPING);
+
+    expect(trial).toMatchObject({
+      dateFormat: "MM/DD/YYYY",
+      dateFormatResolvedBy: "assumed-iso",
+    });
+  });
 });
