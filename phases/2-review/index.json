@@ -2,9 +2,29 @@
   "project": "FinSight",
   "phase": "2-review",
   "steps": [
-    { "step": 0, "name": "ai-review", "status": "pending" },
-    { "step": 1, "name": "signal-detail", "status": "pending" },
-    { "step": 2, "name": "subscriptions", "status": "pending" },
-    { "step": 3, "name": "monthly-report", "status": "pending" }
-  ]
+    {
+      "step": 0,
+      "name": "ai-review",
+      "status": "completed",
+      "started_at": "2026-08-18T09:28:35+0900",
+      "summary": "SIGNAL_TYPE_LABELS를 thresholds.ts에 추가하고 /dashboard/review/[yearMonth]에서 YYYY-MM→YYYY-MM-01로 spending_signals 전수 조회(impact desc null last, dismissed 포함) 후 /dashboard/review/[yearMonth]/[signalId] 상세 링크를 렌더",
+      "completed_at": "2026-08-18T09:37:39+0900"
+    },
+    {
+      "step": 1,
+      "name": "signal-detail",
+      "status": "pending"
+    },
+    {
+      "step": 2,
+      "name": "subscriptions",
+      "status": "pending"
+    },
+    {
+      "step": 3,
+      "name": "monthly-report",
+      "status": "pending"
+    }
+  ],
+  "created_at": "2026-08-18T09:28:35+0900"
 }
