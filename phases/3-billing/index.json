@@ -13,7 +13,10 @@
     {
       "step": 1,
       "name": "polar-webhook",
-      "status": "pending"
+      "status": "error",
+      "started_at": "2026-08-18T11:18:58+0900",
+      "error_message": "[3회 시도 후 실패] Codex 프로세스 비정상 종료 (code 1)",
+      "failed_at": "2026-08-18T11:19:07+0900"
     },
     {
       "step": 2,
