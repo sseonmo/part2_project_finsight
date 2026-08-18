@@ -12,7 +12,8 @@
     },
     {
       "dir": "2-review",
-      "status": "pending"
+      "status": "completed",
+      "completed_at": "2026-08-18T11:07:36+0900"
     },
     {
       "dir": "3-billing",
