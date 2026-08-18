@@ -21,7 +21,10 @@
     {
       "step": 2,
       "name": "account-settings",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-18T20:32:22+0900",
+      "summary": "화면 /settings 는 src/app/(app)/settings/page.tsx (앱 셸 안, dynamic force-dynamic) + src/components/AccountSettings.tsx(client) 로 계정(이메일·가입일=auth user created_at)·구독 상태·구독 관리·계정 삭제 4패널. 사이드바 하단 사용자 블록이 /settings 링크가 되고 AppHeader 에 설정 타이틀 항목 추가. 구독 상태 문구는 src/lib/entitlement.ts 에 새로 추가한 summarizeSubscription(EntitlementInput) → {kind:'trialing'|'subscribed'|'canceled'|'expired'} 로 렌더한다(상태 문자열 비교는 이 파일 안에서만; Entitlement 타입은 그대로라 기존 테스트 무영향). POST /api/billing/portal 은 profiles.polar_customer_id 로 createCustomerPortalSession 을 호출하고 없으면 409 + redirectTo:/dashboard/billing — 해지는 포털에서 일어나고 반영은 웹훅뿐이라 앱이 subscription_status 를 쓰지 않는다. DELETE /api/account 는 세션 사용자만 대상(본문 userId 무시), 재확인 문자열 '계정 삭제' 불일치면 400, 그 다음 upload_jobs.storage_key 목록과 Storage {user_id}/ prefix 재귀 나열(limit 100 페이징)을 합쳐 transaction-csv-uploads 버킷에서 먼저 remove 하고, 실패하면 5xx 로 멈춰 DB 를 건드리지 않는다. 그 뒤 service role 로 auth.admin.deleteUser(userId) 하나만 호출해 cascade 로 전 테이블을 지우고 signOut 후 {redirectTo:'/'} 반환. entitlement 게이트 없음(expired 도 삭제 가능). 재확인 문구 '계정 삭제' 는 route.ts 와 AccountSettings.tsx 두 곳에 상수로 있고 서로 주석으로 가리킨다. globals.css 에 .settings-* 클래스와 .app-sidebar__user 링크 상태 추가. 새 환경변수·마이그레이션 없음. AC: build/lint/test(69 files, 350 tests) 전부 통과.",
+      "completed_at": "2026-08-18T20:42:05+0900"
     },
     {
       "step": 3,
