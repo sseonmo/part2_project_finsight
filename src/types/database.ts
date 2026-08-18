@@ -91,6 +91,24 @@ export type Database = {
         }
         Relationships: []
       }
+      processed_webhook_events: {
+        Row: {
+          event_id: string
+          event_type: string
+          received_at: string
+        }
+        Insert: {
+          event_id: string
+          event_type: string
+          received_at?: string
+        }
+        Update: {
+          event_id?: string
+          event_type?: string
+          received_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           current_period_end: string | null

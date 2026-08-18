@@ -2,6 +2,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const checkoutsCreateMock = vi.hoisted(() => vi.fn());
 const customerSessionsCreateMock = vi.hoisted(() => vi.fn());
+const validateEventMock = vi.hoisted(() => vi.fn());
+const WebhookVerificationErrorMock = vi.hoisted(
+  () =>
+    class WebhookVerificationError extends Error {
+      constructor(message: string) {
+        super(message);
+        this.name = "WebhookVerificationError";
+      }
+    },
+);
 const polarConstructorMock = vi.hoisted(() =>
   vi.fn(() => ({
     checkouts: {
@@ -17,11 +27,17 @@ vi.mock("@polar-sh/sdk", () => ({
   Polar: polarConstructorMock,
 }));
 
+vi.mock("@polar-sh/sdk/webhooks", () => ({
+  validateEvent: validateEventMock,
+  WebhookVerificationError: WebhookVerificationErrorMock,
+}));
+
 vi.mock("server-only", () => ({}));
 
 import {
   createCheckoutSession,
   createCustomerPortalSession,
+  verifyPolarWebhook,
 } from "./polar";
 
 function stubPolarEnv() {
@@ -101,5 +117,65 @@ describe("Polar service wrapper", () => {
     expect(customerSessionsCreateMock).toHaveBeenCalledWith({
       customerId: "cus_123",
     });
+  });
+});
+
+describe("Polar webhook verification", () => {
+  const rawBody = '{"type":"subscription.active"}';
+  const headers = {
+    "webhook-id": "evt_1",
+    "webhook-signature": "v1,signature",
+    "webhook-timestamp": "1786000000",
+  };
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.clearAllMocks();
+  });
+
+  it("returns the parsed event for a valid signature", () => {
+    vi.stubEnv("POLAR_WEBHOOK_SECRET", "whsec_test");
+    const event = { type: "subscription.active" };
+    validateEventMock.mockReturnValue(event);
+
+    expect(verifyPolarWebhook({ headers, rawBody })).toEqual({
+      status: "verified",
+      event,
+    });
+    expect(validateEventMock).toHaveBeenCalledWith(
+      rawBody,
+      headers,
+      "whsec_test",
+    );
+  });
+
+  it("reports an invalid signature instead of throwing", () => {
+    vi.stubEnv("POLAR_WEBHOOK_SECRET", "whsec_test");
+    validateEventMock.mockImplementation(() => {
+      throw new WebhookVerificationErrorMock("No matching signature found");
+    });
+
+    expect(verifyPolarWebhook({ headers, rawBody })).toEqual({
+      status: "invalid_signature",
+    });
+  });
+
+  it("reports payloads the SDK cannot parse as unsupported", () => {
+    vi.stubEnv("POLAR_WEBHOOK_SECRET", "whsec_test");
+    validateEventMock.mockImplementation(() => {
+      throw new Error("Unknown event type: something.new");
+    });
+
+    expect(verifyPolarWebhook({ headers, rawBody })).toEqual({
+      status: "unsupported",
+    });
+  });
+
+  it("requires POLAR_WEBHOOK_SECRET", () => {
+    vi.stubEnv("POLAR_WEBHOOK_SECRET", "");
+
+    expect(() => verifyPolarWebhook({ headers, rawBody })).toThrow(
+      /POLAR_WEBHOOK_SECRET/,
+    );
   });
 });

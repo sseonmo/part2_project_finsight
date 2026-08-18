@@ -1,6 +1,10 @@
 import "server-only";
 
 import { Polar } from "@polar-sh/sdk";
+import {
+  validateEvent,
+  WebhookVerificationError,
+} from "@polar-sh/sdk/webhooks";
 
 export type CheckoutPlan = "monthly" | "yearly";
 
@@ -63,4 +67,31 @@ export async function createCustomerPortalSession(input: {
   });
 
   return { portalUrl: session.customerPortalUrl };
+}
+
+export type PolarWebhookEvent = ReturnType<typeof validateEvent>;
+
+export type PolarWebhookVerification =
+  | { status: "verified"; event: PolarWebhookEvent }
+  | { status: "invalid_signature" }
+  | { status: "unsupported" };
+
+export function verifyPolarWebhook(input: {
+  rawBody: string;
+  headers: Record<string, string>;
+}): PolarWebhookVerification {
+  const secret = getRequiredEnv("POLAR_WEBHOOK_SECRET");
+
+  try {
+    return {
+      status: "verified",
+      event: validateEvent(input.rawBody, input.headers, secret),
+    };
+  } catch (error) {
+    if (error instanceof WebhookVerificationError) {
+      return { status: "invalid_signature" };
+    }
+
+    return { status: "unsupported" };
+  }
 }

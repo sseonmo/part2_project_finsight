@@ -77,6 +77,18 @@ describe("Supabase schema guardrails", () => {
     expect(body).not.toContain("날짜");
   });
 
+  it("locks processed_webhook_events to the service role", () => {
+    expect(migrationSql).toMatch(
+      /alter\s+table\s+(?:public\.)?processed_webhook_events\s+enable\s+row\s+level\s+security/i,
+    );
+    expect(migrationSql).not.toMatch(
+      /create\s+policy\s+[^;]+\s+on\s+(?:public\.)?processed_webhook_events/i,
+    );
+    expect(tableBody("processed_webhook_events").replace(/\s+/g, " ")).toMatch(
+      /event_id\s+text\s+primary\s+key/i,
+    );
+  });
+
   it("enforces dedupe_key uniqueness in transactions", () => {
     const body = tableBody("transactions").replace(/\s+/g, " ");
 
