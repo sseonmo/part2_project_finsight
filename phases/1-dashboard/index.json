@@ -37,7 +37,10 @@
     {
       "step": 4,
       "name": "uploads-history",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-18T09:06:03+0900",
+      "summary": "Added MappingTrial.dateFormat/dateFormatResolvedBy, upload_jobs.date_format/date_format_resolved_by/created_at, full-file worker persistence, and /dashboard/uploads history with needs_mapping links plus expired-safe delete confirmation.",
+      "completed_at": "2026-08-18T09:18:01+0900"
     },
     {
       "step": 5,
