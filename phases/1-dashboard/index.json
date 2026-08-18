@@ -29,7 +29,10 @@
     {
       "step": 3,
       "name": "transactions",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-08-18T02:01:46+0900",
+      "summary": "거래 목록 RPC get_transactions_page/get_transactions_summary(둘 다 p_search·p_categories는 default null이라 TS에서는 undefined로 생략)와 래퍼 src/lib/transactions/queries.ts(fetchTransactionsPage/fetchTransactionsSummary), 분류 수정 라우트 POST /api/transactions/category({merchantNormalized, category} — user_category_overrides만 upsert), /dashboard/transactions 화면(URL 파라미터 month·q·category(다중)·page, 20건 단위)과 TransactionCategorySelect를 추가함",
+      "completed_at": "2026-08-18T09:03:18+0900"
     },
     {
       "step": 4,
