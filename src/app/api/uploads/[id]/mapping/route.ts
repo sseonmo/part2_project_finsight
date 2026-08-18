@@ -76,6 +76,11 @@ export async function POST(request: Request, context: RouteContext) {
     return jsonError("수동 매핑이 필요한 업로드가 아닙니다.", 409);
   }
 
+  // 이 경로에는 entitlement 쓰기 게이트를 걸지 않는다. 이미 signed-url/start
+  // 게이트를 통과해 개시된 파이프라인의 완료 경로이고, csv.mapping_confirmed는
+  // 컬럼 추론 LLM 호출을 건너뛴다. 시도 상한 3회가 남용을 막는다. 여기를
+  // 막으면 체험 만료 순간 needs_mapping 업로드가 영영 미완으로 남아 ADR-001의
+  // 막다른 길이 되살아난다.
   if (job.mapping_attempt_count >= MAX_MANUAL_MAPPING_ATTEMPTS) {
     await supabase
       .from("upload_jobs")

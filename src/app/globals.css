@@ -1662,6 +1662,184 @@ a:hover {
   color: var(--brand-red-dark);
 }
 
+.manual-mapping-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-width: 62.5rem;
+}
+
+.manual-mapping-card {
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+}
+
+.manual-mapping-card__header {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--space-md);
+  justify-content: space-between;
+}
+
+.manual-mapping-card__title {
+  color: var(--ink);
+  font-size: var(--font-size-page-title);
+  font-weight: 500;
+  line-height: 1.25;
+  margin: var(--space-sm) 0 0;
+}
+
+.manual-mapping-card__subtitle,
+.manual-mapping-loading,
+.manual-mapping-cancel-result {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.4;
+  margin: var(--space-xxs) 0 0;
+}
+
+.manual-mapping-attempts {
+  align-items: flex-end;
+  color: var(--text-tertiary);
+  display: flex;
+  flex-direction: column;
+  font-size: var(--font-size-body-xs);
+  gap: var(--space-xxs);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.manual-mapping-attempts strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.manual-mapping-message {
+  background: var(--surface-yellow);
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-lg);
+  color: var(--text-body);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.4;
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+}
+
+.manual-mapping-cancel-result {
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+.manual-mapping-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.manual-mapping-fields {
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.manual-mapping-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.manual-mapping-field__label {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-normal);
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.manual-mapping-field__select {
+  background: var(--surface);
+  border: var(--line-width) solid var(--hairline-strong);
+  border-radius: var(--radius-full);
+  color: var(--ink);
+  min-height: var(--button-height-md);
+  padding-inline: var(--space-md);
+  width: 100%;
+}
+
+.manual-mapping-field__select:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.manual-mapping-preview-wrap {
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+}
+
+.manual-mapping-preview {
+  border-collapse: collapse;
+  color: var(--text-body);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.4;
+  min-width: 50rem;
+  width: 100%;
+}
+
+.manual-mapping-preview th {
+  background: var(--surface-soft);
+  border-bottom: var(--line-width) solid var(--hairline);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  line-height: 1.4;
+  padding: var(--space-sm);
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.manual-mapping-preview td {
+  border-bottom: var(--line-width) solid var(--hairline-soft);
+  padding: var(--space-sm);
+  white-space: nowrap;
+}
+
+.manual-mapping-preview tr:last-child td {
+  border-bottom: 0;
+}
+
+.manual-mapping-preview th[data-selected="true"],
+.manual-mapping-preview td[data-selected="true"] {
+  background: var(--surface-yellow);
+  color: var(--ink);
+}
+
+.manual-mapping-preview__row-number,
+.manual-mapping-preview__date-like {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.manual-mapping-preview__row-number {
+  color: var(--text-tertiary);
+  text-align: right;
+}
+
+.manual-mapping-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+}
+
 @media (max-width: 767px) {
   .app-sidebar {
     display: none;
@@ -1739,6 +1917,27 @@ a:hover {
 
   .transactions-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .manual-mapping-card__header {
+    flex-direction: column;
+  }
+
+  .manual-mapping-attempts {
+    align-items: flex-start;
+  }
+
+  .manual-mapping-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .manual-mapping-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .manual-mapping-actions .finsight-button {
+    width: 100%;
   }
 }
 
