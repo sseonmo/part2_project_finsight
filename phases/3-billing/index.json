@@ -2,9 +2,29 @@
   "project": "FinSight",
   "phase": "3-billing",
   "steps": [
-    { "step": 0, "name": "billing-checkout", "status": "pending" },
-    { "step": 1, "name": "polar-webhook", "status": "pending" },
-    { "step": 2, "name": "account-settings", "status": "pending" },
-    { "step": 3, "name": "landing-final", "status": "pending" }
-  ]
+    {
+      "step": 0,
+      "name": "billing-checkout",
+      "status": "completed",
+      "started_at": "2026-08-18T11:07:36+0900",
+      "summary": "Installed @polar-sh/sdk 0.49.0 using Polar.checkouts.create and Polar.customerSessions.create; src/services/polar.ts exports createCheckoutSession({plan,userId,customerEmail,successUrl}) and createCustomerPortalSession({polarCustomerId}); env POLAR_ACCESS_TOKEN/POLAR_PRODUCT_ID_MONTHLY/POLAR_PRODUCT_ID_YEARLY/POLAR_SERVER; checkout route POST /api/billing/checkout; metadata key user_id.",
+      "completed_at": "2026-08-18T11:18:57+0900"
+    },
+    {
+      "step": 1,
+      "name": "polar-webhook",
+      "status": "pending"
+    },
+    {
+      "step": 2,
+      "name": "account-settings",
+      "status": "pending"
+    },
+    {
+      "step": 3,
+      "name": "landing-final",
+      "status": "pending"
+    }
+  ],
+  "created_at": "2026-08-18T11:07:36+0900"
 }
