@@ -374,6 +374,40 @@ export type Database = {
           transaction_count: number
         }[]
       }
+      get_transactions_page: {
+        Args: {
+          p_categories?: Database["public"]["Enums"]["transaction_category"][]
+          p_limit?: number
+          p_offset?: number
+          p_period: string
+          p_search?: string
+          p_user_id: string
+        }
+        Returns: {
+          amount: number
+          category: Database["public"]["Enums"]["transaction_category"]
+          category_overridden: boolean
+          id: string
+          merchant_normalized: string
+          merchant_raw: string
+          transacted_on: string
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+        }[]
+      }
+      get_transactions_summary: {
+        Args: {
+          p_categories?: Database["public"]["Enums"]["transaction_category"][]
+          p_period: string
+          p_search?: string
+          p_user_id: string
+        }
+        Returns: {
+          deposit_total: number
+          expense_total: number
+          refund_total: number
+          transaction_count: number
+        }[]
+      }
     }
     Enums: {
       spending_signal_type:
