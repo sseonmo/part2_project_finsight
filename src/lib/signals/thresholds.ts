@@ -40,3 +40,11 @@ export const SIGNAL_CONDITION_COPY: Record<SignalType, string> = {
   recurring_payment: `금액 편차가 ${formatPercent(recurring.amountTolerance)} 이내이고 결제 간격이 ${recurring.minIntervalDays}~${recurring.maxIntervalDays}일이며 ${recurring.minOccurrences}회 이상, 모든 달에 월 1건씩 있는 결제만 반복 결제로 봅니다.`,
   recurring_price_up: `반복 결제 조건을 만족하면서 최근 결제액이 직전 결제액보다 ${formatPercent(recurringPriceUp.minIncreaseRatio)} 이상 오르면, 인상분을 ${recurringPriceUp.impactMonths}개월로 환산해 영향도를 계산합니다.`,
 };
+
+export const SIGNAL_TYPE_LABELS: Record<SignalType, string> = {
+  category_spike: "카테고리 급증",
+  new_merchant_large: "새 가맹점 큰 결제",
+  outlier_transaction: "이상 결제",
+  recurring_payment: "반복 결제",
+  recurring_price_up: "구독료 인상",
+};

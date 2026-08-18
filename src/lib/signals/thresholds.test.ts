@@ -2,11 +2,23 @@ import { describe, expect, it } from "vitest";
 
 import {
   SIGNAL_CONDITION_COPY,
+  SIGNAL_TYPE_LABELS,
   SIGNAL_THRESHOLDS,
   SIGNAL_TYPES,
 } from "./thresholds";
 
 describe("signal thresholds", () => {
+  it("keeps every signal type label next to the condition copy", () => {
+    expect(Object.keys(SIGNAL_TYPE_LABELS).sort()).toEqual(
+      [...SIGNAL_TYPES].sort(),
+    );
+
+    for (const type of SIGNAL_TYPES) {
+      expect(SIGNAL_TYPE_LABELS[type]).toEqual(expect.any(String));
+      expect(SIGNAL_TYPE_LABELS[type].length).toBeGreaterThan(0);
+    }
+  });
+
   it("keeps every signal condition copy next to the threshold values", () => {
     expect(Object.keys(SIGNAL_CONDITION_COPY).sort()).toEqual(
       [...SIGNAL_TYPES].sort(),
