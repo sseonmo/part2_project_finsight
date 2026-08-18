@@ -21,6 +21,7 @@ vi.mock("server-only", () => ({}));
 
 import {
   classifyMerchantBatch,
+  describeMonthlyReport,
   describeSignals,
   inferColumnMapping,
   OPENAI_MODELS,
@@ -174,6 +175,131 @@ describe("OpenAI service wrapper", () => {
         },
       ]),
     ).resolves.toEqual({ "signal-1": "첫 문장" });
+  });
+
+  it("uses the narrative model once for monthly report sections with precomputed facts", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    mockJsonResponse({
+      sections: [
+        {
+          heading: "이번 달 요약",
+          body: "3월 지출은 SQL 집계 기준 520,000원입니다.",
+        },
+        {
+          heading: "카테고리",
+          body: "식비가 가장 큰 비중을 차지했습니다.",
+        },
+        {
+          heading: "가맹점",
+          body: "스타벅스 강남 지출이 눈에 띕니다.",
+        },
+        {
+          heading: "다음 행동",
+          body: "큰 결제는 근거 거래를 확인하세요.",
+        },
+      ],
+    });
+
+    await expect(
+      describeMonthlyReport({
+        month: "2026-03",
+        totalExpense: 520_000,
+        previousTotalExpense: 400_000,
+        transactionCount: 42,
+        categoryBreakdown: [{ category: "식비", totalAmount: 210_000 }],
+        topMerchants: [
+          {
+            merchantNormalized: "스타\n벅\t스\u0000강남",
+            totalAmount: 55_000,
+          },
+        ],
+        signals: [
+          {
+            type: "category_spike",
+            impact: 62_000,
+            payload: {
+              category: "식비",
+              increaseAmount: 62_000,
+              increaseRatio: 0.58,
+            },
+          },
+        ],
+      }),
+    ).resolves.toEqual([
+      {
+        heading: "이번 달 요약",
+        body: "3월 지출은 SQL 집계 기준 520,000원입니다.",
+      },
+      {
+        heading: "카테고리",
+        body: "식비가 가장 큰 비중을 차지했습니다.",
+      },
+      {
+        heading: "가맹점",
+        body: "스타벅스 강남 지출이 눈에 띕니다.",
+      },
+      {
+        heading: "다음 행동",
+        body: "큰 결제는 근거 거래를 확인하세요.",
+      },
+    ]);
+
+    expect(chatCompletionsCreateMock).toHaveBeenCalledTimes(1);
+    expect(chatCompletionsCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ model: OPENAI_MODELS.narrative }),
+    );
+    const request = JSON.stringify(chatCompletionsCreateMock.mock.calls[0]?.[0]);
+    expect(request).toContain("520000");
+    expect(request).toContain("400000");
+    expect(request).toContain("스타 벅 스 강남");
+  });
+
+  it("tells the monthly report model not to invent prior-month comparisons", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    mockJsonResponse({
+      sections: [
+        { heading: "요약", body: "비교할 지난달 데이터가 없습니다." },
+        { heading: "카테고리", body: "이번 달 카테고리만 봅니다." },
+        { heading: "가맹점", body: "가맹점 합계를 봅니다." },
+        { heading: "다음 행동", body: "다음 달부터 비교합니다." },
+      ],
+    });
+
+    await describeMonthlyReport({
+      month: "2026-03",
+      totalExpense: 520_000,
+      previousTotalExpense: null,
+      transactionCount: 42,
+      categoryBreakdown: [],
+      topMerchants: [],
+      signals: [],
+    });
+
+    expect(JSON.stringify(chatCompletionsCreateMock.mock.calls[0]?.[0])).toContain(
+      "비교할 지난달 데이터가 없다",
+    );
+  });
+
+  it("returns an empty monthly report section list for schema-invalid output", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    mockJsonResponse({
+      sections: [
+        { heading: "요약", body: "본문" },
+        { heading: "", body: "제목 없음" },
+      ],
+    });
+
+    await expect(
+      describeMonthlyReport({
+        month: "2026-03",
+        totalExpense: 520_000,
+        previousTotalExpense: null,
+        transactionCount: 42,
+        categoryBreakdown: [],
+        topMerchants: [],
+        signals: [],
+      }),
+    ).resolves.toEqual([]);
   });
 
   it("returns null when inferred mapping contains columns outside the header", async () => {

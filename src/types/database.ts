@@ -70,18 +70,21 @@ export type Database = {
       monthly_reports: {
         Row: {
           generated_at: string
+          generation_started_at: string | null
           month: string
           narrative: string
           user_id: string
         }
         Insert: {
           generated_at?: string
+          generation_started_at?: string | null
           month: string
           narrative: string
           user_id: string
         }
         Update: {
           generated_at?: string
+          generation_started_at?: string | null
           month?: string
           narrative?: string
           user_id?: string
@@ -295,6 +298,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_monthly_report_generation: {
+        Args: { p_month: string; p_stale_after: string; p_user_id: string }
+        Returns: boolean
+      }
       get_category_amount_medians: {
         Args: { p_period: string; p_user_id: string }
         Returns: {

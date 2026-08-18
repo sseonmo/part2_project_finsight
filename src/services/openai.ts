@@ -39,10 +39,35 @@ const NARRATIVE_SYSTEM_PROMPT = [
   '반드시 JSON 객체만 반환한다: {"narratives":[{"id":"입력 id","narrative":"문장"}]}',
 ].join("\n");
 
+const MONTHLY_REPORT_SYSTEM_PROMPT = [
+  "너는 개인 가계부의 월간 리포트를 한국어 코칭 문단으로 작성한다.",
+  "입력의 totalExpense, previousTotalExpense, transactionCount, categoryBreakdown, topMerchants, signals 값은 모두 SQL과 결정론적 코드가 이미 계산한 숫자다.",
+  "어떤 금액, 비율, 증감, 건수도 새로 계산하거나 만들지 말고 입력에 있는 숫자만 사용한다.",
+  "무엇을 지적할지도 고르지 않는다. 받은 facts와 signals를 바탕으로만 문단을 쓴다.",
+  "섹션은 4~5개로 작성하고 각 섹션은 짧은 heading과 body를 가진다.",
+  '반드시 JSON 객체만 반환한다: {"sections":[{"heading":"소제목","body":"문단"}]}',
+].join("\n");
+
 export type SignalForNarrative = Signal & {
   id: string;
   type: SignalType;
 };
+
+export type MonthlyReportFacts = {
+  month: string;
+  totalExpense: number;
+  previousTotalExpense: number | null;
+  transactionCount: number;
+  categoryBreakdown: { category: Category; totalAmount: number }[];
+  topMerchants: { merchantNormalized: string; totalAmount: number }[];
+  signals: {
+    type: SignalType;
+    payload: Record<string, unknown>;
+    impact: number | null;
+  }[];
+};
+
+export type MonthlyReportSection = { heading: string; body: string };
 
 function getRequiredEnv(name: string): string {
   const value = process.env[name];
@@ -317,6 +342,39 @@ function extractNarratives(
   return result;
 }
 
+function extractMonthlyReportSections(payload: unknown): MonthlyReportSection[] {
+  if (!isRecord(payload) || !Array.isArray(payload.sections)) {
+    return [];
+  }
+
+  if (payload.sections.length < 4 || payload.sections.length > 5) {
+    return [];
+  }
+
+  const sections: MonthlyReportSection[] = [];
+
+  for (const item of payload.sections) {
+    if (!isRecord(item)) {
+      return [];
+    }
+
+    if (typeof item.heading !== "string" || typeof item.body !== "string") {
+      return [];
+    }
+
+    const heading = item.heading.trim();
+    const body = item.body.trim();
+
+    if (!heading || !body) {
+      return [];
+    }
+
+    sections.push({ heading, body });
+  }
+
+  return sections;
+}
+
 export async function describeSignals(
   signals: SignalForNarrative[],
 ): Promise<Record<string, string>> {
@@ -341,4 +399,35 @@ export async function describeSignals(
     payload,
     new Set(signals.map((signal) => signal.id)),
   );
+}
+
+export async function describeMonthlyReport(
+  facts: MonthlyReportFacts,
+): Promise<MonthlyReportSection[]> {
+  const payload = await createJsonChatCompletion({
+    model: OPENAI_MODELS.narrative,
+    system: MONTHLY_REPORT_SYSTEM_PROMPT,
+    payload: {
+      month: facts.month,
+      totalExpense: facts.totalExpense,
+      previousTotalExpense: facts.previousTotalExpense,
+      previousMonthInstruction:
+        facts.previousTotalExpense === null
+          ? "비교할 지난달 데이터가 없다. 전월 대비 비교 문단을 쓰지 마라."
+          : "previousTotalExpense는 SQL이 계산한 전월 총지출이다. 전월 대비 증감액이나 비율은 입력에 없으므로 계산하거나 쓰지 마라.",
+      transactionCount: facts.transactionCount,
+      categoryBreakdown: facts.categoryBreakdown,
+      topMerchants: facts.topMerchants.map((merchant) => ({
+        merchantNormalized: sanitizeMerchantName(merchant.merchantNormalized),
+        totalAmount: merchant.totalAmount,
+      })),
+      signals: facts.signals.map((signal) => ({
+        type: signal.type,
+        impact: signal.impact,
+        payload: sanitizeNarrativePayload(signal.payload),
+      })),
+    },
+  });
+
+  return extractMonthlyReportSections(payload);
 }
