@@ -42,4 +42,16 @@ describe("csv parse", () => {
     expect(base).not.toBe(hashHeader(["승인일", "금액", "가맹점명", "상태"]));
     expect(base).toMatch(/^[a-f0-9]{64}$/);
   });
+
+  it("treats a bare quote inside an unquoted field as a literal character", () => {
+    const result = parseCsv(
+      '승인일,가맹점명,금액\n2026-03-04,15" 피자,5100\n2026-03-05,GS25,3200\n',
+    );
+
+    expect(result.rows).toEqual([
+      ["2026-03-04", '15" 피자', "5100"],
+      ["2026-03-05", "GS25", "3200"],
+    ]);
+  });
+
 });

@@ -75,21 +75,22 @@ export function decideDateFormat(rawDates: string[]): DateFormatDecision {
       continue;
     }
 
-    const [first, second, third] = parts;
+    const [first, second] = parts;
 
     if (first > 999) {
       sawSeparatedYearFirst = true;
       continue;
     }
 
-    if (third > 999) {
-      sawSlashYearLast = true;
-      if (first > 12 && second <= 12) {
-        sawDayMonthEvidence = true;
-      }
-      if (second > 12 && first <= 12) {
-        sawMonthDayEvidence = true;
-      }
+    // 연도가 마지막인 형식. 두 자리 연도(03/14/26)도 같은 증거를 준다 —
+    // third 가 네 자리일 때만 보면 14 > 12 라는 확정 증거를 버리게 된다.
+    sawSlashYearLast = true;
+
+    if (first > 12 && second <= 12) {
+      sawDayMonthEvidence = true;
+    }
+    if (second > 12 && first <= 12) {
+      sawMonthDayEvidence = true;
     }
   }
 

@@ -50,4 +50,15 @@ describe("csv date", () => {
     expect(parseDate("2026-02-30", "YYYY-MM-DD")).toBeNull();
     expect(parseDate("13/04/2026", "MM/DD/YYYY")).toBeNull();
   });
+
+  it("uses MM/DD evidence in files that carry two-digit years", () => {
+    expect(decideDateFormat(["03/04/26", "03/14/26"])).toEqual({
+      format: "MM/DD/YYYY",
+      ambiguousResolvedBy: "scan",
+    });
+    expect(parseDate("03/14/26", "MM/DD/YYYY")?.toISOString()).toBe(
+      "2026-03-13T15:00:00.000Z",
+    );
+  });
+
 });

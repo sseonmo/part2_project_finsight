@@ -30,4 +30,15 @@ describe("csv amount", () => {
     expect(decideTransactionType({ amount: "(5,100)" })).toBe("refund");
     expect(decideTransactionType({ type: "" })).toBeNull();
   });
+
+  it("parses amounts from statements that export decimal places", () => {
+    expect(parseAmount("5100.00")).toBe(5100);
+    expect(parseAmount("1,234.56")).toBe(1235);
+    expect(parseAmount("-9,900.00")).toBe(9900);
+  });
+
+  it("reads 매입 as an expense", () => {
+    expect(decideTransactionType({ type: "매입" })).toBe("expense");
+  });
+
 });

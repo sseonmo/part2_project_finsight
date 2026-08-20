@@ -2,7 +2,7 @@ export type TransactionType = "expense" | "refund" | "deposit";
 
 export type RawRow = Record<string, string | undefined>;
 
-const EXPENSE_WORDS = ["승인", "이용", "매출", "결제", "구매", "일시불"];
+const EXPENSE_WORDS = ["승인", "이용", "매출", "매입", "결제", "구매", "일시불"];
 const REFUND_WORDS = ["취소", "환불", "청구취소", "매출취소", "승인취소"];
 const DEPOSIT_WORDS = ["입금", "상환", "결제입금", "캐시백"];
 
@@ -25,11 +25,11 @@ export function parseAmount(raw: string): number | null {
 
   const numeric = normalized.replace(/[₩원,\s]/g, "").replace(/[()]/g, "");
 
-  if (!/^-?\d+$/.test(numeric)) {
+  if (!/^-?\d+(\.\d+)?$/.test(numeric)) {
     return null;
   }
 
-  return Math.abs(Number.parseInt(numeric, 10));
+  return Math.abs(Math.round(Number.parseFloat(numeric)));
 }
 
 export function decideTransactionType(row: RawRow): TransactionType | null {

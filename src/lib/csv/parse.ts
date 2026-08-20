@@ -24,11 +24,19 @@ export function parseCsv(text: string): { header: string[]; rows: string[][] } {
     const next = text[index + 1];
 
     if (char === '"') {
-      if (inQuotes && next === '"') {
-        cell += '"';
-        index += 1;
+      if (inQuotes) {
+        if (next === '"') {
+          cell += '"';
+          index += 1;
+        } else {
+          inQuotes = false;
+        }
+      } else if (cell === "") {
+        inQuotes = true;
       } else {
-        inQuotes = !inQuotes;
+        // 인용하지 않은 필드 중간의 따옴표는 리터럴이다(RFC 4180).
+        // 토글하면 상호명 하나 때문에 파일 끝까지가 한 셀로 빨려 들어간다.
+        cell += '"';
       }
       continue;
     }
