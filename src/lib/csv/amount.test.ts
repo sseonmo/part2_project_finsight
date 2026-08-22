@@ -41,4 +41,19 @@ describe("csv amount", () => {
     expect(decideTransactionType({ type: "매입" })).toBe("expense");
   });
 
+  it("rejects a dot that may be a thousands separator instead of shrinking the amount", () => {
+    // 5.100 은 유럽·일부 한국 명세서에서 5,100 을 뜻한다. 소수점으로 읽으면
+    // 5 가 되어 1000배 작은 금액이 amount > 0 을 통과해 조용히 적재된다.
+    expect(parseAmount("5.100")).toBeNull();
+    expect(parseAmount("5.000")).toBeNull();
+    // 쉼표가 먼저 제거되므로 1.234,56 은 1.23456 이 되어 1 로 적재됐다.
+    expect(parseAmount("1.234,56")).toBeNull();
+  });
+
+  it("rounds 승인 and 취소 to the same magnitude", () => {
+    // Math.abs(Math.round(x)) 는 음수를 0 쪽으로 반올림해 부호 쌍이 1원 어긋난다.
+    expect(parseAmount("-1,234.50")).toBe(parseAmount("1,234.50"));
+    expect(parseAmount("-1,234.50")).toBe(1235);
+  });
+
 });
