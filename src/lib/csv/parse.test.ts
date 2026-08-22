@@ -54,4 +54,14 @@ describe("csv parse", () => {
     ]);
   });
 
+  it("opens a quoted field that follows a space after the comma", () => {
+    const result = parseCsv(
+      '승인일,가맹점명,금액,상태\n2026-03-04, "스타벅스, 강남점", "5,100", 승인\n',
+    );
+
+    expect(result.rows).toEqual([
+      ["2026-03-04", "스타벅스, 강남점", "5,100", " 승인"],
+    ]);
+  });
+
 });

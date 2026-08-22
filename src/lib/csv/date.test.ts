@@ -61,4 +61,23 @@ describe("csv date", () => {
     );
   });
 
+  it("does not read a two-digit year-first value as DD/MM evidence", () => {
+    // 한국 카드사에서 흔한 YY.MM.DD. 26 을 '일'로 읽으면 DD/MM/YYYY 로 확정되고
+    // 26.08.18 이 2018-08-26 이 된다 — 8년 어긋난 값이 scan 으로 확정돼 경고도 뜨지 않는다.
+    const decision = decideDateFormat(["26.08.18", "26.08.19", "26.08.20"]);
+
+    expect(decision).not.toEqual({
+      format: "DD/MM/YYYY",
+      ambiguousResolvedBy: "scan",
+    });
+    expect(parseDate("26.08.18", decision.format)).toBeNull();
+  });
+
+  it("still takes MM/DD evidence when the two-digit year is last", () => {
+    expect(decideDateFormat(["03/04/26", "03/14/26"])).toEqual({
+      format: "MM/DD/YYYY",
+      ambiguousResolvedBy: "scan",
+    });
+  });
+
 });

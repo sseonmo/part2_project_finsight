@@ -31,7 +31,10 @@ export function parseCsv(text: string): { header: string[]; rows: string[][] } {
         } else {
           inQuotes = false;
         }
-      } else if (cell === "") {
+      } else if (cell.trim() === "") {
+        // 쉼표 뒤 공백(`, "5,100"`)이 있어도 인용 필드를 연다. 앞선 공백은
+        // 구분자의 일부이므로 버린다 — 남겨두면 셀 값이 ` 5,100` 이 된다.
+        cell = "";
         inQuotes = true;
       } else {
         // 인용하지 않은 필드 중간의 따옴표는 리터럴이다(RFC 4180).

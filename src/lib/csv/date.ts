@@ -22,7 +22,11 @@ function expandYear(year: number): number {
   return year < 100 ? 2000 + year : year;
 }
 
-function partsFromSeparatedDate(raw: string): [number, number, number] | null {
+// 네 번째 원소는 세 번째 성분의 자릿수다. 두 자리 연도가 앞에 오는 YY.MM.DD 를
+// DD/MM/YY 와 구분하려면 값만으로는 부족하고 연도가 네 자리로 못박혔는지를 봐야 한다.
+function partsFromSeparatedDate(
+  raw: string,
+): [number, number, number, number] | null {
   const match = DATE_PARTS.exec(raw);
 
   if (!match) {
@@ -35,7 +39,7 @@ function partsFromSeparatedDate(raw: string): [number, number, number] | null {
 
   return first === null || second === null || third === null
     ? null
-    : [first, second, third];
+    : [first, second, third, match[3]!.length];
 }
 
 function makeSeoulDate(year: number, month: number, day: number): Date | null {
@@ -75,7 +79,7 @@ export function decideDateFormat(rawDates: string[]): DateFormatDecision {
       continue;
     }
 
-    const [first, second] = parts;
+    const [first, second, , thirdDigits] = parts;
 
     if (first > 999) {
       sawSeparatedYearFirst = true;
@@ -86,9 +90,14 @@ export function decideDateFormat(rawDates: string[]): DateFormatDecision {
     // third 가 네 자리일 때만 보면 14 > 12 라는 확정 증거를 버리게 된다.
     sawSlashYearLast = true;
 
-    if (first > 12 && second <= 12) {
+    // first > 12 는 '일'의 증거가 되지만, third 가 두 자리면 first 가 두 자리
+    // 연도일 수도 있다(YY.MM.DD 는 한국 카드사에서 흔하다). 그 경우를 '일'로
+    // 확정하면 26.08.18 이 2018-08-26 으로 조용히 8년 어긋난다 — 연도가 네
+    // 자리로 못박혔을 때만 증거로 받는다.
+    if (first > 12 && second <= 12 && thirdDigits === 4) {
       sawDayMonthEvidence = true;
     }
+    // second > 12 는 '월'이 아님을 뜻하므로 연도 위치와 무관하게 안전하다.
     if (second > 12 && first <= 12) {
       sawMonthDayEvidence = true;
     }
