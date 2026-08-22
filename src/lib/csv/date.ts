@@ -66,11 +66,32 @@ export function toSeoulDateString(date: Date): string {
   }).format(date);
 }
 
+// 세 성분이 모두 두 자리면 26.08.18 을 YY.MM.DD 로도 DD/MM/YY 로도 읽을 수 있다.
+// 명세서 한 부에서는 연도가 한 값으로 고정되고 일이 여러 값을 갖는다 — 어느 쪽이
+// 고정인지로 연도 위치를 가른다. 갈리지 않으면 판정하지 않는다.
+function looksYearFirst(rows: [number, number, number][]): boolean {
+  const validAsYearFirst = rows.every(
+    ([first, second, third]) =>
+      first <= 99 && second >= 1 && second <= 12 && third >= 1 && third <= 31,
+  );
+
+  if (!validAsYearFirst) {
+    return false;
+  }
+
+  const firsts = new Set(rows.map(([first]) => first));
+  const thirds = new Set(rows.map(([, , third]) => third));
+
+  return firsts.size === 1 && thirds.size >= 2;
+}
+
 export function decideDateFormat(rawDates: string[]): DateFormatDecision {
   let sawSeparatedYearFirst = false;
   let sawSlashYearLast = false;
   let sawMonthDayEvidence = false;
   let sawDayMonthEvidence = false;
+  let separatedRows = 0;
+  const twoDigitTailRows: [number, number, number][] = [];
 
   for (const rawDate of rawDates) {
     const parts = partsFromSeparatedDate(rawDate);
@@ -79,7 +100,9 @@ export function decideDateFormat(rawDates: string[]): DateFormatDecision {
       continue;
     }
 
-    const [first, second, , thirdDigits] = parts;
+    separatedRows += 1;
+
+    const [first, second, third, thirdDigits] = parts;
 
     if (first > 999) {
       sawSeparatedYearFirst = true;
@@ -101,6 +124,23 @@ export function decideDateFormat(rawDates: string[]): DateFormatDecision {
     if (second > 12 && first <= 12) {
       sawMonthDayEvidence = true;
     }
+
+    if (thirdDigits <= 2) {
+      twoDigitTailRows.push([first, second, third]);
+    }
+  }
+
+  // 연도 위치를 확정해 주는 증거가 하나도 없고 모든 행의 꼬리가 두 자리일 때만
+  // 고정/변동으로 가른다. 증거가 있으면 그쪽이 우선이다.
+  if (
+    !sawMonthDayEvidence &&
+    !sawDayMonthEvidence &&
+    !sawSeparatedYearFirst &&
+    separatedRows > 0 &&
+    twoDigitTailRows.length === separatedRows &&
+    looksYearFirst(twoDigitTailRows)
+  ) {
+    return { format: "YY.MM.DD", ambiguousResolvedBy: "scan" };
   }
 
   if (sawMonthDayEvidence && !sawDayMonthEvidence) {
@@ -150,6 +190,8 @@ export function parseDate(raw: string, format: string): Date | null {
       return makeSeoulDate(expandYear(third), first, second);
     case "DD/MM/YYYY":
       return makeSeoulDate(expandYear(third), second, first);
+    case "YY.MM.DD":
+      return first > 99 ? null : makeSeoulDate(expandYear(first), second, third);
     default:
       return null;
   }
