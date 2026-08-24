@@ -2,7 +2,20 @@ export type TransactionType = "expense" | "refund" | "deposit";
 
 export type RawRow = Record<string, string | undefined>;
 
-const EXPENSE_WORDS = ["승인", "이용", "매출", "매입", "결제", "구매", "일시불"];
+// 결제방법 컬럼(일시불·할부·자동이체)이 type 으로 매핑되는 명세서가 흔하다.
+// 여기 없는 결제수단은 행째로 버려지므로 지출 수단도 함께 둔다.
+const EXPENSE_WORDS = [
+  "승인",
+  "이용",
+  "매출",
+  "매입",
+  "결제",
+  "구매",
+  "일시불",
+  "할부",
+  "분할납부",
+  "자동이체",
+];
 const REFUND_WORDS = ["취소", "환불", "청구취소", "매출취소", "승인취소"];
 const DEPOSIT_WORDS = ["입금", "상환", "결제입금", "캐시백"];
 

@@ -6,9 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/types/database";
 
-function getRequiredEnv(name: string): string {
-  const value = process.env[name];
-
+function requireEnv(name: string, value: string | undefined): string {
   if (!value) {
     throw new Error(`${name} is required to create a Supabase client.`);
   }
@@ -16,10 +14,19 @@ function getRequiredEnv(name: string): string {
   return value;
 }
 
+// 키를 리터럴로 적는다. 번들러는 리터럴 process.env.NEXT_PUBLIC_X 만 값으로
+// 치환하므로, 동적으로 읽으면 브라우저에서 빈 폴리필 객체를 보게 되어 로그인과
+// 업로드가 통째로 막힌다.
 function getPublicSupabaseEnv() {
   return {
-    url: getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    anonKey: getRequiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+    url: requireEnv(
+      "NEXT_PUBLIC_SUPABASE_URL",
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+    ),
+    anonKey: requireEnv(
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    ),
   };
 }
 

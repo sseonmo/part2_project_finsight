@@ -27,6 +27,19 @@ describe("Supabase client factories", () => {
     vi.clearAllMocks();
   });
 
+  it("reads public env through literal keys so the client bundle inlines them", async () => {
+    // 번들러는 리터럴 process.env.NEXT_PUBLIC_X 만 치환한다. process.env[name]
+    // 처럼 동적으로 읽으면 브라우저에서는 빈 폴리필 객체를 읽게 되어 값이 항상
+    // undefined 가 되고, 로그인과 업로드가 통째로 막힌다. 런타임 동작은 Node 의
+    // 진짜 process.env 위에서 늘 통과하므로 소스에서 직접 막는다.
+    const { readFileSync } = await import("node:fs");
+    const source = readFileSync("src/services/supabase.ts", "utf8");
+
+    expect(source).toContain("process.env.NEXT_PUBLIC_SUPABASE_URL");
+    expect(source).toContain("process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    expect(source).not.toMatch(/process\.env\[/);
+  });
+
   it("does not require environment variables at module import time", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");

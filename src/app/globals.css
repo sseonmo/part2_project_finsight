@@ -1142,11 +1142,13 @@ a:hover {
 .dashboard-category-row__bar,
 .dashboard-flow__bar-track {
   background: var(--surface);
-  border-radius: var(--radius-full);
   overflow: hidden;
 }
 
+/* 알약 반경은 8px 높이의 가로 막대에만 맞다. 세로로 긴 추이 트랙에 걸면
+   트랙이 통째로 타원이 되고 overflow 가 막대를 원으로 잘라낸다. */
 .dashboard-category-row__bar {
+  border-radius: var(--radius-full);
   height: var(--space-xs);
   width: 100%;
 }

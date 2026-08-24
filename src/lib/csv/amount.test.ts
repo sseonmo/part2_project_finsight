@@ -24,6 +24,16 @@ describe("csv amount", () => {
     expect(decideTransactionType({ type: "보류" })).toBeNull();
   });
 
+  it("reads 결제수단 words in the type column as ordinary spending", () => {
+    // 카드사 명세서의 결제방법 컬럼은 승인/취소가 아니라 일시불·할부·자동이체다.
+    // 자동이체를 모르면 통신요금·보험료·구독료 행이 통째로 버려지고, 그게 바로
+    // 반복 지출과 구독료 인상 탐지가 딛고 선 데이터다.
+    expect(decideTransactionType({ type: "자동이체" })).toBe("expense");
+    expect(decideTransactionType({ type: "할부" })).toBe("expense");
+    expect(decideTransactionType({ type: "분할납부" })).toBe("expense");
+    expect(decideTransactionType({ type: "정기결제" })).toBe("expense");
+  });
+
   it("defaults to expense only when no type column exists", () => {
     expect(decideTransactionType({ amount: "5,100" })).toBe("expense");
     expect(decideTransactionType({ amount: "-5,100" })).toBe("refund");
