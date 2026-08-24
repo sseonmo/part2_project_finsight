@@ -73,6 +73,9 @@ export type Database = {
           generation_started_at: string | null
           month: string
           narrative: string
+          previous_total_expense: number | null
+          total_expense: number | null
+          transaction_count: number | null
           user_id: string
         }
         Insert: {
@@ -80,6 +83,9 @@ export type Database = {
           generation_started_at?: string | null
           month: string
           narrative: string
+          previous_total_expense?: number | null
+          total_expense?: number | null
+          transaction_count?: number | null
           user_id: string
         }
         Update: {
@@ -87,6 +93,9 @@ export type Database = {
           generation_started_at?: string | null
           month?: string
           narrative?: string
+          previous_total_expense?: number | null
+          total_expense?: number | null
+          transaction_count?: number | null
           user_id?: string
         }
         Relationships: []

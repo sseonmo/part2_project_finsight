@@ -236,6 +236,10 @@ describe("POST /api/reports/[yearMonth]", () => {
       ]),
       generated_at: "2026-08-18T12:00:00.000Z",
       generation_started_at: null,
+      // 문단이 쓴 숫자를 함께 남겨야 상단 통계가 문단과 같은 시점을 보여준다.
+      total_expense: 520_000,
+      previous_total_expense: 400_000,
+      transaction_count: 42,
     });
   });
 

@@ -32,6 +32,9 @@ type ReportRow = {
   generated_at: string;
   generation_started_at: string | null;
   narrative: string;
+  total_expense?: number | null;
+  previous_total_expense?: number | null;
+  transaction_count?: number | null;
 };
 
 function mockSession(input?: { canWrite?: boolean; state?: string }) {
@@ -92,6 +95,54 @@ describe("/dashboard/report/[yearMonth]", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+  });
+
+  it("renders the totals the narrative was written from, not the live aggregate", async () => {
+    // 상단이 최신 집계이고 문단이 옛 스냅샷이면 한 화면에 총지출이 둘이 된다.
+    mockSession();
+    mockSummaries();
+    mockReport({
+      generated_at: "2026-03-12T00:00:00.000Z",
+      generation_started_at: null,
+      narrative: JSON.stringify([
+        { heading: "이번 달 요약", body: "생성 시점 문단입니다." },
+        { heading: "다음 행동", body: "확인하세요." },
+      ]),
+      total_expense: 289_150,
+      previous_total_expense: 350_250,
+      transaction_count: 14,
+    });
+
+    await renderReportPage();
+
+    expect(screen.getByText("289,150원")).toBeInTheDocument();
+    expect(screen.queryByText("520,000원")).not.toBeInTheDocument();
+    expect(screen.getByText("14건")).toBeInTheDocument();
+    expect(
+      screen.getByText(/리포트를 만든 뒤 이 달 거래가 바뀌었습니다/),
+    ).toBeInTheDocument();
+  });
+
+  it("does not warn about changed transactions while the snapshot still matches", async () => {
+    mockSession();
+    mockSummaries();
+    mockReport({
+      generated_at: "2026-03-12T00:00:00.000Z",
+      generation_started_at: null,
+      narrative: JSON.stringify([
+        { heading: "이번 달 요약", body: "생성 시점 문단입니다." },
+        { heading: "다음 행동", body: "확인하세요." },
+      ]),
+      total_expense: 520_000,
+      previous_total_expense: 400_000,
+      transaction_count: 42,
+    });
+
+    await renderReportPage();
+
+    expect(
+      screen.queryByText(/리포트를 만든 뒤 이 달 거래가 바뀌었습니다/),
+    ).not.toBeInTheDocument();
   });
 
   it("renders an existing report for expired users but disables regeneration", async () => {

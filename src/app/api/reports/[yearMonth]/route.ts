@@ -198,6 +198,14 @@ export async function POST(_request: Request, context: RouteContext) {
         narrative: JSON.stringify(sections),
         generated_at: generatedAt,
         generation_started_at: null,
+        // 문단이 쓴 숫자를 함께 남긴다. 이 값이 없으면 상단 통계가 문단과
+        // 다른 시점을 보여주게 된다.
+        total_expense: currentSummary.totalExpense,
+        previous_total_expense:
+          previousSummary.transactionCount > 0
+            ? previousSummary.totalExpense
+            : null,
+        transaction_count: currentSummary.transactionCount,
       })
       .eq("user_id", user.id)
       .eq("month", period);

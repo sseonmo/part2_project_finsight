@@ -1,10 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 
 import { ReportGenerateButton } from "@/components/DashboardActions";
+import { fetchDashboardSummary } from "@/lib/dashboard/queries";
 import {
-  fetchDashboardSummary,
-  type DashboardSummary,
-} from "@/lib/dashboard/queries";
+  resolveReportStats,
+  type ReportSnapshot,
+} from "@/lib/report/snapshot";
 import { getSessionContext } from "@/lib/session";
 import { createServerClient } from "@/services/supabase";
 
@@ -20,6 +21,9 @@ type ReportRow = {
   generated_at: string;
   generation_started_at: string | null;
   narrative: string;
+  total_expense: number | null;
+  previous_total_expense: number | null;
+  transaction_count: number | null;
 };
 
 type ReportSection = {
@@ -163,16 +167,10 @@ function parseReport(narrative: string): ParsedReport {
   }
 }
 
-function ReportStats({
-  current,
-  previous,
-}: {
-  current: DashboardSummary;
-  previous: DashboardSummary;
-}) {
+function ReportStats({ stats }: { stats: ReportSnapshot }) {
   const change =
-    previous.transactionCount > 0
-      ? getChange(current.totalExpense, previous.totalExpense)
+    stats.previousTotalExpense !== null
+      ? getChange(stats.totalExpense, stats.previousTotalExpense)
       : null;
 
   return (
@@ -180,7 +178,7 @@ function ReportStats({
       <div className="report-stat">
         <span className="report-stat__label">그 달 총지출</span>
         <span className="report-stat__value tabular-nums">
-          {formatCurrency(current.totalExpense)}
+          {formatCurrency(stats.totalExpense)}
         </span>
       </div>
       <div className="report-stat">
@@ -199,7 +197,7 @@ function ReportStats({
       <div className="report-stat">
         <span className="report-stat__label">거래 건수</span>
         <span className="report-stat__value tabular-nums">
-          {current.transactionCount.toLocaleString("ko-KR")}건
+          {stats.transactionCount.toLocaleString("ko-KR")}건
         </span>
       </div>
     </section>
@@ -259,7 +257,9 @@ export default async function ReportPage({ params }: ReportPageProps) {
     await Promise.all([
       supabase
         .from("monthly_reports")
-        .select("narrative, generated_at, generation_started_at")
+        .select(
+          "narrative, generated_at, generation_started_at, total_expense, previous_total_expense, transaction_count",
+        )
         .eq("user_id", session.userId)
         .eq("month", period)
         .maybeSingle<ReportRow>(),
@@ -280,6 +280,24 @@ export default async function ReportPage({ params }: ReportPageProps) {
   const parsedReport = parseReport(report?.narrative ?? "");
   const hasReport = parsedReport.kind !== "empty";
   const isGenerating = Boolean(report?.generation_started_at);
+  const { stats, isStale } = resolveReportStats({
+    snapshot:
+      hasReport &&
+      report &&
+      typeof report.total_expense === "number" &&
+      typeof report.transaction_count === "number"
+        ? {
+            totalExpense: report.total_expense,
+            previousTotalExpense:
+              typeof report.previous_total_expense === "number"
+                ? report.previous_total_expense
+                : null,
+            transactionCount: report.transaction_count,
+          }
+        : null,
+    current: currentSummary,
+    previous: previousSummary,
+  });
 
   return (
     <div className="report-page">
@@ -305,7 +323,14 @@ export default async function ReportPage({ params }: ReportPageProps) {
         </section>
       ) : null}
 
-      <ReportStats current={currentSummary} previous={previousSummary} />
+      {isStale ? (
+        <p className="report-stale" role="status">
+          리포트를 만든 뒤 이 달 거래가 바뀌었습니다. 아래 숫자와 문단은 생성
+          시점 기준입니다.
+        </p>
+      ) : null}
+
+      <ReportStats stats={stats} />
       <ReportBody parsedReport={parsedReport} />
     </div>
   );

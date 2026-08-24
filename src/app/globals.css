@@ -1349,7 +1349,8 @@ a:hover {
 .report-hero,
 .report-stat,
 .report-empty,
-.report-generating {
+.report-generating,
+.report-stale {
   background: var(--canvas);
   border: var(--line-width) solid var(--hairline);
   border-radius: var(--radius-xl);
@@ -1437,6 +1438,7 @@ a:hover {
 }
 
 .report-generating,
+.report-stale,
 .report-empty {
   color: var(--text-secondary);
   font-size: var(--font-size-body-sm);
