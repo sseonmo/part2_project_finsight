@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { ManualMappingForm } from "@/components/ManualMappingForm";
 import { getSessionContext } from "@/lib/session";
+import { initialMappingError } from "@/lib/uploads/mapping-message";
 import { createServerClient } from "@/services/supabase";
 
 export const dynamic = "force-dynamic";
@@ -17,14 +18,6 @@ type UploadMappingJob = {
   mapping_attempt_count: number;
   failed_reason: string | null;
 };
-
-function initialMappingError(job: UploadMappingJob): string | null {
-  if (job.mapping_attempt_count > 0) {
-    return "선택한 컬럼으로 날짜를 읽지 못했습니다. 다른 컬럼을 골라주세요";
-  }
-
-  return job.failed_reason;
-}
 
 export default async function ManualMappingPage({ params }: MappingPageProps) {
   const session = await getSessionContext();
@@ -49,7 +42,10 @@ export default async function ManualMappingPage({ params }: MappingPageProps) {
   return (
     <div className="manual-mapping-page">
       <ManualMappingForm
-        initialErrorMessage={initialMappingError(job)}
+        initialErrorMessage={initialMappingError({
+          mappingAttemptCount: job.mapping_attempt_count,
+          failedReason: job.failed_reason,
+        })}
         originalFilename={job.original_filename}
         uploadId={job.id}
       />

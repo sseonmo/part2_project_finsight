@@ -13,7 +13,8 @@ import {
   type ParsedRow,
 } from "@/lib/csv/mapping";
 import { hashHeader, parseCsv } from "@/lib/csv/parse";
-import { runSanityCheck } from "@/lib/csv/sanity";
+import { runSanityCheck, SANITY_EMPTY_FILE_REASON } from "@/lib/csv/sanity";
+import { GENERIC_MAPPING_FAILURE_REASON } from "@/lib/uploads/mapping-message";
 import {
   CSV_FULL_FAILURE_RATE_MAX,
   CSV_MAPPING_SAMPLE_SIZE,
@@ -227,7 +228,7 @@ export function classifyMappingFailure(
 
   return {
     status: "needs_mapping",
-    reason: "거래를 읽지 못했습니다. 컬럼을 다시 골라주세요.",
+    reason: GENERIC_MAPPING_FAILURE_REASON,
   };
 }
 
@@ -461,7 +462,7 @@ export async function runProcessUploadPipeline(input: {
     if (!inferred) {
       await repository.updateJob(job.id, {
         status: "needs_mapping",
-        failedReason: "거래를 읽지 못했습니다. 컬럼을 다시 골라주세요.",
+        failedReason: GENERIC_MAPPING_FAILURE_REASON,
       });
 
       return { hasMapping: false, source: "none" as const };
@@ -546,10 +547,27 @@ export async function runProcessUploadPipeline(input: {
     const sanity = runSanityCheck(normalizedRows);
 
     if (!sanity.ok) {
-      await repository.updateJob(job.id, {
-        status: "failed",
-        failedReason: sanity.reason,
-      });
+      // 수동 매핑 직후의 sanity 실패는 컬럼을 잘못 고른 결과일 수 있다.
+      // 시도 횟수가 남았으면 다시 고를 기회를 준다(S10). 데이터 행이 0건인
+      // 파일만은 컬럼을 바꿔도 읽을 것이 없어 그대로 failed 다.
+      const remappable =
+        isManualMapping &&
+        sanity.reason !== SANITY_EMPTY_FILE_REASON &&
+        job.mappingAttemptCount < MAX_MANUAL_MAPPING_ATTEMPTS;
+
+      if (remappable) {
+        await markMappingFailure({
+          repository,
+          job,
+          failure: { status: "needs_mapping", reason: sanity.reason },
+        });
+      } else {
+        await repository.updateJob(job.id, {
+          status: "failed",
+          failedReason: sanity.reason,
+        });
+      }
+
       return { ready: false, insertedCount: 0, duplicateCount: 0, skippedRows: 0 };
     }
 

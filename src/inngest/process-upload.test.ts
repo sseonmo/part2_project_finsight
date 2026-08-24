@@ -227,12 +227,19 @@ function createRepository(input: {
   };
 }
 
-async function runWithRepository(repository: ReturnType<typeof createRepository>) {
+async function runWithRepository(
+  repository: ReturnType<typeof createRepository>,
+  mapping?: ColumnMapping,
+) {
   const { runProcessUploadPipeline } = await import("./process-upload");
   const stepRecorder = createStepRecorder();
 
   await runProcessUploadPipeline({
-    event: { uploadId: repository.job.id, userId: repository.job.userId },
+    event: {
+      uploadId: repository.job.id,
+      userId: repository.job.userId,
+      ...(mapping ? { mapping } : {}),
+    },
     repository,
     step: stepRecorder.step,
   });
@@ -318,6 +325,63 @@ describe("process upload pipeline", () => {
 
     expect(repository.job.status).toBe("needs_mapping");
     expect(repository.savedFingerprints).toEqual([]);
+  });
+
+  it("sends a manual mapping whose amounts are unreadable back to needs_mapping", async () => {
+    // 금액 컬럼을 잘못 고른 것뿐인데 failed 로 끝나면 남은 시도 횟수가 있어도
+    // 컬럼을 다시 고를 수 없다(S10). 자동 매핑 경로의 판정은 그대로 둔다.
+    inferColumnMappingMock.mockResolvedValue(MAPPING);
+    const repository = createRepository({
+      job: makeJob({ mapping: MAPPING, mappingAttemptCount: 1, status: "needs_mapping" }),
+      bytes: csv(
+        Array.from({ length: 20 }, (_, index) => row("2026-03-04", `가맹점${index}`, "금액아님")),
+      ),
+    });
+
+    await runWithRepository(repository, MAPPING);
+
+    expect(repository.job.status).toBe("needs_mapping");
+    expect(repository.savedFingerprints).toEqual([]);
+  });
+
+  it("still fails a manual mapping once the attempt limit is reached", async () => {
+    inferColumnMappingMock.mockResolvedValue(MAPPING);
+    const repository = createRepository({
+      job: makeJob({ mapping: MAPPING, mappingAttemptCount: 3, status: "needs_mapping" }),
+      bytes: csv(
+        Array.from({ length: 20 }, (_, index) => row("2026-03-04", `가맹점${index}`, "금액아님")),
+      ),
+    });
+
+    await runWithRepository(repository, MAPPING);
+
+    expect(repository.job.status).toBe("failed");
+  });
+
+  it("fails an automatic mapping whose amounts are unreadable", async () => {
+    inferColumnMappingMock.mockResolvedValue(MAPPING);
+    const repository = createRepository({
+      bytes: csv(
+        Array.from({ length: 20 }, (_, index) => row("2026-03-04", `가맹점${index}`, "금액아님")),
+      ),
+    });
+
+    await runWithRepository(repository);
+
+    expect(repository.job.status).toBe("failed");
+  });
+
+  it("fails a manual mapping on a file with no data rows", async () => {
+    // 헤더만 있는 파일은 컬럼을 다시 골라도 읽을 것이 없다.
+    inferColumnMappingMock.mockResolvedValue(MAPPING);
+    const repository = createRepository({
+      job: makeJob({ mapping: MAPPING, mappingAttemptCount: 1, status: "needs_mapping" }),
+      bytes: csv([]),
+    });
+
+    await runWithRepository(repository, MAPPING);
+
+    expect(repository.job.status).toBe("failed");
   });
 
   it("stores the date format from the full-file mapping trial", async () => {

@@ -7,6 +7,12 @@ import {
 
 export type SanityResult = { ok: true } | { ok: false; reason: string };
 
+/**
+ * 데이터 행이 애초에 0건인 파일이다. 다른 사유와 달리 컬럼을 다시 골라도
+ * 읽을 것이 없으므로 수동 매핑에서도 되돌리지 않는다.
+ */
+export const SANITY_EMPTY_FILE_REASON = "거래가 없는 파일입니다.";
+
 function seoulDateParts(date: Date): { year: number; month: number; day: number } {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Seoul",
@@ -50,7 +56,7 @@ function hasValidAmount(row: ParsedRow): boolean {
 
 export function runSanityCheck(rows: ParsedRow[]): SanityResult {
   if (rows.length === 0) {
-    return { ok: false, reason: "거래가 없는 파일입니다." };
+    return { ok: false, reason: SANITY_EMPTY_FILE_REASON };
   }
 
   const { today, oldestAllowed } = currentSeoulDateWindow();
