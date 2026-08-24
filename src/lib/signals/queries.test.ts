@@ -12,10 +12,40 @@ import {
 
 function supabaseMock(data: unknown[] = []) {
   const client = {
-    rpc: vi.fn().mockResolvedValue({ data, error: null }),
+    rpc: vi.fn(() => {
+      const result = Promise.resolve({ data, error: null });
+
+      // 페이지네이션을 쓰는 wrapper 와 그렇지 않은 wrapper 를 모두 받는다.
+      return Object.assign(result, { range: () => result });
+    }),
   };
 
   return client as unknown as SignalAggregateClient & typeof client;
+}
+
+/** 페이지가 꽉 차 있는 동안 이어 읽는 wrapper 를 위한 mock. */
+function pagedRpcMock(pages: unknown[][]) {
+  const ranges: [number, number][] = [];
+  let pageIndex = 0;
+  const client = {
+    rpc: vi.fn(() => {
+      // 페이지네이션하지 않는 wrapper 는 첫 페이지만 보게 된다.
+      const firstPage = Promise.resolve({ data: pages[0], error: null });
+
+      return Object.assign(firstPage, {
+        range: (from: number, to: number) => {
+          ranges.push([from, to]);
+
+          return Promise.resolve({
+            data: pages[pageIndex++] ?? [],
+            error: null,
+          });
+        },
+      });
+    }),
+  } as unknown as SignalAggregateClient;
+
+  return { client, ranges };
 }
 
 describe("signal aggregate query wrappers", () => {
@@ -143,6 +173,59 @@ describe("signal aggregate query wrappers", () => {
     expect(client.rpc).toHaveBeenCalledWith("get_recurring_signals_latest", {
       p_user_id: "user-1",
     });
+  });
+
+  it("reads every merchant history page when the first page comes back full", async () => {
+    // PostgREST 는 한 응답에 max_rows(1000) 만 싣는다. 한 페이지가 꽉 차서
+    // 돌아오면 뒤쪽 가맹점이 통째로 잘려 반복 결제 신호가 사라진다.
+    const historyRow = (index: number) => ({
+      id: `transaction-${index}`,
+      period: "2026-03-01",
+      transacted_on: "2026-03-04",
+      category: "구독" as const,
+      amount: 17_000,
+      merchant_normalized: `MERCHANT-${String(index).padStart(4, "0")}`,
+    });
+    const { client, ranges } = pagedRpcMock([
+      Array.from({ length: 1000 }, (_, index) => historyRow(index)),
+      [historyRow(1000)],
+    ]);
+
+    const history = await fetchMerchantHistory(client, {
+      userId: "user-1",
+      untilPeriod: "2026-03-01",
+    });
+
+    expect(history).toHaveLength(1001);
+    expect(history.at(-1)?.merchantNormalized).toBe("MERCHANT-1000");
+    // 두 번째 페이지가 덜 차 있으므로 세 번째 요청은 없다.
+    expect(ranges).toEqual([
+      [0, 999],
+      [1000, 1999],
+    ]);
+  });
+
+  it("reads every seen merchants page when the first page comes back full", async () => {
+    // 잘리면 이미 본 가맹점이 "신규"로 판정돼 new_merchant_large 가 오탐한다.
+    const merchantRow = (index: number) => ({
+      merchant_normalized: `MERCHANT-${String(index).padStart(4, "0")}`,
+    });
+    const { client, ranges } = pagedRpcMock([
+      Array.from({ length: 1000 }, (_, index) => merchantRow(index)),
+      [merchantRow(1000)],
+    ]);
+
+    const merchants = await fetchSeenMerchantsBeforePeriod(client, {
+      userId: "user-1",
+      period: "2026-03-01",
+    });
+
+    expect(merchants).toHaveLength(1001);
+    expect(merchants.at(-1)).toBe("MERCHANT-1000");
+    expect(ranges).toEqual([
+      [0, 999],
+      [1000, 1999],
+    ]);
   });
 
   it("throws RPC errors without hiding them", async () => {
