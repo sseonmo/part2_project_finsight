@@ -20,21 +20,20 @@ import {
   type DashboardSummary,
   type DashboardTopMerchant,
 } from "@/lib/dashboard/queries";
+import {
+  DASHBOARD_UPLOAD_CARD_LIMIT,
+  DASHBOARD_UPLOAD_STATUSES,
+  selectDashboardUploadCards,
+} from "@/lib/dashboard/upload-cards";
 import { getSessionContext } from "@/lib/session";
 import { createServerClient } from "@/services/supabase";
 import type { Database, Json } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
-const DASHBOARD_UPLOAD_STATUSES = [
-  "pending",
-  "parsing",
-  "categorizing",
-  "needs_mapping",
-] as const;
-
 type UploadCardRow = {
   id: string;
+  created_at: string;
   status: UploadJobSnapshot["status"];
   failed_reason: string | null;
   inserted_count: number;
@@ -255,12 +254,16 @@ async function getDashboardUploadJobs(
   const { data } = await supabase
     .from("upload_jobs")
     .select(
-      "id, status, failed_reason, inserted_count, duplicate_count, skipped_rows, uncategorized_count, card_label_mismatch_warning",
+      "id, created_at, status, failed_reason, inserted_count, duplicate_count, skipped_rows, uncategorized_count, card_label_mismatch_warning",
     )
     .eq("user_id", userId)
-    .in("status", [...DASHBOARD_UPLOAD_STATUSES]);
+    .in("status", [...DASHBOARD_UPLOAD_STATUSES])
+    .order("created_at", { ascending: false })
+    .limit(DASHBOARD_UPLOAD_CARD_LIMIT);
 
-  return ((data ?? []) as UploadCardRow[]).map(toUploadJobSnapshot);
+  return selectDashboardUploadCards((data ?? []) as UploadCardRow[], new Date()).map(
+    toUploadJobSnapshot,
+  );
 }
 
 async function getTransactionMonths(
