@@ -36,6 +36,7 @@ const NARRATIVE_SYSTEM_PROMPT = [
   "입력의 amount, impact, ratio, total, count 값은 모두 SQL과 순수 함수가 이미 계산한 값이다.",
   "어떤 수치도 새로 계산하거나 만들지 말고, 입력에 있는 숫자만 사용한다.",
   "무엇을 지적할지도 고르지 않는다. 받은 신호 각각에 대해서만 문장을 쓴다.",
+  "금액은 천단위마다 쉼표를 찍어 쓴다(73,400원). Percent 로 끝나는 값은 이미 퍼센트이므로 % 를 붙여 그대로 쓴다.",
   '반드시 JSON 객체만 반환한다: {"narratives":[{"id":"입력 id","narrative":"문장"}]}',
 ].join("\n");
 
@@ -280,6 +281,23 @@ function maybeSanitizeMerchantField(key: string, value: unknown): unknown {
   return value;
 }
 
+/**
+ * 0~1 사이의 비율은 LLM 이 그대로 문장에 박는다("비중은 0.6559428060768543 입니다").
+ * 프롬프트에 싣기 전에 정수 퍼센트로 바꾸고 키에도 그 사실을 적는다.
+ * 값을 새로 만드는 것이 아니라 이미 계산된 값의 표현만 고르는 것이다.
+ */
+function asWholePercent(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
+
+  if (Number.isInteger(value) || value <= -1 || value >= 1) {
+    return null;
+  }
+
+  return Math.round(value * 100);
+}
+
 function sanitizeNarrativePayload(value: unknown, key = ""): unknown {
   if (Array.isArray(value)) {
     return value.map((item) => sanitizeNarrativePayload(item, key));
@@ -290,10 +308,15 @@ function sanitizeNarrativePayload(value: unknown, key = ""): unknown {
   }
 
   return Object.fromEntries(
-    Object.entries(value).map(([entryKey, entryValue]) => [
-      entryKey,
-      sanitizeNarrativePayload(entryValue, entryKey),
-    ]),
+    Object.entries(value).map(([entryKey, entryValue]) => {
+      const percent = asWholePercent(entryValue);
+
+      if (percent !== null) {
+        return [`${entryKey}Percent`, percent];
+      }
+
+      return [entryKey, sanitizeNarrativePayload(entryValue, entryKey)];
+    }),
   );
 }
 

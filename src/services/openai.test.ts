@@ -149,6 +149,57 @@ describe("OpenAI service wrapper", () => {
     );
   });
 
+  it("hands ratios to the prompt as whole percents instead of raw floats", async () => {
+    // 원값을 그대로 넘기면 LLM 이 "비중은 0.6559428060768543 입니다" 처럼
+    // 그대로 문장에 박는다. 실제로 그렇게 나온 적이 있다.
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    mockJsonResponse({ narratives: [{ id: "signal-1", narrative: "문장" }] });
+
+    await describeSignals([
+      {
+        id: "signal-1",
+        type: "outlier_transaction",
+        period: "2026-06-01",
+        targetKey: "tx-1",
+        impact: 73_400,
+        payload: {
+          merchantNormalized: "이마트",
+          amount: 73_400,
+          categoryTotal: 111_900,
+          shareOfCategory: 0.6559428060768543,
+        },
+      },
+    ]);
+
+    const sent = JSON.stringify(chatCompletionsCreateMock.mock.calls[0]?.[0]);
+
+    expect(sent).not.toContain("0.6559428060768543");
+    expect(sent).toContain("shareOfCategoryPercent\\\":66");
+    expect(sent).not.toContain("shareOfCategory\\\":");
+  });
+
+  it("keeps integer amounts untouched while converting ratios", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    mockJsonResponse({ narratives: [{ id: "signal-1", narrative: "문장" }] });
+
+    await describeSignals([
+      {
+        id: "signal-1",
+        type: "recurring_price_up",
+        period: "2026-06-01",
+        targetKey: "넷플릭스",
+        impact: 36_000,
+        payload: { previousAmount: 9_900, currentAmount: 12_900, increaseRate: 0.303 },
+      },
+    ]);
+
+    const sent = JSON.stringify(chatCompletionsCreateMock.mock.calls[0]?.[0]);
+
+    expect(sent).toContain("9900");
+    expect(sent).toContain("12900");
+    expect(sent).toContain("increaseRatePercent\\\":30");
+  });
+
   it("returns only provided signal narratives and leaves omissions to the caller", async () => {
     vi.stubEnv("OPENAI_API_KEY", "test-key");
     mockJsonResponse({
