@@ -64,6 +64,10 @@ export function applyMapping(
   header: string[],
   rows: string[][],
   mapping: ColumnMapping,
+  // 날짜 형식 판별에만 쓰는 행. 샘플 20행만 시험 파싱하면서 형식은 전 행에서
+  // 정해야 하는 7단계를 위한 것이다 — 샘플이 전부 같은 날이면 그 안에는
+  // YY.MM.DD 를 가릴 증거가 없다.
+  options?: { dateFormatRows?: string[][] },
 ): MappingTrial {
   const headerIndex = buildHeaderIndex(header);
   const dateIndex = findColumnIndex(headerIndex, mapping.date);
@@ -86,7 +90,9 @@ export function applyMapping(
   }
 
   const dateDecision = decideDateFormat(
-    rows.map((row) => cellAt(row, dateIndex) ?? ""),
+    (options?.dateFormatRows ?? rows).map(
+      (row) => cellAt(row, dateIndex) ?? "",
+    ),
   );
   const dateFormat = dateDecision.format;
   const parsed: ParsedRow[] = [];

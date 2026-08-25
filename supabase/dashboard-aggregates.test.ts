@@ -77,4 +77,14 @@ describe("dashboard aggregate SQL functions", () => {
     expect(body).toMatch(/transaction_type\s*=\s*'refund'/i);
     expect(body).toMatch(/transaction_type\s*=\s*'deposit'/i);
   });
+
+  it("counts upload job rows in SQL instead of returning them", () => {
+    // 업로드 이력 화면이 사용자의 거래 행을 전부 받아 JS 로 세면 행 상한에
+    // 걸려 오래된 업로드가 "0건" 으로 표시된다. 집계는 SQL 이 한다.
+    const body = functionBody("get_upload_job_counts").replace(/\s+/g, " ");
+
+    expect(body).toMatch(/count\s*\(/i);
+    expect(body).toMatch(/group\s+by/i);
+    expect(body).toMatch(/upload_job_id/i);
+  });
 });

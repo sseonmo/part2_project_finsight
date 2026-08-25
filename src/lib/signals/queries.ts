@@ -25,9 +25,36 @@ export type RecurringSignalLatest = {
   narrative: string | null;
 };
 
+// PostgREST 는 한 응답에 max_rows 행까지만 싣는다(supabase/config.toml).
+// 거래 1건당 1행을 돌려주는 RPC 는 이 값을 넘는 순간 조용히 잘린다.
+const RPC_PAGE_SIZE = 1000;
+
 function throwIfRpcError(error: { message?: string } | null): void {
   if (error) {
     throw new Error(error.message ?? "Signal aggregate RPC failed.");
+  }
+}
+
+/** 페이지가 꽉 차 있는 동안 이어 읽는다. 덜 찬 페이지가 마지막이다. */
+async function readAllPages<Row>(
+  readPage: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{ data: Row[] | null; error: { message?: string } | null }>,
+): Promise<Row[]> {
+  const rows: Row[] = [];
+
+  for (let offset = 0; ; offset += RPC_PAGE_SIZE) {
+    const { data, error } = await readPage(offset, offset + RPC_PAGE_SIZE - 1);
+
+    throwIfRpcError(error);
+
+    const page = data ?? [];
+    rows.push(...page);
+
+    if (page.length < RPC_PAGE_SIZE) {
+      return rows;
+    }
   }
 }
 
@@ -54,14 +81,16 @@ export async function fetchPeriodTransactions(
   client: SignalAggregateClient,
   input: { userId: string; period: string },
 ): Promise<SignalTransaction[]> {
-  const { data, error } = await client.rpc("get_period_transactions", {
-    p_user_id: input.userId,
-    p_period: input.period,
-  });
+  const rows = await readAllPages((from, to) =>
+    client
+      .rpc("get_period_transactions", {
+        p_user_id: input.userId,
+        p_period: input.period,
+      })
+      .range(from, to),
+  );
 
-  throwIfRpcError(error);
-
-  return (data ?? []).map((row) => ({
+  return rows.map((row) => ({
     id: row.id,
     period: row.period,
     transactedOn: row.transacted_on,
@@ -94,14 +123,16 @@ export async function fetchMerchantHistory(
   client: SignalAggregateClient,
   input: { userId: string; untilPeriod: string },
 ): Promise<SignalTransaction[]> {
-  const { data, error } = await client.rpc("get_merchant_history", {
-    p_user_id: input.userId,
-    p_until_period: input.untilPeriod,
-  });
+  const rows = await readAllPages((from, to) =>
+    client
+      .rpc("get_merchant_history", {
+        p_user_id: input.userId,
+        p_until_period: input.untilPeriod,
+      })
+      .range(from, to),
+  );
 
-  throwIfRpcError(error);
-
-  return (data ?? []).map((row) => ({
+  return rows.map((row) => ({
     id: row.id,
     period: row.period,
     transactedOn: row.transacted_on,
@@ -116,14 +147,16 @@ export async function fetchSeenMerchantsBeforePeriod(
   client: SignalAggregateClient,
   input: { userId: string; period: string },
 ): Promise<string[]> {
-  const { data, error } = await client.rpc("get_seen_merchants_before_period", {
-    p_user_id: input.userId,
-    p_period: input.period,
-  });
+  const rows = await readAllPages((from, to) =>
+    client
+      .rpc("get_seen_merchants_before_period", {
+        p_user_id: input.userId,
+        p_period: input.period,
+      })
+      .range(from, to),
+  );
 
-  throwIfRpcError(error);
-
-  return (data ?? []).map((row) => row.merchant_normalized);
+  return rows.map((row) => row.merchant_normalized);
 }
 
 export async function fetchRecurringSignalsLatest(

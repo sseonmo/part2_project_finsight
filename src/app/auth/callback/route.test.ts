@@ -88,7 +88,14 @@ describe("GET /auth/callback", () => {
     );
   });
 
-  it.each(["https://evil.test", "//evil.test"])(
+  it.each([
+    "https://evil.test",
+    "//evil.test",
+    // WHATWG URL 파서는 http(s) 에서 역슬래시를 슬래시로 정규화한다.
+    "/\\evil.test",
+    "/\\/evil.test",
+    "\\\\evil.test",
+  ])(
     "rejects unsafe redirectTo values: %s",
     async (redirectTo) => {
       mockSupabase();

@@ -47,6 +47,8 @@ import type {
 const UPLOAD_BUCKET = "transaction-csv-uploads";
 export const MAX_MANUAL_MAPPING_ATTEMPTS = 3;
 const CLASSIFICATION_RETRY_ATTEMPTS = 3;
+// 배치가 빌 때까지 도는 루프의 안전 상한. 20,000 고유 가맹점까지 받는다.
+const MAX_CLASSIFICATION_BATCHES = 200;
 
 type UploadStatus =
   Database["public"]["Enums"]["upload_job_status"];
@@ -122,7 +124,6 @@ export type UploadPipelineRepository = {
   insertTransactions(
     transactions: readonly TransactionToInsert[],
   ): Promise<{ insertedCount: number }>;
-  countUnmatchedMerchants(uploadJobId: string): Promise<number>;
   getNextUnmatchedMerchantBatch(
     uploadJobId: string,
     limit: number,
@@ -488,7 +489,9 @@ export async function runProcessUploadPipeline(input: {
 
     const { header: csvHeader, rows } = await loadParsedCsv(repository, job);
     const sampleRows = rows.slice(0, CSV_MAPPING_SAMPLE_SIZE);
-    const trial = applyMapping(csvHeader, sampleRows, job.mapping);
+    const trial = applyMapping(csvHeader, sampleRows, job.mapping, {
+      dateFormatRows: rows,
+    });
 
     if (
       trial.total > 0 &&
@@ -626,15 +629,11 @@ export async function runProcessUploadPipeline(input: {
     return;
   }
 
-  const classificationPlan = await step.run("plan-merchant-classification", async () => ({
-    batchCount: Math.ceil(
-      (await repository.countUnmatchedMerchants(event.uploadId)) /
-        CLASSIFY_BATCH_SIZE,
-    ),
-  }));
+  // 배치 수를 미리 세지 않는다. 고유 가맹점 수를 재는 조회 자체가 행 상한에
+  // 걸려 과소 보고되면, 남은 가맹점이 영영 분류되지 않은 채 job 이 완료된다.
   let uncategorizedCount = 0;
 
-  for (let index = 0; index < classificationPlan.batchCount; index += 1) {
+  for (let index = 0; index < MAX_CLASSIFICATION_BATCHES; index += 1) {
     const batch = await step.run(`classify-merchants-${index + 1}`, async () => {
       const merchants = await repository.getNextUnmatchedMerchantBatch(
         event.uploadId,
@@ -642,7 +641,7 @@ export async function runProcessUploadPipeline(input: {
       );
 
       if (merchants.length === 0) {
-        return { fallbackCount: 0 };
+        return { fallbackCount: 0, done: true };
       }
 
       const { categories, fallback } = await classifyBatchWithFallback(merchants);
@@ -657,10 +656,17 @@ export async function runProcessUploadPipeline(input: {
         categoryFallback: fallback,
       });
 
-      return { fallbackCount: fallback ? merchants.length : 0 };
+      return {
+        fallbackCount: fallback ? merchants.length : 0,
+        done: merchants.length < CLASSIFY_BATCH_SIZE,
+      };
     });
 
     uncategorizedCount += batch.fallbackCount;
+
+    if (batch.done) {
+      break;
+    }
   }
 
   await step.run("detect-spending-signals", async () => {
@@ -764,7 +770,7 @@ function toUploadJobUpdate(patch: UploadJobPatch): TablesUpdate<"upload_jobs"> {
   return update;
 }
 
-function createSupabaseUploadRepository(
+export function createSupabaseUploadRepository(
   client: SupabaseClient<Database>,
 ): UploadPipelineRepository {
   return {
@@ -912,19 +918,6 @@ function createSupabaseUploadRepository(
 
       return { insertedCount: data?.length ?? 0 };
     },
-    async countUnmatchedMerchants(uploadJobId) {
-      const { data, error } = await client
-        .from("transactions")
-        .select("merchant_normalized")
-        .eq("upload_job_id", uploadJobId)
-        .is("category", null);
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      return new Set((data ?? []).map((row) => row.merchant_normalized)).size;
-    },
     async getNextUnmatchedMerchantBatch(uploadJobId, limit) {
       const { data, error } = await client
         .from("transactions")
@@ -955,7 +948,10 @@ function createSupabaseUploadRepository(
 
       const { error } = await client
         .from("merchant_categories")
-        .upsert(rows, { onConflict: "merchant_normalized" });
+        .upsert(rows, {
+          onConflict: "merchant_normalized",
+          ignoreDuplicates: true,
+        });
 
       if (error) {
         throw new Error(error.message);
@@ -979,20 +975,17 @@ function createSupabaseUploadRepository(
       }
     },
     async getUploadPeriods(uploadJobId) {
-      const { data, error } = await client
-        .from("transactions")
-        .select("transacted_on")
-        .eq("upload_job_id", uploadJobId);
+      // 거래 행을 전부 받아 TS 에서 줄이면 행 상한에 잘려 뒷 달이 빠진다.
+      // 달 목록은 SQL 이 distinct 로 돌려준다.
+      const { data, error } = await client.rpc("get_upload_periods", {
+        p_upload_job_id: uploadJobId,
+      });
 
       if (error) {
         throw new Error(error.message);
       }
 
-      return [
-        ...new Set(
-          (data ?? []).map((row) => `${row.transacted_on.slice(0, 7)}-01`),
-        ),
-      ].sort();
+      return (data ?? []).map((row) => row.period);
     },
     fetchCategoryMonthlyTotals(userId, periods) {
       return fetchCategoryMonthlyTotals(client, { userId, periods });

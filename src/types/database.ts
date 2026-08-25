@@ -422,6 +422,20 @@ export type Database = {
           merchant_normalized: string
         }[]
       }
+      get_upload_job_counts: {
+        Args: { p_user_id: string }
+        Returns: {
+          upload_job_id: string
+          transaction_count: number
+          signal_count: number
+        }[]
+      }
+      get_upload_periods: {
+        Args: { p_upload_job_id: string }
+        Returns: {
+          period: string
+        }[]
+      }
       get_transaction_months: {
         Args: { p_user_id: string }
         Returns: {

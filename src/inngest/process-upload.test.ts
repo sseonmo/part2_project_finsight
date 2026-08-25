@@ -90,6 +90,8 @@ function createRepository(input: {
   fingerprint?: ColumnMapping | null;
   existingDedupeKeys?: Set<string>;
   narrativeSignals?: SignalForNarrative[];
+  /** PostgREST 의 max_rows 를 흉내낸다. 조회 하나가 이 행 수에서 잘린다. */
+  unmatchedRowCap?: number;
 } = {}) {
   const job = input.job ?? makeJob();
   const dedupeKeys = input.existingDedupeKeys ?? new Set<string>();
@@ -98,6 +100,12 @@ function createRepository(input: {
   const updates: Array<Partial<Job> & Record<string, unknown>> = [];
   const merchantCategoryWrites: Record<string, Category> = {};
   const signalNarrativeUpdates: Record<string, string> = {};
+  const rowCap = input.unmatchedRowCap ?? Number.POSITIVE_INFINITY;
+  const unmatchedRows = (uploadJobId: string) =>
+    transactions.filter(
+      (transaction) =>
+        transaction.uploadJobId === uploadJobId && transaction.category === null,
+    );
 
   return {
     job,
@@ -152,30 +160,18 @@ function createRepository(input: {
 
       return { insertedCount };
     },
-    async countUnmatchedMerchants(uploadJobId: string) {
-      return new Set(
-        transactions
-          .filter(
-            (transaction) =>
-              transaction.uploadJobId === uploadJobId && transaction.category === null,
-          )
-          .map((transaction) => transaction.merchantNormalized),
-      ).size;
-    },
     async getNextUnmatchedMerchantBatch(uploadJobId: string, limit: number) {
+      // SQL 은 merchant_normalized 로 정렬한 뒤 행 상한에 걸린다.
       return [
         ...new Set(
-          transactions
-            .filter(
-              (transaction) =>
-                transaction.uploadJobId === uploadJobId &&
-                transaction.category === null,
+          unmatchedRows(uploadJobId)
+            .sort((left, right) =>
+              left.merchantNormalized.localeCompare(right.merchantNormalized),
             )
+            .slice(0, rowCap)
             .map((transaction) => transaction.merchantNormalized),
         ),
-      ]
-        .sort()
-        .slice(0, limit);
+      ].slice(0, limit);
     },
     async saveMerchantCategories(categories: Record<string, Category>) {
       Object.assign(merchantCategoryWrites, categories);
@@ -448,6 +444,84 @@ describe("process upload pipeline", () => {
       100,
       50,
     ]);
+  });
+
+  it("classifies every unmatched merchant even when the row cap truncates the count", async () => {
+    classifyMerchantBatchMock.mockImplementation(async (names: string[]) =>
+      Object.fromEntries(names.map((name) => [name, "식비"])),
+    );
+    describeSignalsMock.mockResolvedValue({});
+    const repository = createRepository({
+      fingerprint: MAPPING,
+      // 미분류 거래가 상한을 넘으면 고유 가맹점 수 조회가 잘린다.
+      unmatchedRowCap: 100,
+      bytes: csv(
+        Array.from({ length: 150 }, (_, index) =>
+          row("2026-03-04", `테스트가맹점${String(index).padStart(3, "0")}A`),
+        ),
+      ),
+    });
+
+    await runWithRepository(repository);
+
+    expect(repository.transactions).toHaveLength(150);
+    expect(
+      repository.transactions.filter(
+        (transaction) => transaction.category === null,
+      ),
+    ).toEqual([]);
+  });
+
+  it("asks the database for distinct months instead of counting rows in memory", async () => {
+    // 거래 행을 전부 받아 TS 에서 Set 으로 줄이면 행 상한에 잘려 뒷 달이
+    // periods 에서 빠지고, 그 달 신호가 아예 만들어지지 않는다.
+    const { createSupabaseUploadRepository } = await import("./process-upload");
+    const rpcCalls: { fn: string; args: unknown }[] = [];
+    const client = {
+      rpc: (fn: string, args: unknown) => {
+        rpcCalls.push({ fn, args });
+
+        return Promise.resolve({
+          data: [{ period: "2026-03-01" }, { period: "2026-04-01" }],
+          error: null,
+        });
+      },
+      from: () => {
+        throw new Error("거래 행을 직접 읽으면 안 된다.");
+      },
+    };
+
+    const periods = await createSupabaseUploadRepository(
+      client as never,
+    ).getUploadPeriods("job-1");
+
+    expect(periods).toEqual(["2026-03-01", "2026-04-01"]);
+    expect(rpcCalls[0]?.fn).toBe("get_upload_periods");
+  });
+
+  it("never overwrites a merchant category that is already in the global cache", async () => {
+    const { createSupabaseUploadRepository } = await import("./process-upload");
+    const upsertCalls: { table: string; options: unknown }[] = [];
+    const client = {
+      from: (table: string) => ({
+        upsert: (_rows: unknown, options: unknown) => {
+          upsertCalls.push({ table, options });
+
+          return Promise.resolve({ error: null });
+        },
+      }),
+    };
+
+    await createSupabaseUploadRepository(
+      client as never,
+    ).saveMerchantCategories({ STARBUCKS: "카페/간식" });
+
+    expect(upsertCalls).toHaveLength(1);
+    expect(upsertCalls[0]?.table).toBe("merchant_categories");
+    expect(upsertCalls[0]?.options).toEqual({
+      onConflict: "merchant_normalized",
+      ignoreDuplicates: true,
+    });
   });
 
   it("marks transactions as category_fallback when a classification batch fails after retries", async () => {

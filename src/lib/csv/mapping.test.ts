@@ -103,6 +103,21 @@ describe("csv mapping", () => {
     expect(trial.parsed[20]?.transactedOn).toBe("2026-03-14");
   });
 
+  it("resolves the date format from every row while trialing only the sample", () => {
+    // 7단계는 20행 샘플로 매핑을 검증하는데, 그 20행이 전부 같은 날이면
+    // YY.MM.DD 판정에 필요한 증거가 샘플 안에 없다. 형식은 전 행에서 정한다.
+    const sample = Array.from({ length: 20 }, () => row("26.07.15"));
+    const allRows = [...sample, row("26.07.16"), row("26.07.17")];
+
+    const trial = applyMapping(HEADER, sample, MAPPING, {
+      dateFormatRows: allRows,
+    });
+
+    expect(trial.dateFormat).toBe("YY.MM.DD");
+    expect(trial.failed).toBe(0);
+    expect(trial.parsed[0]?.transactedOn).toBe("2026-07-15");
+  });
+
   it("returns the scanned DD/MM/YYYY date format decision", () => {
     const trial = applyMapping(HEADER, [
       row("03/04/2026"),
