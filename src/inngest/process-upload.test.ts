@@ -408,6 +408,33 @@ describe("process upload pipeline", () => {
     ).toEqual([]);
   });
 
+  it("asks the database for distinct months instead of counting rows in memory", async () => {
+    // 거래 행을 전부 받아 TS 에서 Set 으로 줄이면 행 상한에 잘려 뒷 달이
+    // periods 에서 빠지고, 그 달 신호가 아예 만들어지지 않는다.
+    const { createSupabaseUploadRepository } = await import("./process-upload");
+    const rpcCalls: { fn: string; args: unknown }[] = [];
+    const client = {
+      rpc: (fn: string, args: unknown) => {
+        rpcCalls.push({ fn, args });
+
+        return Promise.resolve({
+          data: [{ period: "2026-03-01" }, { period: "2026-04-01" }],
+          error: null,
+        });
+      },
+      from: () => {
+        throw new Error("거래 행을 직접 읽으면 안 된다.");
+      },
+    };
+
+    const periods = await createSupabaseUploadRepository(
+      client as never,
+    ).getUploadPeriods("job-1");
+
+    expect(periods).toEqual(["2026-03-01", "2026-04-01"]);
+    expect(rpcCalls[0]?.fn).toBe("get_upload_periods");
+  });
+
   it("never overwrites a merchant category that is already in the global cache", async () => {
     const { createSupabaseUploadRepository } = await import("./process-upload");
     const upsertCalls: { table: string; options: unknown }[] = [];

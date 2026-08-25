@@ -38,17 +38,8 @@ function toDateFormatResolvedBy(
   return value === "scan" || value === "assumed-iso" ? value : null;
 }
 
-function countByUploadJob(
-  rows: { upload_job_id: string }[] | null,
-): Map<string, number> {
-  const counts = new Map<string, number>();
-
-  for (const row of rows ?? []) {
-    counts.set(row.upload_job_id, (counts.get(row.upload_job_id) ?? 0) + 1);
-  }
-
-  return counts;
-}
+type UploadJobCountRow =
+  Database["public"]["Functions"]["get_upload_job_counts"]["Returns"][number];
 
 async function fetchUploadJobs(
   supabase: SupabaseClient<Database>,
@@ -67,20 +58,17 @@ async function fetchUploadJobs(
     return [];
   }
 
-  const [transactionsResult, signalsResult] = await Promise.all([
-    supabase
-      .from("transactions")
-      .select("upload_job_id")
-      .eq("user_id", userId)
-      .in("upload_job_id", ids),
-    supabase
-      .from("spending_signals")
-      .select("upload_job_id")
-      .eq("user_id", userId)
-      .in("upload_job_id", ids),
-  ]);
-  const transactionCounts = countByUploadJob(transactionsResult.data);
-  const signalCounts = countByUploadJob(signalsResult.data);
+  // 행을 받아 세면 행 상한에 걸려 오래된 업로드가 0건으로 표시된다.
+  const { data: countRows } = await supabase.rpc("get_upload_job_counts", {
+    p_user_id: userId,
+  });
+  const transactionCounts = new Map<string, number>();
+  const signalCounts = new Map<string, number>();
+
+  for (const row of (countRows ?? []) as UploadJobCountRow[]) {
+    transactionCounts.set(row.upload_job_id, Number(row.transaction_count));
+    signalCounts.set(row.upload_job_id, Number(row.signal_count));
+  }
 
   return uploadJobs.map((job) => ({
     cardLabel: job.card_label,

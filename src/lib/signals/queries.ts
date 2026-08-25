@@ -81,14 +81,16 @@ export async function fetchPeriodTransactions(
   client: SignalAggregateClient,
   input: { userId: string; period: string },
 ): Promise<SignalTransaction[]> {
-  const { data, error } = await client.rpc("get_period_transactions", {
-    p_user_id: input.userId,
-    p_period: input.period,
-  });
+  const rows = await readAllPages((from, to) =>
+    client
+      .rpc("get_period_transactions", {
+        p_user_id: input.userId,
+        p_period: input.period,
+      })
+      .range(from, to),
+  );
 
-  throwIfRpcError(error);
-
-  return (data ?? []).map((row) => ({
+  return rows.map((row) => ({
     id: row.id,
     period: row.period,
     transactedOn: row.transacted_on,

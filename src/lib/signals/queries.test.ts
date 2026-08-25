@@ -228,10 +228,41 @@ describe("signal aggregate query wrappers", () => {
     ]);
   });
 
+  it("reads every period transactions page when the first page comes back full", async () => {
+    // 한 달 지출이 1,000건을 넘으면 월말 거래가 이상 거래 판정에서 빠진다.
+    const transactionRow = (index: number) => ({
+      id: `transaction-${index}`,
+      period: "2026-03-01",
+      transacted_on: "2026-03-28",
+      category: "식비" as const,
+      amount: 12_000,
+      merchant_normalized: `MERCHANT-${index}`,
+    });
+    const { client, ranges } = pagedRpcMock([
+      Array.from({ length: 1000 }, (_, index) => transactionRow(index)),
+      [transactionRow(1000)],
+    ]);
+
+    const transactions = await fetchPeriodTransactions(client, {
+      userId: "user-1",
+      period: "2026-03-01",
+    });
+
+    expect(transactions).toHaveLength(1001);
+    expect(ranges).toEqual([
+      [0, 999],
+      [1000, 1999],
+    ]);
+  });
+
   it("throws RPC errors without hiding them", async () => {
     const error = new Error("rpc failed");
     const client = {
-      rpc: vi.fn().mockResolvedValue({ data: null, error }),
+      rpc: vi.fn(() => {
+        const result = Promise.resolve({ data: null, error });
+
+        return Object.assign(result, { range: () => result });
+      }),
     } as unknown as SignalAggregateClient & {
       rpc: ReturnType<typeof vi.fn>;
     };

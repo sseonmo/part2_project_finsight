@@ -957,20 +957,17 @@ export function createSupabaseUploadRepository(
       }
     },
     async getUploadPeriods(uploadJobId) {
-      const { data, error } = await client
-        .from("transactions")
-        .select("transacted_on")
-        .eq("upload_job_id", uploadJobId);
+      // 거래 행을 전부 받아 TS 에서 줄이면 행 상한에 잘려 뒷 달이 빠진다.
+      // 달 목록은 SQL 이 distinct 로 돌려준다.
+      const { data, error } = await client.rpc("get_upload_periods", {
+        p_upload_job_id: uploadJobId,
+      });
 
       if (error) {
         throw new Error(error.message);
       }
 
-      return [
-        ...new Set(
-          (data ?? []).map((row) => `${row.transacted_on.slice(0, 7)}-01`),
-        ),
-      ].sort();
+      return (data ?? []).map((row) => row.period);
     },
     fetchCategoryMonthlyTotals(userId, periods) {
       return fetchCategoryMonthlyTotals(client, { userId, periods });
