@@ -109,6 +109,20 @@ describe("Supabase schema guardrails", () => {
     expect(body).toMatch(/\bcard_label\s+text\s+not\s+null\b/i);
   });
 
+  it("caps upload size and mime types on the bucket itself", () => {
+    // 서명 URL 발급 라우트가 검사하는 size·contentType 은 클라이언트 자기신고다.
+    // 실제 업로드는 Storage 로 직행하므로 버킷에 제한이 없으면 방어가 없다.
+    const bucketStatements = [
+      ...migrationSql.matchAll(/insert\s+into\s+storage\.buckets[\s\S]*?;/gi),
+    ]
+      .map((match) => match[0])
+      .join(" ")
+      .replace(/\s+/g, " ");
+
+    expect(bucketStatements).toMatch(/file_size_limit/i);
+    expect(bucketStatements).toMatch(/allowed_mime_types/i);
+  });
+
   it("matches database category values to src/lib/categories.ts", () => {
     const enumValues =
       migrationSql
