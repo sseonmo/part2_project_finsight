@@ -488,7 +488,9 @@ export async function runProcessUploadPipeline(input: {
 
     const { header: csvHeader, rows } = await loadParsedCsv(repository, job);
     const sampleRows = rows.slice(0, CSV_MAPPING_SAMPLE_SIZE);
-    const trial = applyMapping(csvHeader, sampleRows, job.mapping);
+    const trial = applyMapping(csvHeader, sampleRows, job.mapping, {
+      dateFormatRows: rows,
+    });
 
     if (
       trial.total > 0 &&
