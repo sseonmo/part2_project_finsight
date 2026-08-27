@@ -4329,6 +4329,80 @@ a:hover {
   }
 }
 
+/* ══════ 랜딩 ③ 지적 5종 ══════ */
+
+.landing-sig-grid {
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+  margin: var(--space-lg) 0 0;
+  padding: 0;
+}
+
+.landing-sig {
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  padding: calc(var(--space-lg) + var(--landing-accent-height)) var(--space-md)
+    var(--space-md);
+  position: relative;
+}
+
+.landing-sig--lead {
+  align-items: center;
+  display: grid;
+  gap: var(--space-md);
+  grid-column: span 3;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: calc(var(--space-md) + var(--landing-accent-height)) var(--space-md)
+    var(--space-md);
+}
+
+.landing-sig--muted {
+  background: transparent;
+  border-style: dashed;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.landing-sig__icon {
+  border-radius: 9px;
+  display: grid;
+  flex: none;
+  height: 28px;
+  place-items: center;
+  width: 28px;
+}
+
+.landing-sig__name {
+  color: var(--ink);
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  margin-top: 12px;
+}
+
+.landing-sig--lead .landing-sig__name,
+.landing-sig--muted .landing-sig__name {
+  margin-top: 0;
+}
+
+.landing-sig__cond {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-body-xs);
+  line-height: 1.55;
+  margin-top: 5px;
+}
+
+.landing-sig__amt {
+  color: var(--brand-red-dark);
+  font-size: var(--font-size-landing-amount);
+  font-weight: 600;
+  letter-spacing: -0.4px;
+}
+
 @media (max-width: 767px) {
   .app-sidebar {
     display: none;
