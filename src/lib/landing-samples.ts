@@ -243,15 +243,15 @@ export const LANDING_SIGNAL_ROWS: readonly LandingSignalRow[] = [
 
 export const LANDING_DASHBOARD = {
   period: "2026년 3월 · 대시보드",
-  total: "1,284,000원",
+  total: "1,136,000원",
   delta: "지난달보다 +8.2%",
-  donutTotal: "128만원",
+  donutTotal: "114만원",
   bars: [
     { category: "식비", amount: "382,000원", share: 100 },
     { category: "쇼핑", amount: "214,000원", share: 56 },
     { category: "카페/간식", amount: "168,000원", share: 44 },
     { category: "교통", amount: "146,000원", share: 38 },
-    { category: "주거/통신", amount: "128,000원", share: 33 },
+    { category: "주거/통신", amount: "128,000원", share: 34 },
     { category: "기타", amount: "98,000원", share: 26 },
   ],
 } as const satisfies {

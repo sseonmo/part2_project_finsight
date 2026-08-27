@@ -12,6 +12,13 @@ import {
   LANDING_SIGNAL_TILES,
 } from "./landing-samples";
 
+/** 금액 문자열("382,000원")에서 숫자만 추출 */
+function extractAmount(amountStr: string): number {
+  const match = amountStr.match(/\d+/g);
+  if (!match) throw new Error(`Cannot parse amount: ${amountStr}`);
+  return parseInt(match.join(""), 10);
+}
+
 describe("landing samples", () => {
   it("covers every signal type exactly once in the tile grid", () => {
     const types = LANDING_SIGNAL_TILES.map((tile) => tile.type);
@@ -86,6 +93,29 @@ describe("landing samples", () => {
       expect(CATEGORY_TOKENS[bar.category]).toBeDefined();
       expect(bar.share).toBeGreaterThan(0);
       expect(bar.share).toBeLessThanOrEqual(100);
+    });
+  });
+
+  it("keeps dashboard totals and shares mathematically consistent", () => {
+    // 막대 금액 합이 total과 같아야 한다
+    const barSum = LANDING_DASHBOARD.bars.reduce(
+      (sum, bar) => sum + extractAmount(bar.amount),
+      0,
+    );
+    const totalAmount = extractAmount(LANDING_DASHBOARD.total);
+
+    expect(barSum).toBe(totalAmount);
+
+    // 각 share가 정확한 비율 계산값과 같아야 한다 (최대값 대비)
+    const maxAmount = Math.max(
+      ...LANDING_DASHBOARD.bars.map((bar) => extractAmount(bar.amount)),
+    );
+
+    LANDING_DASHBOARD.bars.forEach((bar) => {
+      const barAmount = extractAmount(bar.amount);
+      const expectedShare = Math.round((barAmount / maxAmount) * 100);
+
+      expect(bar.share).toBe(expectedShare);
     });
   });
 });
