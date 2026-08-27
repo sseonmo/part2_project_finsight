@@ -26,12 +26,12 @@ describe("InsightCardStack", () => {
     const cards = screen.getAllByRole("article");
 
     expect(cards).toHaveLength(3);
-    expect(within(cards[0]).getByText("카테고리 급증")).toBeInTheDocument();
-    expect(within(cards[0]).getByText("+62,000원")).toBeInTheDocument();
+    expect(within(cards[0]!).getByText("카테고리 급증")).toBeInTheDocument();
+    expect(within(cards[0]!).getByText("+62,000원")).toBeInTheDocument();
     // 문장은 <span> 조각으로 쪼개져 있고 부모 <p> 의 textContent 도 같은 정규식에
     // 걸린다. 요소가 둘이므로 getByText 는 쓸 수 없다.
     expect(
-      within(cards[0]).getAllByText(/카페·간식이 지난달보다/).length,
+      within(cards[0]!).getAllByText(/카페·간식이 지난달보다/).length,
     ).toBeGreaterThan(0);
   });
 
@@ -88,14 +88,14 @@ describe("InsightCardStack", () => {
     const cards = screen.getAllByRole("article");
 
     fireEvent.click(
-      within(cards[0]).getByRole("button", { name: "근거 보기 →" }),
+      within(cards[0]!).getByRole("button", { name: "근거 보기 →" }),
     );
 
-    expect(cards[0]).toHaveClass("landing-icard--flipped");
-    expect(within(cards[0]).getByText("이 금액을 만든 거래")).toBeVisible();
+    expect(cards[0]!).toHaveClass("landing-icard--flipped");
+    expect(within(cards[0]!).getByText("이 금액을 만든 거래")).toBeVisible();
     // 근거 목록에는 같은 가맹점이 두 번(03.04, 03.14) 등장한다 — getByText 는 쓸 수 없다.
-    expect(within(cards[0]).getAllByText("블루보틀 성수")[0]).toBeVisible();
-    expect(within(cards[0]).getByText("168,000원")).toBeVisible();
+    expect(within(cards[0]!).getAllByText("블루보틀 성수")[0]).toBeVisible();
+    expect(within(cards[0]!).getByText("168,000원")).toBeVisible();
   });
 
   it("flips the card back", () => {
@@ -104,13 +104,13 @@ describe("InsightCardStack", () => {
     const cards = screen.getAllByRole("article");
 
     fireEvent.click(
-      within(cards[0]).getByRole("button", { name: "근거 보기 →" }),
+      within(cards[0]!).getByRole("button", { name: "근거 보기 →" }),
     );
     fireEvent.click(
-      within(cards[0]).getByRole("button", { name: "← 돌아가기" }),
+      within(cards[0]!).getByRole("button", { name: "← 돌아가기" }),
     );
 
-    expect(cards[0]).not.toHaveClass("landing-icard--flipped");
+    expect(cards[0]!).not.toHaveClass("landing-icard--flipped");
   });
 
   it("rotates to the next card on its own", () => {

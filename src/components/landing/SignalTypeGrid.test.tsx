@@ -31,8 +31,8 @@ describe("SignalTypeGrid", () => {
     const grid = screen.getByRole("list", { name: "잡는 지적 5종" });
     const items = within(grid).getAllByRole("listitem");
 
-    expect(within(items[0]).getByText("구독료 인상")).toBeInTheDocument();
-    expect(within(items[0]).getByText("연 36,000원")).toBeInTheDocument();
+    expect(within(items[0]!).getByText("구독료 인상")).toBeInTheDocument();
+    expect(within(items[0]!).getByText("연 36,000원")).toBeInTheDocument();
   });
 
   it("promises to say nothing when nothing was caught", () => {

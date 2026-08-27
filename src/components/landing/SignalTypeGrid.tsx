@@ -86,10 +86,6 @@ function TileIcon({ type }: { type: SignalType }) {
 export function SignalTypeGrid() {
   const [lead, ...rest] = LANDING_SIGNAL_TILES;
 
-  if (!lead) {
-    return null;
-  }
-
   return (
     <ul aria-label="잡는 지적 5종" className="landing-sig-grid">
       <li

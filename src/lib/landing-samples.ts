@@ -55,7 +55,7 @@ const priceUp = SIGNAL_THRESHOLDS.recurringPriceUp;
 
 /** `SIGNAL_CONDITION_COPY` 는 리포트용 완결 문장이라 타일에는 길다. 타일은 조건만 짧게 끊되
     숫자는 같은 출처에서 읽는다 — 임계값이 바뀌면 랜딩도 따라 바뀌어야 한다. */
-export const LANDING_SIGNAL_TILES: readonly LandingSignalTile[] = [
+export const LANDING_SIGNAL_TILES = [
   {
     type: "recurring_price_up",
     condition: `반복 결제가 직전보다 ${formatPercent(priceUp.minIncreaseRatio)} 이상 오르면 인상분을 ${priceUp.impactMonths}개월로 환산합니다. 가장 놓치기 쉽고, 가장 오래 새는 항목입니다.`,
@@ -76,9 +76,9 @@ export const LANDING_SIGNAL_TILES: readonly LandingSignalTile[] = [
     type: "recurring_payment",
     condition: `${recurring.minIntervalDays}~${recurring.maxIntervalDays}일 간격으로 ${recurring.minOccurrences}회 이상 같은 금액`,
   },
-] as const;
+] as const satisfies readonly LandingSignalTile[];
 
-export const LANDING_INSIGHT_CARDS: readonly LandingInsightCard[] = [
+export const LANDING_INSIGHT_CARDS = [
   {
     id: "cafe",
     type: "category_spike",
@@ -105,7 +105,7 @@ export const LANDING_INSIGHT_CARDS: readonly LandingInsightCard[] = [
         pass: true,
         value: `+58% ≥ ${formatPercent(spike.minIncreaseRatio)} ✓ · 62,000 ≥ ${spike.minIncreaseKrw.toLocaleString("ko-KR")} ✓`,
       },
-    ],
+    ] as RawRow[],
     source: "src/lib/signals/detect-category-spike.ts",
     evidence: {
       title: "이 금액을 만든 거래",
@@ -152,7 +152,7 @@ export const LANDING_INSIGHT_CARDS: readonly LandingInsightCard[] = [
         pass: true,
         value: `+30.3% ≥ ${formatPercent(priceUp.minIncreaseRatio)} ✓`,
       },
-    ],
+    ] as RawRow[],
     source: "src/lib/signals/detect-recurring.ts",
     evidence: {
       title: "반복 결제 이력",
@@ -192,7 +192,7 @@ export const LANDING_INSIGHT_CARDS: readonly LandingInsightCard[] = [
         pass: true,
         value: `44% ≥ ${formatPercent(outlier.minShareOfCategory)} ✓ · 180,000 ≥ ${outlier.minAmountKrw.toLocaleString("ko-KR")} ✓`,
       },
-    ],
+    ] as RawRow[],
     source: "src/lib/signals/detect-outlier-transaction.ts",
     evidence: {
       title: "해당 결제",
@@ -206,9 +206,9 @@ export const LANDING_INSIGHT_CARDS: readonly LandingInsightCard[] = [
       summaryValue: "409,000원",
     },
   },
-] as const;
+] as const satisfies readonly LandingInsightCard[];
 
-export const LANDING_CSV_ROWS: readonly LandingCsvRow[] = [
+export const LANDING_CSV_ROWS = [
   { text: "2026-03-01,스타벅스 역삼,5100", signalId: "cafe" },
   { text: "2026-03-01,GS25 역삼점,3200", signalId: "" },
   { text: "2026-03-02,스트리밍 구독,12900", signalId: "sub" },
@@ -218,9 +218,9 @@ export const LANDING_CSV_ROWS: readonly LandingCsvRow[] = [
   { text: "2026-03-06,메가박스 코엑스,180000", signalId: "outlier" },
   { text: "2026-03-08,메가커피 삼성,2000", signalId: "cafe" },
   { text: "2026-03-09,올리브영,31900", signalId: "" },
-] as const;
+] as const satisfies readonly LandingCsvRow[];
 
-export const LANDING_SIGNAL_ROWS: readonly LandingSignalRow[] = [
+export const LANDING_SIGNAL_ROWS = [
   {
     signalId: "sub",
     category: "주거/통신",
@@ -239,7 +239,7 @@ export const LANDING_SIGNAL_ROWS: readonly LandingSignalRow[] = [
     name: "한 건이 그 달의 44%",
     amount: "180,000원",
   },
-] as const;
+] as const satisfies readonly LandingSignalRow[];
 
 export const LANDING_DASHBOARD = {
   period: "2026년 3월 · 대시보드",
