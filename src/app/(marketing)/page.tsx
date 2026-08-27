@@ -5,6 +5,12 @@ import { useSearchParams } from "next/navigation";
 
 import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
+import {
+  ClassifyStepPreview,
+  DashboardGlancePreview,
+  ReviewStepPreview,
+  UploadStepPreview,
+} from "@/components/LandingStepPreview";
 import { PricingCard } from "@/components/PricingCard";
 import { createBrowserClient } from "@/services/supabase";
 
@@ -35,31 +41,41 @@ const CSV_REASONS = [
 
 const FLOW_STEPS = [
   {
-    body: "카드사에서 내려받은 파일을 그대로 올립니다. 컬럼 이름이 카드사마다 달라도 자동으로 읽습니다.",
-    title: "CSV 올리기",
+    Preview: UploadStepPreview,
+    doing: "카드사에서 내려받은 CSV를 그대로 올립니다.",
+    system: "컬럼 이름이 카드사마다 달라도 자동으로 알아보고 거래를 읽습니다.",
+    title: "명세서 올리기",
   },
   {
-    body: "가맹점을 카테고리 10종으로 나눕니다. 분류를 고치면 같은 가맹점의 다른 거래도 함께 바뀝니다.",
-    title: "자동 분류",
+    Preview: ClassifyStepPreview,
+    doing: "카테고리가 맞는지 보고 틀린 것만 고칩니다.",
+    system:
+      "가맹점을 10종으로 나누고, 하나를 고치면 같은 가맹점 전부에 반영합니다.",
+    title: "분류 확인하기",
   },
   {
-    body: "지출 급증·튀는 결제·구독료 인상 같은 신호를 찾아 문장으로 알려줍니다.",
-    title: "지적 받기",
+    Preview: ReviewStepPreview,
+    doing: "지적받은 문장을 열어 근거를 확인합니다.",
+    system: "지출 급증·튀는 결제·구독료 인상을 찾아 문장으로 옮깁니다.",
+    title: "리뷰 읽기",
   },
 ] as const;
 
 const SAMPLE_SENTENCES = [
   {
+    amount: "+62,000원",
     signal: "카테고리 지출 급증",
-    text: "카페·간식이 지난달보다 62,000원(+58%) 늘었습니다.",
+    text: "카페·간식이 지난달보다 58% 늘었습니다.",
   },
   {
+    amount: "연 36,000원",
     signal: "구독료 인상",
-    text: "스트리밍 구독료가 9,900원에서 12,900원으로 올랐습니다. 이대로면 1년에 36,000원을 더 내게 됩니다.",
+    text: "스트리밍 구독료가 9,900원에서 12,900원으로 올랐습니다. 이대로면 1년에 그만큼 더 내게 됩니다.",
   },
   {
+    amount: "180,000원",
     signal: "튀는 단일 결제",
-    text: "문화·여가 결제 한 건이 180,000원으로 그 달 문화·여가 지출의 44%를 차지했습니다.",
+    text: "문화·여가 결제 한 건이 그 달 문화·여가 지출의 44%를 차지했습니다.",
   },
 ] as const;
 
@@ -129,6 +145,8 @@ function MarketingContent() {
 
       <main className="landing-main">
         <section className="landing-hero">
+          <div className="landing-hero__copy">
+          <span className="landing-hero__eyebrow">계좌를 연동하지 않는 가계부</span>
           <h1 className="landing-hero__title">
             카드 명세서 CSV를 올리면 지출을 분류하고 바꿀 지점을 짚어 드립니다
           </h1>
@@ -152,6 +170,34 @@ function MarketingContent() {
             </Button>
             <p className="landing-hero__note">7일 무료 체험, 카드 등록 없이</p>
           </div>
+          </div>
+          <DashboardGlancePreview />
+        </section>
+
+        <section className="landing-section landing-section--flow">
+          <h2 className="landing-section__title">세 단계로 끝납니다</h2>
+          <p className="landing-section__lead">
+            가입한 뒤 밟는 순서가 그대로 이 셋입니다. 아래 화면은 예시 데이터로
+            그린 것이고, 실제 화면은 올린 거래로 채워집니다.
+          </p>
+          <ol aria-label="이용 흐름" className="landing-flow-list">
+            {FLOW_STEPS.map((step, index) => (
+              <li className="landing-flow" key={step.title}>
+                <div className="landing-flow__head">
+                  <span className="landing-flow__index tabular-nums">
+                    {index + 1}
+                  </span>
+                  <h3 className="landing-flow__title">{step.title}</h3>
+                </div>
+                <p className="landing-flow__doing">{step.doing}</p>
+                <p className="landing-flow__system">
+                  <span className="landing-flow__system-label">그동안</span>
+                  {step.system}
+                </p>
+                <step.Preview />
+              </li>
+            ))}
+          </ol>
         </section>
 
         <section className="landing-section">
@@ -173,21 +219,6 @@ function MarketingContent() {
         </section>
 
         <section className="landing-section">
-          <h2 className="landing-section__title">세 단계로 끝납니다</h2>
-          <ol aria-label="이용 흐름" className="landing-flow-list">
-            {FLOW_STEPS.map((step, index) => (
-              <li className="landing-flow" key={step.title}>
-                <span className="landing-flow__index tabular-nums">
-                  {index + 1}
-                </span>
-                <h3 className="landing-flow__title">{step.title}</h3>
-                <p className="landing-flow__body">{step.body}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        <section className="landing-section">
           <h2 className="landing-section__title">이런 문장을 받게 됩니다</h2>
           <p className="landing-section__lead">
             아래 세 문장은 실제 사용자 데이터가 아니라 예시 문장입니다. 실제
@@ -203,6 +234,12 @@ function MarketingContent() {
                     {sample.signal}
                   </span>
                 </div>
+                <p
+                  className="landing-sample__amount tabular-nums"
+                  data-testid="sample-amount"
+                >
+                  {sample.amount}
+                </p>
                 <p className="landing-sample__text">{sample.text}</p>
               </li>
             ))}
