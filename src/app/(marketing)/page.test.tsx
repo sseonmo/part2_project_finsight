@@ -88,12 +88,57 @@ describe("marketing page", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the three step flow", () => {
+  it("shows the three step flow with the canonical user-action wording", () => {
+    render(<Page />);
+
+    const steps = screen.getByRole("list", { name: "이용 흐름" });
+    const items = within(steps).getAllByRole("listitem");
+
+    expect(items).toHaveLength(3);
+    expect(
+      within(steps).getByRole("heading", { name: "명세서 올리기" }),
+    ).toBeInTheDocument();
+    expect(
+      within(steps).getByRole("heading", { name: "분류 확인하기" }),
+    ).toBeInTheDocument();
+    expect(
+      within(steps).getByRole("heading", { name: "리뷰 읽기" }),
+    ).toBeInTheDocument();
+  });
+
+  it("separates what the user does from what the system does in each step", () => {
+    render(<Page />);
+
+    const steps = screen.getByRole("list", { name: "이용 흐름" });
+    const items = within(steps).getAllByRole("listitem");
+
+    items.forEach((item) => {
+      expect(within(item).getByText("그동안")).toBeInTheDocument();
+    });
+  });
+
+  it("previews the actual screen of each step as a labelled example", () => {
     render(<Page />);
 
     const steps = screen.getByRole("list", { name: "이용 흐름" });
 
-    expect(within(steps).getAllByRole("listitem")).toHaveLength(3);
+    expect(
+      within(steps).getByRole("img", { name: "예시 화면 — 명세서 올리기" }),
+    ).toBeInTheDocument();
+    expect(
+      within(steps).getByRole("img", { name: "예시 화면 — 분류 확인하기" }),
+    ).toBeInTheDocument();
+    expect(
+      within(steps).getByRole("img", { name: "예시 화면 — 리뷰 읽기" }),
+    ).toBeInTheDocument();
+  });
+
+  it("marks the step previews as examples rather than real data", () => {
+    render(<Page />);
+
+    expect(
+      screen.getByText(/아래 화면은 예시 데이터로 그린 것/),
+    ).toBeInTheDocument();
   });
 
   it("labels the sample sentences as examples rather than real data", () => {
@@ -109,6 +154,20 @@ describe("marketing page", () => {
     expect(
       screen.getByText(/실제 사용자 데이터가 아니라 예시 문장/),
     ).toBeInTheDocument();
+  });
+
+  it("lifts the amount out of each sample sentence so the number reads first", () => {
+    render(<Page />);
+
+    const samples = screen.getByRole("list", { name: "예시 문장" });
+    const items = within(samples).getAllByRole("listitem");
+
+    items.forEach((item) => {
+      const amount = within(item).getByTestId("sample-amount");
+
+      expect(amount).toHaveClass("tabular-nums");
+      expect(amount.textContent).toMatch(/원/);
+    });
   });
 
   it("prices both plans from the PRD", () => {

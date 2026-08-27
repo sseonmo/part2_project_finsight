@@ -87,6 +87,12 @@
   --font-size-body-xs: 12px;
   --font-size-label: 11px;
   --letter-spacing-normal: 0;
+
+  --font-size-landing-hero: 40px;
+  --font-size-landing-lead: 16px;
+  --font-size-landing-amount: 22px;
+  --landing-step-index-size: 28px;
+  --landing-max-width: 1040px;
 }
 
 [data-theme="dark"] {
@@ -3086,10 +3092,14 @@ a:hover {
   margin: 0;
 }
 
+/* 한글은 어절 단위로 끊어야 읽힌다. 기본값은 "카드 명세서 CSV를 올 / 리면" 처럼
+   단어 중간에서 자른다. overflow-wrap 은 keep-all 이 못 막는 긴 라틴 문자열용 보험. */
 .landing {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  overflow-wrap: break-word;
+  word-break: keep-all;
 }
 
 .landing-header {
@@ -3117,15 +3127,29 @@ a:hover {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-xl);
   margin-inline: auto;
-  max-width: 960px;
-  padding: var(--space-xl) var(--app-main-padding-inline)
+  max-width: var(--landing-max-width);
+  padding: var(--space-xxl) var(--app-main-padding-inline)
     var(--app-main-padding-bottom);
   width: 100%;
 }
 
-.landing-hero,
+/* 히어로는 카드가 아니다. 페이지 바탕 위에 직접 놓아야 아래 섹션 카드들과
+   층이 갈린다 — 전부 같은 카드면 스크롤해도 리듬이 생기지 않는다. */
+.landing-hero {
+  align-items: center;
+  display: grid;
+  gap: var(--space-xxl);
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  padding: var(--space-lg) 0 var(--space-xl);
+}
+
+.landing-hero__copy {
+  display: flex;
+  flex-direction: column;
+}
+
 .landing-section {
   background: var(--canvas);
   border: var(--line-width) solid var(--hairline);
@@ -3135,22 +3159,35 @@ a:hover {
   padding: var(--space-xl);
 }
 
+.landing-hero__eyebrow {
+  align-self: flex-start;
+  background: var(--surface);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+  line-height: 1.4;
+  margin-bottom: var(--space-md);
+  padding: 6px var(--space-sm);
+}
+
 .landing-hero__title {
   color: var(--ink);
-  font-size: var(--font-size-empty-title);
-  font-weight: 500;
-  letter-spacing: -0.8px;
-  line-height: 1.2;
+  font-size: var(--font-size-landing-hero);
+  font-weight: 600;
+  letter-spacing: -1.2px;
+  line-height: 1.22;
   margin: 0;
-  max-width: 22ch;
+  max-width: 20ch;
+  text-wrap: balance;
 }
 
 .landing-hero__description {
   color: var(--text-secondary);
-  font-size: var(--font-size-copy);
-  line-height: 1.65;
-  margin: var(--space-sm) 0 0;
-  max-width: 56ch;
+  font-size: var(--font-size-detail-copy);
+  line-height: 1.6;
+  margin: var(--space-md) 0 0;
+  max-width: 52ch;
 }
 
 .landing-hero__actions {
@@ -3190,10 +3227,10 @@ a:hover {
 
 .landing-section__lead {
   color: var(--text-secondary);
-  font-size: var(--font-size-copy);
-  line-height: 1.65;
+  font-size: var(--font-size-landing-lead);
+  line-height: 1.6;
   margin: var(--space-xs) 0 0;
-  max-width: 64ch;
+  max-width: 62ch;
 }
 
 .landing-reason-list,
@@ -3207,8 +3244,14 @@ a:hover {
 }
 
 .landing-reason-list,
-.landing-flow-list {
+.landing-flow-list,
+.landing-sample-list {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* 설명 문장 길이가 단계마다 달라도 미리보기 상단선은 맞는다 (정렬 원칙). */
+.landing-flow .landing-preview {
+  margin-top: auto;
 }
 
 .landing-reason,
@@ -3220,35 +3263,69 @@ a:hover {
   padding: var(--space-md);
 }
 
+.landing-flow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.landing-flow__head {
+  align-items: center;
+  display: flex;
+  gap: var(--space-xs);
+}
+
+/* 번호는 계단으로 읽혀야 한다. 11px 회색 라벨로는 순서가 보이지 않는다. */
 .landing-flow__index {
-  color: var(--text-tertiary);
-  display: block;
-  font-family: var(--font-mono);
-  font-size: var(--font-size-label);
+  align-items: center;
+  background: var(--primary);
+  border-radius: var(--radius-full);
+  color: var(--on-primary);
+  display: inline-flex;
+  flex: none;
+  font-size: var(--font-size-body-sm);
   font-weight: 600;
-  letter-spacing: 0.5px;
-  line-height: 1.4;
+  height: var(--landing-step-index-size);
+  justify-content: center;
+  line-height: 1;
+  width: var(--landing-step-index-size);
 }
 
 .landing-reason__title,
 .landing-flow__title {
   color: var(--ink);
-  font-size: var(--font-size-body);
-  font-weight: 500;
+  font-size: var(--font-size-copy);
+  font-weight: 600;
   line-height: 1.4;
   margin: 0;
 }
 
-.landing-flow__title {
-  margin-top: var(--space-xxs);
-}
-
-.landing-reason__body,
-.landing-flow__body {
+.landing-reason__body {
   color: var(--text-secondary);
   font-size: var(--font-size-body-sm);
-  line-height: 1.4;
+  line-height: 1.55;
   margin: var(--space-xs) 0 0;
+}
+
+.landing-flow__doing {
+  color: var(--text-body);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.landing-flow__system {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-body-xs);
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* --text-muted 는 이 크기에서 2.25:1 로 AA 에 못 미친다(실측). */
+.landing-flow__system-label {
+  color: var(--text-tertiary);
+  font-weight: 600;
+  margin-right: var(--space-xxs);
 }
 
 .landing-sample__header {
@@ -3266,11 +3343,22 @@ a:hover {
   text-transform: uppercase;
 }
 
+/* 금액을 문장에서 꺼내 가장 먼저 읽히게 한다 — 랜딩에서만 "숫자가 주인공"이
+   깨져 있었다 (DESIGN.md 원칙 3). */
+.landing-sample__amount {
+  color: var(--ink);
+  font-size: var(--font-size-landing-amount);
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+  margin: var(--space-sm) 0 0;
+}
+
 .landing-sample__text {
-  color: var(--text-body);
-  font-size: var(--font-size-copy);
-  line-height: 1.65;
-  margin: var(--space-xs) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.6;
+  margin: var(--space-xxs) 0 0;
 }
 
 .landing-plan-grid {
@@ -3285,6 +3373,289 @@ a:hover {
   font-size: var(--font-size-body-sm);
   line-height: 1.4;
   margin: var(--space-sm) 0 0;
+}
+
+/* 단계 미리보기 — 스크린샷이 아니라 같은 토큰을 쓰는 DOM이다. 화면 값이 바뀌면
+   미리보기도 함께 바뀌므로 조용히 낡지 않는다. */
+.landing-preview {
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-lg);
+  margin-top: var(--space-sm);
+  overflow: hidden;
+}
+
+.landing-preview__bar {
+  align-items: center;
+  background: var(--surface);
+  border-bottom: var(--line-width) solid var(--hairline-soft);
+  display: flex;
+  padding: var(--space-xs) var(--space-sm);
+}
+
+.landing-preview__bar-title {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  line-height: 1.4;
+}
+
+.landing-preview__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+}
+
+.landing-preview__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+}
+
+.landing-preview__label {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.landing-preview__file,
+.landing-preview__select {
+  align-items: center;
+  background: var(--surface-soft);
+  border: var(--line-width) solid var(--hairline-soft);
+  border-radius: var(--radius-lg);
+  color: var(--text-body);
+  display: flex;
+  font-size: var(--font-size-body-xs);
+  gap: var(--space-xxs);
+  line-height: 1.4;
+  overflow: hidden;
+  padding: 6px var(--space-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-preview__file-icon {
+  background: var(--text-muted);
+  border-radius: 2px;
+  flex: none;
+  height: 12px;
+  width: 9px;
+}
+
+.landing-preview__cta {
+  align-items: center;
+  align-self: flex-start;
+  background: var(--primary);
+  border-radius: var(--radius-lg);
+  color: var(--on-primary);
+  display: inline-flex;
+  font-size: var(--font-size-body-xs);
+  font-weight: 500;
+  line-height: 1;
+  margin-top: var(--space-xxs);
+  padding: var(--space-xs) var(--space-sm);
+}
+
+.landing-preview__rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.landing-preview__row {
+  align-items: center;
+  border-bottom: var(--line-width) solid var(--hairline-soft);
+  column-gap: var(--space-xs);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  padding: var(--space-xs) var(--space-sm);
+  row-gap: var(--space-xxs);
+}
+
+.landing-preview__row:last-child {
+  border-bottom: none;
+}
+
+.landing-preview__date {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-label);
+  grid-column: 1;
+  grid-row: 1;
+  line-height: 1.4;
+}
+
+.landing-preview__merchant {
+  color: var(--text-body);
+  font-size: var(--font-size-body-xs);
+  grid-column: 2;
+  grid-row: 1;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-preview__amount {
+  color: var(--ink);
+  font-size: var(--font-size-body-xs);
+  font-weight: 600;
+  grid-column: 3;
+  grid-row: 1;
+  line-height: 1.4;
+  text-align: right;
+}
+
+/* 카테고리는 색 점 + 무채색 글자다. 색을 글자에 쓰면 다크에서 대비가 무너진다
+   (거래 목록의 transactions-category-chip 과 같은 패턴). */
+.landing-preview__category {
+  align-items: center;
+  background: var(--surface-soft);
+  border: var(--line-width) solid var(--hairline-soft);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  display: inline-flex;
+  font-size: var(--font-size-label);
+  gap: var(--space-xxs);
+  grid-column: 2 / 4;
+  grid-row: 2;
+  justify-self: start;
+  line-height: 1.4;
+  padding: 2px var(--space-xs);
+}
+
+.landing-preview__dot {
+  border-radius: var(--radius-full);
+  flex: none;
+  height: var(--space-xs);
+  width: var(--space-xs);
+}
+
+.landing-preview__glance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md);
+}
+
+.landing-preview__kpi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+}
+
+.landing-preview__kpi-label {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.landing-preview__kpi-value {
+  color: var(--ink);
+  font-size: var(--font-size-kpi-value);
+  font-weight: 600;
+  letter-spacing: -0.6px;
+  line-height: 1.1;
+}
+
+.landing-preview__kpi-delta {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-xs);
+  line-height: 1.4;
+}
+
+.landing-preview__bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.landing-preview__cat-row {
+  align-items: center;
+  display: grid;
+  gap: var(--space-xs);
+  grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+}
+
+.landing-preview__category-name {
+  align-items: center;
+  color: var(--text-secondary);
+  display: inline-flex;
+  font-size: var(--font-size-body-xs);
+  gap: var(--space-xxs);
+  line-height: 1.4;
+}
+
+.landing-preview__track {
+  background: var(--surface);
+  border-radius: var(--radius-full);
+  display: block;
+  height: var(--space-xs);
+  overflow: hidden;
+}
+
+.landing-preview__fill {
+  border-radius: var(--radius-full);
+  display: block;
+  height: 100%;
+}
+
+.landing-preview__insight {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-sm);
+}
+
+.landing-preview__insight-head {
+  align-items: baseline;
+  display: flex;
+  gap: var(--space-xs);
+  justify-content: space-between;
+}
+
+.landing-preview__insight-type {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.landing-preview__insight-impact {
+  color: var(--ink);
+  font-size: var(--font-size-copy);
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+}
+
+.landing-preview__insight-subject {
+  color: var(--ink);
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  line-height: 1.4;
+  margin: var(--space-xxs) 0 0;
+}
+
+.landing-preview__insight-text {
+  color: var(--text-secondary);
+  font-size: var(--font-size-body-xs);
+  line-height: 1.55;
+  margin: var(--space-xxs) 0 0;
+}
+
+.landing-preview__insight-link {
+  align-self: flex-start;
+  border: var(--line-width) solid var(--hairline-strong);
+  border-radius: var(--radius-lg);
+  color: var(--text-body);
+  font-size: var(--font-size-body-xs);
+  line-height: 1;
+  margin-top: var(--space-xs);
+  padding: 6px var(--space-xs);
 }
 
 .landing-footer {
@@ -3383,7 +3754,13 @@ a:hover {
 
   .landing-reason-list,
   .landing-flow-list,
+  .landing-sample-list,
   .landing-plan-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-hero {
+    gap: var(--space-lg);
     grid-template-columns: 1fr;
   }
 
@@ -3391,6 +3768,20 @@ a:hover {
   .landing-main,
   .landing-footer {
     padding-inline: var(--space-md);
+  }
+
+  .landing-hero__title {
+    font-size: var(--font-size-report-title);
+    letter-spacing: -0.6px;
+    max-width: none;
+  }
+
+  .landing-hero__description {
+    font-size: var(--font-size-copy);
+  }
+
+  .landing-section {
+    padding: var(--space-lg) var(--space-md);
   }
 
   .transactions-panel__header,
