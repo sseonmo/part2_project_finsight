@@ -2994,7 +2994,11 @@ git commit -m "feat(landing): 매달 쌓이는 대시보드를 지적 카드와 
   it("lifts the impact amount out of each insight card so the number reads first", () => {
     const { container } = render(<Page />);
 
-    const impacts = container.querySelectorAll(".landing-icard__impact");
+    // `.landing-icard__impact` 는 DashboardShowcase 의 떠 있는 카드도 재사용한다(강조 문법 통일).
+    // 페이지 전체로는 4개가 잡히므로 히어로 스택 컨테이너 안으로 좁힌다.
+    const impacts = container.querySelectorAll(
+      ".landing-stack .landing-icard__impact",
+    );
 
     expect(impacts).toHaveLength(3);
     impacts.forEach((impact) => {

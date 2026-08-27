@@ -3,14 +3,17 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
 import {
   ClassifyStepPreview,
-  DashboardGlancePreview,
   ReviewStepPreview,
   UploadStepPreview,
 } from "@/components/LandingStepPreview";
+import { CsvToSignals } from "@/components/landing/CsvToSignals";
+import { DashboardShowcase } from "@/components/landing/DashboardShowcase";
+import { InsightCardStack } from "@/components/landing/InsightCardStack";
+import { LandingSection } from "@/components/landing/LandingSection";
+import { SignalTypeGrid } from "@/components/landing/SignalTypeGrid";
 import { PricingCard } from "@/components/PricingCard";
 import { createBrowserClient } from "@/services/supabase";
 
@@ -58,24 +61,6 @@ const FLOW_STEPS = [
     doing: "지적받은 문장을 열어 근거를 확인합니다.",
     system: "지출 급증·튀는 결제·구독료 인상을 찾아 문장으로 옮깁니다.",
     title: "리뷰 읽기",
-  },
-] as const;
-
-const SAMPLE_SENTENCES = [
-  {
-    amount: "+62,000원",
-    signal: "카테고리 지출 급증",
-    text: "카페·간식이 지난달보다 58% 늘었습니다.",
-  },
-  {
-    amount: "연 36,000원",
-    signal: "구독료 인상",
-    text: "스트리밍 구독료가 9,900원에서 12,900원으로 올랐습니다. 이대로면 1년에 그만큼 더 내게 됩니다.",
-  },
-  {
-    amount: "180,000원",
-    signal: "튀는 단일 결제",
-    text: "문화·여가 결제 한 건이 그 달 문화·여가 지출의 44%를 차지했습니다.",
   },
 ] as const;
 
@@ -150,11 +135,11 @@ function MarketingContent() {
               계좌를 연동하지 않는 가계부
             </span>
             <h1 className="landing-hero__title">
-              카드 명세서 CSV를 올리면 지출을 분류하고 바꿀 지점을 짚어 드립니다
+              지난달과 뭐가 달라졌는지, 문장으로 짚어 드립니다
             </h1>
             <p className="landing-hero__description">
-              매달 내려받는 명세서 파일 하나로 카테고리별 지출, 지난달과의 비교,
-              그리고 행동을 바꿀 수 있는 지적 5종을 받습니다.
+              카드 명세서 CSV 한 장이면 됩니다. 지출 급증·튀는 결제·구독료
+              인상을 찾아 금액과 함께 알려 드립니다.
             </p>
             {authError ? (
               <p className="landing-alert" role="alert">
@@ -172,19 +157,45 @@ function MarketingContent() {
               </Button>
               <p className="landing-hero__note">7일 무료 체험, 카드 등록 없이</p>
             </div>
+            <p className="landing-trustline">
+              <span>
+                <b>금액은 계산된 값입니다.</b> 무엇을 지적할지는 정해진 규칙이
+                고르고, AI는 그 숫자를 문장으로 옮기기만 합니다. 오른쪽 토글로
+                직접 확인해 보세요.
+              </span>
+            </p>
           </div>
-          <DashboardGlancePreview />
+          <InsightCardStack />
         </section>
 
-        <section className="landing-section landing-section--flow">
-          <h2 className="landing-section__title">세 단계로 끝납니다</h2>
-          <p className="landing-section__lead">
-            가입한 뒤 밟는 순서가 그대로 이 셋입니다. 아래 화면은 예시 데이터로
-            그린 것이고, 실제 화면은 올린 거래로 채워집니다.
-          </p>
+        <LandingSection
+          hint="어느 쪽이든 짚어 보세요 — 어떤 줄이 어떤 문장이 됐는지 이어집니다"
+          label="무엇을 올리나"
+          lead="카드사에서 내려받은 CSV를 그대로 올리면 됩니다. 컬럼 이름이 카드사마다 달라도 알아서 읽고, 바꿀 수 있는 지점만 골라 드립니다."
+          title="340줄짜리 명세서에서 볼 것은 5줄입니다"
+        >
+          <CsvToSignals />
+        </LandingSection>
+
+        <LandingSection
+          label="무엇을 잡나"
+          lead="막연한 분석이 아닙니다. 잡는 조건이 숫자로 정해져 있고, 걸린 것만 금액과 함께 문장으로 드립니다."
+          title="이 다섯 가지를 놓치지 않습니다"
+        >
+          <SignalTypeGrid />
+        </LandingSection>
+
+        <LandingSection
+          label="무엇을 하나"
+          lead="가입한 뒤 밟는 순서가 그대로 이 셋입니다. 아래 화면은 예시 데이터로 그린 것이고, 실제 화면은 올린 거래로 채워집니다."
+          title="세 단계로 끝납니다"
+        >
           <ol aria-label="이용 흐름" className="landing-flow-list">
             {FLOW_STEPS.map((step, index) => (
-              <li className="landing-flow" key={step.title}>
+              <li
+                className={`landing-flow landing-flow--${index + 1} landing-lift`}
+                key={step.title}
+              >
                 <div className="landing-flow__head">
                   <span className="landing-flow__index tabular-nums">
                     {index + 1}
@@ -200,60 +211,37 @@ function MarketingContent() {
               </li>
             ))}
           </ol>
-        </section>
+        </LandingSection>
 
-        <section className="landing-section">
-          <h2 className="landing-section__title">
-            왜 계좌를 연동하지 않나
-          </h2>
-          <p className="landing-section__lead">
-            연동하지 못해서가 아니라 연동하지 않기로 했습니다. 가계부 하나를
-            쓰려고 금융 계정 전체를 넘길 이유가 없습니다.
-          </p>
+        <LandingSection
+          label="무엇을 보나"
+          lead="지적만 오는 게 아닙니다. 카테고리별 지출과 지난달 비교가 함께 서고, 지적은 그 위에서 나옵니다."
+          title="매달 이 화면이 한 장 쌓입니다"
+        >
+          <DashboardShowcase />
+        </LandingSection>
+
+        <LandingSection
+          label="왜 이 방식인가"
+          lead="연동하지 못해서가 아니라 연동하지 않기로 했습니다. 가계부 하나를 쓰려고 금융 계정 전체를 넘길 이유가 없습니다."
+          title="왜 계좌를 연동하지 않나"
+        >
           <ul aria-label="CSV를 쓰는 이유" className="landing-reason-list">
             {CSV_REASONS.map((reason) => (
-              <li className="landing-reason" key={reason.title}>
+              <li className="landing-reason landing-lift" key={reason.title}>
                 <h3 className="landing-reason__title">{reason.title}</h3>
                 <p className="landing-reason__body">{reason.body}</p>
               </li>
             ))}
           </ul>
-        </section>
+        </LandingSection>
 
-        <section className="landing-section">
-          <h2 className="landing-section__title">이런 문장을 받게 됩니다</h2>
-          <p className="landing-section__lead">
-            아래 세 문장은 실제 사용자 데이터가 아니라 예시 문장입니다. 실제
-            화면의 금액은 올린 거래에서 직접 집계한 값이고, AI는 그 숫자를
-            문장으로 옮기기만 합니다.
-          </p>
-          <ul aria-label="예시 문장" className="landing-sample-list">
-            {SAMPLE_SENTENCES.map((sample) => (
-              <li className="landing-sample" key={sample.signal}>
-                <div className="landing-sample__header">
-                  <Badge variant="neutral">예시</Badge>
-                  <span className="landing-sample__signal">
-                    {sample.signal}
-                  </span>
-                </div>
-                <p
-                  className="landing-sample__amount tabular-nums"
-                  data-testid="sample-amount"
-                >
-                  {sample.amount}
-                </p>
-                <p className="landing-sample__text">{sample.text}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="landing-section" id="pricing">
-          <h2 className="landing-section__title">요금제</h2>
-          <p className="landing-section__lead">
-            7일 체험이 끝난 뒤에도 체험 중 만든 대시보드·리뷰·리포트는 계속
-            볼 수 있습니다. 결제하면 새 업로드와 리포트 생성이 다시 열립니다.
-          </p>
+        <LandingSection
+          id="pricing"
+          label="얼마인가"
+          lead="7일 체험이 끝난 뒤에도 체험 중 만든 대시보드·리뷰·리포트는 계속 볼 수 있습니다. 결제하면 새 업로드와 리포트 생성이 다시 열립니다."
+          title="요금제"
+        >
           <div className="landing-plan-grid">
             <PricingCard
               amount={formatCurrency(MONTHLY_PRICE_KRW)}
@@ -279,7 +267,7 @@ function MarketingContent() {
             {formatCurrency(savings)} 저렴합니다. 결제는 로그인한 뒤
             대시보드에서 진행합니다.
           </p>
-        </section>
+        </LandingSection>
       </main>
 
       <footer className="landing-footer">
