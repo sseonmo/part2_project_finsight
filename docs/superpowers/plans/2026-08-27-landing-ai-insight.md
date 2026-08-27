@@ -260,7 +260,7 @@ const priceUp = SIGNAL_THRESHOLDS.recurringPriceUp;
 
 /** `SIGNAL_CONDITION_COPY` 는 리포트용 완결 문장이라 타일에는 길다. 타일은 조건만 짧게 끊되
     숫자는 같은 출처에서 읽는다 — 임계값이 바뀌면 랜딩도 따라 바뀌어야 한다. */
-export const LANDING_SIGNAL_TILES: readonly LandingSignalTile[] = [
+export const LANDING_SIGNAL_TILES = [
   {
     type: "recurring_price_up",
     condition: `반복 결제가 직전보다 ${formatPercent(priceUp.minIncreaseRatio)} 이상 오르면 인상분을 ${priceUp.impactMonths}개월로 환산합니다. 가장 놓치기 쉽고, 가장 오래 새는 항목입니다.`,
@@ -281,9 +281,9 @@ export const LANDING_SIGNAL_TILES: readonly LandingSignalTile[] = [
     type: "recurring_payment",
     condition: `${recurring.minIntervalDays}~${recurring.maxIntervalDays}일 간격으로 ${recurring.minOccurrences}회 이상 같은 금액`,
   },
-] as const;
+] as const satisfies readonly LandingSignalTile[];
 
-export const LANDING_INSIGHT_CARDS: readonly LandingInsightCard[] = [
+export const LANDING_INSIGHT_CARDS = [
   {
     id: "cafe",
     type: "category_spike",
@@ -411,9 +411,9 @@ export const LANDING_INSIGHT_CARDS: readonly LandingInsightCard[] = [
       summaryValue: "409,000원",
     },
   },
-] as const;
+] as const satisfies readonly LandingInsightCard[];
 
-export const LANDING_CSV_ROWS: readonly LandingCsvRow[] = [
+export const LANDING_CSV_ROWS = [
   { text: "2026-03-01,스타벅스 역삼,5100", signalId: "cafe" },
   { text: "2026-03-01,GS25 역삼점,3200", signalId: "" },
   { text: "2026-03-02,스트리밍 구독,12900", signalId: "sub" },
@@ -423,9 +423,9 @@ export const LANDING_CSV_ROWS: readonly LandingCsvRow[] = [
   { text: "2026-03-06,메가박스 코엑스,180000", signalId: "outlier" },
   { text: "2026-03-08,메가커피 삼성,2000", signalId: "cafe" },
   { text: "2026-03-09,올리브영,31900", signalId: "" },
-] as const;
+] as const satisfies readonly LandingCsvRow[];
 
-export const LANDING_SIGNAL_ROWS: readonly LandingSignalRow[] = [
+export const LANDING_SIGNAL_ROWS = [
   {
     signalId: "sub",
     category: "주거/통신",
@@ -444,7 +444,7 @@ export const LANDING_SIGNAL_ROWS: readonly LandingSignalRow[] = [
     name: "한 건이 그 달의 44%",
     amount: "180,000원",
   },
-] as const;
+] as const satisfies readonly LandingSignalRow[];
 
 export const LANDING_DASHBOARD = {
   period: "2026년 3월 · 대시보드",
@@ -467,6 +467,8 @@ export const LANDING_DASHBOARD = {
   bars: readonly { category: Category; amount: string; share: number }[];
 };
 ```
+
+`satisfies` 를 쓰고 `: readonly X[]` 를 붙이지 않는 이유: 타입을 명시하면 `as const` 가 만든 튜플 타입이 배열 타입으로 넓혀져, 이 저장소의 `noUncheckedIndexedAccess: true` 아래에서 `LANDING_INSIGHT_CARDS[0]` 이 `| undefined` 가 된다. Task 7·8 이 그 인덱싱을 프로덕션 코드에서 쓴다.
 
 `LANDING_CSV_ROWS` 의 빈 `signalId` 는 "어떤 지적에도 걸리지 않은 줄"이다. 테스트에서 `.filter(Boolean)` 로 걸러진다.
 
