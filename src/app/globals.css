@@ -4403,6 +4403,14 @@ a:hover {
   letter-spacing: -0.4px;
 }
 
+/* ══════ 랜딩 ④ 근거 패널 미리보기 ══════ */
+
+.landing-preview__rows .landing-preview__row--total {
+  border-top: var(--line-width) solid var(--hairline);
+  color: var(--text-tertiary);
+  padding-top: 6px;
+}
+
 @media (max-width: 767px) {
   .app-sidebar {
     display: none;
