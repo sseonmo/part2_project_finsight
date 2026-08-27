@@ -148,6 +148,12 @@ export function DashboardGlancePreview() {
   );
 }
 
+/** 형제 미리보기 두 개가 모두 3행이라 여기도 3행에서 끊는다 (3열 그리드에서 높이가 맞는다).
+    카드가 요약하는 거래는 전부 12건이다 — `sentence` 의 근거 문구("거래 12건을 더한 값")와
+    `evidence.summaryLabel`("외 7건 합계" = 5행 + 7)이 같은 값을 가리킨다. 3행을 보여주므로
+    남는 건수는 9다. **슬라이스 수나 예시 거래 건수를 고치면 아래 "외 9건"도 함께 고칠 것.** */
+const PREVIEW_EVIDENCE_ROWS = 3;
+
 /** 3단계 중 마지막. 히어로가 인사이트 문장을 이미 보여주므로 여기서는
     "그 문장을 열면 나오는 것" — 근거가 된 거래 행과 합계를 보여준다. */
 export function ReviewStepPreview() {
@@ -159,7 +165,7 @@ export function ReviewStepPreview() {
         <span className="landing-preview__bar-title">근거 패널</span>
       </div>
       <div className="landing-preview__rows">
-        {evidence.rows.slice(0, 3).map((row) => (
+        {evidence.rows.slice(0, PREVIEW_EVIDENCE_ROWS).map((row) => (
           <div className="landing-preview__row" key={row.date + row.merchant}>
             <span className="landing-preview__date tabular-nums">
               {row.date}
