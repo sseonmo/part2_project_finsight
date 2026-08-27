@@ -19,11 +19,11 @@ export const SIGNAL_THRESHOLDS = {
   recurringPriceUp: { minIncreaseRatio: 0.1, impactMonths: 12 },
 } as const;
 
-function formatKrw(amount: number): string {
+export function formatKrw(amount: number): string {
   return `${amount.toLocaleString("ko-KR")}원`;
 }
 
-function formatPercent(ratio: number): string {
+export function formatPercent(ratio: number): string {
   return `${Math.round(ratio * 100)}%`;
 }
 
