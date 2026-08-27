@@ -105,7 +105,7 @@ export const LANDING_INSIGHT_CARDS = [
         pass: true,
         value: `+58% ≥ ${formatPercent(spike.minIncreaseRatio)} ✓ · 62,000 ≥ ${spike.minIncreaseKrw.toLocaleString("ko-KR")} ✓`,
       },
-    ] as RawRow[],
+    ] as readonly RawRow[],
     source: "src/lib/signals/detect-category-spike.ts",
     evidence: {
       title: "이 금액을 만든 거래",
@@ -152,7 +152,7 @@ export const LANDING_INSIGHT_CARDS = [
         pass: true,
         value: `+30.3% ≥ ${formatPercent(priceUp.minIncreaseRatio)} ✓`,
       },
-    ] as RawRow[],
+    ] as readonly RawRow[],
     source: "src/lib/signals/detect-recurring.ts",
     evidence: {
       title: "반복 결제 이력",
@@ -192,7 +192,7 @@ export const LANDING_INSIGHT_CARDS = [
         pass: true,
         value: `44% ≥ ${formatPercent(outlier.minShareOfCategory)} ✓ · 180,000 ≥ ${outlier.minAmountKrw.toLocaleString("ko-KR")} ✓`,
       },
-    ] as RawRow[],
+    ] as readonly RawRow[],
     source: "src/lib/signals/detect-outlier-transaction.ts",
     evidence: {
       title: "해당 결제",
