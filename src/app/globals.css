@@ -4693,19 +4693,21 @@ a:hover {
 .landing-donut {
   /* 조각 비율은 LANDING_DASHBOARD.bars 금액에서 나온 것이다 —
      식비 33.6 · 쇼핑 18.8 · 카페/간식 14.8 · 교통 12.9 · 주거/통신 11.3 · 기타 8.6.
-     조각 사이 0.6% 의 --canvas 틈은 docs/DESIGN.md "도넛 조각에는 구분선을 넣는다" 규칙이다. */
+     조각 사이 0.6% 의 --canvas 틈은 docs/DESIGN.md "도넛 조각에는 구분선을 넣는다" 규칙이다.
+     틈 5개가 3% 를 먹으므로 조각은 전부 0.97 배로 줄인다 — 그래야 조각끼리의 비율이
+     금액 비율과 정확히 같다. 앞 조각만 온전히 두고 뒤에서 깎으면 첫 조각이 부풀어 보인다. */
   background: conic-gradient(
-    var(--cat-food) 0 33.6%,
-    var(--canvas) 33.6% 34.2%,
-    var(--cat-shopping) 34.2% 52.5%,
-    var(--canvas) 52.5% 53.1%,
-    var(--cat-cafe-snack) 53.1% 67.3%,
-    var(--canvas) 67.3% 67.9%,
-    var(--cat-transport) 67.9% 80.1%,
-    var(--canvas) 80.1% 80.7%,
-    var(--cat-housing-telecom) 80.7% 91.4%,
-    var(--canvas) 91.4% 92%,
-    var(--cat-other) 92% 100%
+    var(--cat-food) 0 32.59%,
+    var(--canvas) 32.59% 33.19%,
+    var(--cat-shopping) 33.19% 51.43%,
+    var(--canvas) 51.43% 52.03%,
+    var(--cat-cafe-snack) 52.03% 66.39%,
+    var(--canvas) 66.39% 66.99%,
+    var(--cat-transport) 66.99% 79.5%,
+    var(--canvas) 79.5% 80.1%,
+    var(--cat-housing-telecom) 80.1% 91.06%,
+    var(--canvas) 91.06% 91.66%,
+    var(--cat-other) 91.66% 100%
   );
   border-radius: var(--radius-full);
   display: grid;

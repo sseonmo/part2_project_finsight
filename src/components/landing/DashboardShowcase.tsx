@@ -8,7 +8,7 @@ import {
 } from "@/lib/landing-samples";
 import { SIGNAL_TYPE_LABELS } from "@/lib/signals/thresholds";
 
-import { Highlight } from "./Highlight";
+import { Sentence } from "./Sentence";
 
 const FLOATING = LANDING_INSIGHT_CARDS[1];
 
@@ -100,13 +100,7 @@ export function DashboardShowcase() {
             </span>
           </div>
           <p className="landing-icard__subject">{FLOATING.subject}</p>
-          <p className="landing-icard__text">
-            구독료가{" "}
-            <Highlight evidence="직전 결제 대비 +30.3%">
-              9,900원에서 12,900원
-            </Highlight>
-            으로 올랐습니다.
-          </p>
+          <Sentence parts={FLOATING.sentence} />
         </div>
       </article>
     </div>

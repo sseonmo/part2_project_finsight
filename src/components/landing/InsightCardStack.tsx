@@ -3,14 +3,10 @@
 import { useEffect, useState, type CSSProperties } from "react";
 
 import { Badge } from "@/components/Badge";
-import {
-  categoryVar,
-  LANDING_INSIGHT_CARDS,
-  type SentencePart,
-} from "@/lib/landing-samples";
+import { categoryVar, LANDING_INSIGHT_CARDS } from "@/lib/landing-samples";
 import { SIGNAL_TYPE_LABELS } from "@/lib/signals/thresholds";
 
-import { Highlight } from "./Highlight";
+import { Sentence } from "./Sentence";
 
 const ROTATE_MS = 4_600;
 
@@ -26,22 +22,6 @@ const MODE_NOTES: Record<Mode, { lead: string; rest: string }> = {
     rest: " src/lib/signals/ 의 순수 함수가 임계값으로 판정한 결과 그대로이고, AI는 아직 아무것도 하지 않았습니다.",
   },
 };
-
-function Sentence({ parts }: { parts: readonly SentencePart[] }) {
-  return (
-    <p className="landing-icard__text">
-      {parts.map((part, index) =>
-        part.kind === "mark" ? (
-          <Highlight evidence={part.evidence} key={index}>
-            {part.text}
-          </Highlight>
-        ) : (
-          <span key={index}>{part.text}</span>
-        ),
-      )}
-    </p>
-  );
-}
 
 export function InsightCardStack() {
   const [active, setActive] = useState(0);
