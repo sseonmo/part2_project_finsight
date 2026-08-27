@@ -25,6 +25,7 @@ export function CsvToSignals() {
         <span className="landing-csvbox__label">올린 것</span>
         {LANDING_CSV_ROWS.map((row) => (
           <button
+            aria-pressed={Boolean(row.signalId) && focused === row.signalId}
             className="landing-csvrow"
             data-sig={row.signalId}
             key={row.text}
@@ -53,6 +54,7 @@ export function CsvToSignals() {
       <div className="landing-outbox">
         {LANDING_SIGNAL_ROWS.map((row) => (
           <button
+            aria-pressed={focused === row.signalId}
             className="landing-outrow landing-acc"
             data-sig={row.signalId}
             key={row.signalId}

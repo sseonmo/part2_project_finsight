@@ -73,4 +73,46 @@ describe("CsvToSignals", () => {
       "data-focus",
     );
   });
+
+  it("marks the focused signal and its csv line as pressed", () => {
+    render(<CsvToSignals />);
+
+    fireEvent.focus(
+      screen.getByRole("button", { name: /구독료가 3,000원 올랐습니다/ }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: /구독료가 3,000원 올랐습니다/ }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByRole("button", { name: "2026-03-02,스트리밍 구독,12900" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("leaves the rest unpressed while one pair is linked", () => {
+    render(<CsvToSignals />);
+
+    fireEvent.focus(
+      screen.getByRole("button", { name: /구독료가 3,000원 올랐습니다/ }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: /카페·간식이 58% 늘었습니다/ }),
+    ).toHaveAttribute("aria-pressed", "false");
+    expect(
+      screen.getByRole("button", { name: "2026-03-01,스타벅스 역삼,5100" }),
+    ).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("does not mark any button pressed when an unmatched csv line is picked", () => {
+    render(<CsvToSignals />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "2026-03-09,올리브영,31900" }),
+    );
+
+    for (const button of screen.getAllByRole("button")) {
+      expect(button).toHaveAttribute("aria-pressed", "false");
+    }
+  });
 });
