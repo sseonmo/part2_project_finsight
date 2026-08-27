@@ -113,6 +113,27 @@ describe("InsightCardStack", () => {
     expect(cards[0]!).not.toHaveClass("landing-icard--flipped");
   });
 
+  it("keeps the hidden card face out of the tab order", () => {
+    const { container } = render(<InsightCardStack />);
+
+    const cards = container.querySelectorAll(".landing-icard");
+    const front = cards[0]!.querySelector(".landing-icard__face--front")!;
+    const back = cards[0]!.querySelector(".landing-icard__face--back")!;
+
+    // 뒷면은 180도 돌아가 눈에 보이지 않는다 — Tab 이 그리로 가면 포커스를 잃는다.
+    expect(back).toHaveAttribute("inert");
+    expect(front).not.toHaveAttribute("inert");
+
+    fireEvent.click(
+      within(cards[0]! as HTMLElement).getByRole("button", {
+        name: "근거 보기 →",
+      }),
+    );
+
+    expect(front).toHaveAttribute("inert");
+    expect(back).not.toHaveAttribute("inert");
+  });
+
   it("rotates to the next card on its own", () => {
     render(<InsightCardStack />);
 

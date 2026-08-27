@@ -112,6 +112,7 @@ export function InsightCardStack() {
               <div className="landing-icard__inner">
                 <div
                   className="landing-icard__face landing-icard__face--front landing-acc"
+                  inert={flipped}
                   style={accent}
                 >
                   <div className="landing-icard__head">
@@ -162,8 +163,11 @@ export function InsightCardStack() {
                   </div>
                 </div>
 
+                {/* 안 보이는 면은 180도 돌아가 있을 뿐 레이아웃에는 남는다. inert 가 없으면
+                    Tab 이 그리로 가서 포커스가 화면 밖으로 사라진다. */}
                 <div
                   className="landing-icard__face landing-icard__face--back landing-acc"
+                  inert={!flipped}
                   style={accent}
                 >
                   <div className="landing-ev__title">

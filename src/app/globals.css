@@ -3114,6 +3114,10 @@ a:hover {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  /* 글로우 두 곳은 컨테이너보다 넓게 퍼져 좁은 화면에서 뷰포트 밖으로 나간다. 그대로 두면
+     모바일에서 빈 배경만 나오는 가로 스크롤이 생긴다. `hidden` 이 아니라 `clip` 인 이유는
+     `hidden` 은 스크롤 컨테이너를 만들어 안에 있는 sticky 헤더를 깨뜨리기 때문이다. */
+  overflow-x: clip;
   overflow-wrap: break-word;
   word-break: keep-all;
 }
