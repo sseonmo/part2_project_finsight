@@ -200,6 +200,36 @@ describe("OpenAI service wrapper", () => {
     expect(sent).toContain("increaseRatePercent\\\":30");
   });
 
+  it("converts ratios above 1 into whole percents too", async () => {
+    // 배수로 표현되는 비율(2.9 = 290% 증가)이 원시 실수로 프롬프트에 실려
+    // "증가 비율은 2.902482269503546이며" 처럼 문장에 그대로 박힌 적이 있다.
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    mockJsonResponse({ narratives: [{ id: "signal-1", narrative: "문장" }] });
+
+    await describeSignals([
+      {
+        id: "signal-1",
+        type: "category_spike",
+        period: "2026-06-01",
+        targetKey: "생활/마트",
+        impact: 163_700,
+        payload: {
+          previousAmount: 56_400,
+          currentAmount: 220_100,
+          increaseAmount: 163_700,
+          increaseRatio: 2.902482269503546,
+        },
+      },
+    ]);
+
+    const sent = JSON.stringify(chatCompletionsCreateMock.mock.calls[0]?.[0]);
+
+    expect(sent).not.toContain("2.902482269503546");
+    expect(sent).toContain("increaseRatioPercent\\\":290");
+    expect(sent).not.toContain("increaseRatio\\\":");
+    expect(sent).toContain("163700");
+  });
+
   it("returns only provided signal narratives and leaves omissions to the caller", async () => {
     vi.stubEnv("OPENAI_API_KEY", "test-key");
     mockJsonResponse({

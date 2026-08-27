@@ -282,8 +282,10 @@ function maybeSanitizeMerchantField(key: string, value: unknown): unknown {
 }
 
 /**
- * 0~1 사이의 비율은 LLM 이 그대로 문장에 박는다("비중은 0.6559428060768543 입니다").
+ * 비율은 LLM 이 그대로 문장에 박는다("비중은 0.6559428060768543 입니다").
  * 프롬프트에 싣기 전에 정수 퍼센트로 바꾸고 키에도 그 사실을 적는다.
+ * 1 이상인 배수 비율도 마찬가지다(2.902482269503546 → 290).
+ * 금액·건수는 모두 정수라 정수는 손대지 않는 것으로 비율과 구분한다.
  * 값을 새로 만드는 것이 아니라 이미 계산된 값의 표현만 고르는 것이다.
  */
 function asWholePercent(value: unknown): number | null {
@@ -291,7 +293,7 @@ function asWholePercent(value: unknown): number | null {
     return null;
   }
 
-  if (Number.isInteger(value) || value <= -1 || value >= 1) {
+  if (Number.isInteger(value)) {
     return null;
   }
 
