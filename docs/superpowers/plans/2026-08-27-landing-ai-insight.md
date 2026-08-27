@@ -2979,9 +2979,9 @@ git commit -m "feat(landing): 매달 쌓이는 대시보드를 지적 카드와 
     render(<Page />);
 
     expect(screen.getAllByText("예시").length).toBeGreaterThanOrEqual(2);
-    expect(
-      screen.getByText(/금액은 계산된 값입니다/),
-    ).toBeInTheDocument();
+    // 신뢰줄은 <b> 안에 있고 부모 <span>·<p> 의 textContent 에도 같은 문구가 들어간다.
+    // 정규식으로 찾으면 세 요소가 매칭되므로 <b> 하나만 잡히는 완전 일치를 쓴다.
+    expect(screen.getByText("금액은 계산된 값입니다.")).toBeInTheDocument();
   });
 ```
 
@@ -3009,10 +3009,10 @@ git commit -m "feat(landing): 매달 쌓이는 대시보드를 지적 카드와 
   it("says the numbers are computed and the AI only writes them into sentences", () => {
     render(<Page />);
 
-    expect(screen.getByText(/금액은 계산된 값입니다/)).toBeInTheDocument();
+    expect(screen.getByText("금액은 계산된 값입니다.")).toBeInTheDocument();
     expect(
-      screen.getByText(/무엇을 지적할지는 정해진 규칙이 고르고/),
-    ).toBeInTheDocument();
+      screen.getAllByText(/무엇을 지적할지는 정해진 규칙이 고르고/).length,
+    ).toBeGreaterThan(0);
   });
 
   it("shows the raw signal fields behind the sentence when the toggle is pressed", () => {
