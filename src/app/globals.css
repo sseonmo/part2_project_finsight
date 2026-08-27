@@ -4177,6 +4177,158 @@ a:hover {
   }
 }
 
+/* ══════ 랜딩 ② CSV ↔ 지적 ══════ */
+
+.landing-transform {
+  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr);
+  margin-top: var(--space-lg);
+}
+
+.landing-csvbox {
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--landing-lift);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-body-xs);
+  height: 258px;
+  overflow: hidden;
+  padding: var(--space-sm);
+  position: relative;
+}
+
+.landing-csvbox::after {
+  background: linear-gradient(to bottom, transparent, var(--canvas));
+  bottom: 0;
+  content: "";
+  height: 56px;
+  inset-inline: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.landing-csvbox__label {
+  color: var(--text-muted);
+  font-family: var(--font-core);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  position: absolute;
+  right: 12px;
+  top: 9px;
+  z-index: 3;
+}
+
+.landing-csvrow {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: block;
+  font: inherit;
+  line-height: 1.7;
+  padding: 3px 7px;
+  text-align: left;
+  transition:
+    background 150ms var(--landing-ease),
+    color 150ms var(--landing-ease),
+    opacity 150ms var(--landing-ease);
+  width: 100%;
+}
+
+.landing-arrow {
+  color: var(--text-muted);
+  display: grid;
+  place-items: center;
+}
+
+.landing-outbox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.landing-outrow {
+  align-items: center;
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  display: flex;
+  font-family: inherit;
+  gap: var(--space-sm);
+  overflow: hidden;
+  padding: calc(12px + var(--landing-accent-height)) var(--space-md) 12px;
+  text-align: left;
+  transition:
+    border-color 150ms var(--landing-ease),
+    opacity 150ms var(--landing-ease),
+    transform 150ms var(--landing-ease),
+    box-shadow 150ms var(--landing-ease);
+  width: 100%;
+}
+
+.landing-outrow:hover {
+  box-shadow: var(--landing-lift-hover);
+  transform: translateY(-1px);
+}
+
+.landing-outrow__name {
+  color: var(--ink);
+  flex: 1;
+  font-size: var(--font-size-body);
+  font-weight: 500;
+}
+
+.landing-outrow__amt {
+  color: var(--brand-red-dark);
+  font-size: var(--font-size-body);
+  font-weight: 600;
+}
+
+.landing-outmore {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-body-sm);
+  padding: 2px var(--space-md) 0;
+}
+
+/* 하나를 짚으면 나머지가 물러난다 — 어느 줄이 어느 문장이 됐는지가 남는다. */
+.landing-transform[data-focus] .landing-csvrow {
+  opacity: 0.3;
+}
+
+.landing-transform[data-focus] .landing-outrow {
+  opacity: 0.36;
+}
+
+.landing-transform[data-focus="cafe"] .landing-csvrow[data-sig="cafe"],
+.landing-transform[data-focus="sub"] .landing-csvrow[data-sig="sub"],
+.landing-transform[data-focus="outlier"] .landing-csvrow[data-sig="outlier"] {
+  background: var(--landing-mark);
+  color: var(--ink);
+  font-weight: 600;
+  opacity: 1;
+}
+
+.landing-transform[data-focus="cafe"] .landing-outrow[data-sig="cafe"],
+.landing-transform[data-focus="sub"] .landing-outrow[data-sig="sub"],
+.landing-transform[data-focus="outlier"] .landing-outrow[data-sig="outlier"] {
+  border-color: var(--ink);
+  box-shadow: var(--landing-lift-hover);
+  opacity: 1;
+  transform: translateX(3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-csvrow,
+  .landing-outrow {
+    transition: none;
+  }
+}
+
 @media (max-width: 767px) {
   .app-sidebar {
     display: none;
