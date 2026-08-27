@@ -146,30 +146,32 @@ function MarketingContent() {
       <main className="landing-main">
         <section className="landing-hero">
           <div className="landing-hero__copy">
-          <span className="landing-hero__eyebrow">계좌를 연동하지 않는 가계부</span>
-          <h1 className="landing-hero__title">
-            카드 명세서 CSV를 올리면 지출을 분류하고 바꿀 지점을 짚어 드립니다
-          </h1>
-          <p className="landing-hero__description">
-            매달 내려받는 명세서 파일 하나로 카테고리별 지출, 지난달과의 비교,
-            그리고 행동을 바꿀 수 있는 지적 5종을 받습니다.
-          </p>
-          {authError ? (
-            <p className="landing-alert" role="alert">
-              {authError}
+            <span className="landing-hero__eyebrow">
+              계좌를 연동하지 않는 가계부
+            </span>
+            <h1 className="landing-hero__title">
+              카드 명세서 CSV를 올리면 지출을 분류하고 바꿀 지점을 짚어 드립니다
+            </h1>
+            <p className="landing-hero__description">
+              매달 내려받는 명세서 파일 하나로 카테고리별 지출, 지난달과의 비교,
+              그리고 행동을 바꿀 수 있는 지적 5종을 받습니다.
             </p>
-          ) : null}
-          {errorMessage ? (
-            <p className="landing-alert" role="alert">
-              {errorMessage}
-            </p>
-          ) : null}
-          <div className="landing-hero__actions">
-            <Button onClick={startGoogleOAuth} size="lg">
-              구글로 시작하기
-            </Button>
-            <p className="landing-hero__note">7일 무료 체험, 카드 등록 없이</p>
-          </div>
+            {authError ? (
+              <p className="landing-alert" role="alert">
+                {authError}
+              </p>
+            ) : null}
+            {errorMessage ? (
+              <p className="landing-alert" role="alert">
+                {errorMessage}
+              </p>
+            ) : null}
+            <div className="landing-hero__actions">
+              <Button onClick={startGoogleOAuth} size="lg">
+                구글로 시작하기
+              </Button>
+              <p className="landing-hero__note">7일 무료 체험, 카드 등록 없이</p>
+            </div>
           </div>
           <DashboardGlancePreview />
         </section>
