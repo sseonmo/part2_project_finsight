@@ -4613,3 +4613,189 @@ a:hover {
     width: 100%;
   }
 }
+
+/* ══════ 랜딩 ⑤ 대시보드 ══════ */
+
+.landing-dashwrap {
+  margin-top: var(--space-lg);
+  padding-bottom: 56px;
+  position: relative;
+}
+
+.landing-dashwrap::before {
+  background: radial-gradient(
+    52% 60% at 50% 34%,
+    var(--landing-glow-a) 0%,
+    transparent 72%
+  );
+  content: "";
+  inset: 14% -14% -4% -14%;
+  pointer-events: none;
+  position: absolute;
+}
+
+.landing-dash {
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--landing-lift-strong);
+  overflow: hidden;
+  position: relative;
+}
+
+.landing-dash__bar {
+  align-items: center;
+  background: var(--surface-soft);
+  border-bottom: var(--line-width) solid var(--hairline-soft);
+  color: var(--text-tertiary);
+  display: flex;
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  justify-content: space-between;
+  letter-spacing: 0.5px;
+  padding: 10px var(--space-lg);
+}
+
+.landing-dash__body {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+}
+
+.landing-dash__left {
+  border-right: var(--line-width) solid var(--hairline-soft);
+  padding: var(--space-xl);
+}
+
+.landing-kpi-label {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.landing-kpi-value {
+  color: var(--ink);
+  display: block;
+  font-size: var(--font-size-kpi-value);
+  font-weight: 600;
+  letter-spacing: -0.6px;
+  margin-top: 6px;
+}
+
+.landing-kpi-delta {
+  color: var(--brand-red-dark);
+  display: block;
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.landing-donut {
+  /* 조각 비율은 LANDING_DASHBOARD.bars 금액에서 나온 것이다 —
+     식비 33.6 · 쇼핑 18.8 · 카페/간식 14.8 · 교통 12.9 · 주거/통신 11.3 · 기타 8.6.
+     조각 사이 0.6% 의 --canvas 틈은 docs/DESIGN.md "도넛 조각에는 구분선을 넣는다" 규칙이다. */
+  background: conic-gradient(
+    var(--cat-food) 0 33.6%,
+    var(--canvas) 33.6% 34.2%,
+    var(--cat-shopping) 34.2% 52.5%,
+    var(--canvas) 52.5% 53.1%,
+    var(--cat-cafe-snack) 53.1% 67.3%,
+    var(--canvas) 67.3% 67.9%,
+    var(--cat-transport) 67.9% 80.1%,
+    var(--canvas) 80.1% 80.7%,
+    var(--cat-housing-telecom) 80.7% 91.4%,
+    var(--canvas) 91.4% 92%,
+    var(--cat-other) 92% 100%
+  );
+  border-radius: var(--radius-full);
+  display: grid;
+  height: 128px;
+  margin: var(--space-lg) auto 0;
+  place-items: center;
+  width: 128px;
+}
+
+.landing-donut__hole {
+  align-items: center;
+  background: var(--canvas);
+  border-radius: var(--radius-full);
+  color: var(--ink);
+  display: grid;
+  font-size: var(--font-size-body-sm);
+  font-weight: 600;
+  height: 82px;
+  place-items: center;
+  width: 82px;
+}
+
+.landing-dash__right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: var(--space-xl);
+}
+
+.landing-barrow {
+  align-items: center;
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: 92px minmax(0, 1fr) 82px;
+}
+
+.landing-barname {
+  align-items: center;
+  color: var(--text-secondary);
+  display: inline-flex;
+  font-size: var(--font-size-body-sm);
+  gap: 6px;
+}
+
+.landing-track {
+  background: var(--surface);
+  border-radius: var(--radius-full);
+  height: 8px;
+  overflow: hidden;
+}
+
+.landing-fill {
+  border-radius: var(--radius-full);
+  display: block;
+  height: 100%;
+}
+
+.landing-baramt {
+  color: var(--ink);
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+  text-align: right;
+}
+
+.landing-floatcard {
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline-strong);
+  border-radius: var(--radius-xl);
+  bottom: 0;
+  box-shadow: var(--landing-lift);
+  overflow: hidden;
+  position: absolute;
+  right: -6px;
+  width: 340px;
+}
+
+.landing-floatcard__flag {
+  align-items: center;
+  background: var(--surface-yellow);
+  border-bottom: var(--line-width) solid var(--hairline-soft);
+  color: var(--text-secondary);
+  display: flex;
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  gap: 6px;
+  letter-spacing: 0.5px;
+  margin-top: var(--landing-accent-height);
+  padding: 8px var(--space-lg);
+}
+
+.landing-floatcard__body {
+  padding: var(--space-lg);
+}
