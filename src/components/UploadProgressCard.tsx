@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { ProgressBar } from "@/components/ProgressBar";
@@ -68,6 +69,7 @@ async function fetchUploadJob(id: string): Promise<UploadJobSnapshot | null> {
 export function UploadProgressCard({
   initialJob,
 }: UploadProgressCardProps) {
+  const router = useRouter();
   const [job, setJob] = useState(initialJob);
   const label = STATUS_LABEL[job.status];
   const isTerminal = TERMINAL_STATUSES.has(job.status);
@@ -80,8 +82,17 @@ export function UploadProgressCard({
 
     const intervalId = window.setInterval(() => {
       void fetchUploadJob(job.id).then((nextJob) => {
-        if (nextJob) {
-          setJob(nextJob);
+        if (!nextJob) {
+          return;
+        }
+
+        setJob(nextJob);
+
+        // 이 카드만 바꾸면 서버 컴포넌트가 그린 집계·월 선택 칩·빈 상태가 그대로 남아
+        // "안 들어갔나?" 하고 같은 파일을 다시 올리게 된다. 폴링은 여기서 멈추므로
+        // 새로고침도 한 번뿐이고, 되돌아온 카드는 처음부터 터미널이라 다시 부르지 않는다.
+        if (TERMINAL_STATUSES.has(nextJob.status)) {
+          router.refresh();
         }
       });
     }, 2000);
@@ -89,7 +100,7 @@ export function UploadProgressCard({
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [job.id, shouldPoll]);
+  }, [job.id, router, shouldPoll]);
 
   const content = useMemo(() => {
     if (job.status === "completed") {
