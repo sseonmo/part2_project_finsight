@@ -3859,6 +3859,324 @@ a:hover {
   }
 }
 
+/* ══════ 랜딩 ① 히어로 인사이트 스택 ══════ */
+
+.landing-modebar {
+  align-items: center;
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.landing-seg {
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+}
+
+.landing-seg__btn {
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-full);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--font-size-body-xs);
+  font-weight: 600;
+  height: 28px;
+  padding: 0 13px;
+  transition:
+    background 150ms var(--landing-ease),
+    color 150ms var(--landing-ease);
+}
+
+.landing-seg__btn[aria-pressed="true"] {
+  background: var(--canvas);
+  box-shadow: 0 1px 3px rgba(11, 11, 18, 0.14);
+  color: var(--ink);
+}
+
+.landing-modenote {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-body-xs);
+  line-height: 1.55;
+  margin-top: 10px;
+  min-height: 34px;
+}
+
+.landing-modenote b {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.landing-stack {
+  height: 272px;
+  perspective: 1400px;
+  position: relative;
+}
+
+.landing-icard {
+  height: 248px;
+  inset-inline: 0;
+  position: absolute;
+  top: 0;
+  transition:
+    transform 520ms var(--landing-ease),
+    opacity 520ms var(--landing-ease);
+}
+
+.landing-icard[data-pos="0"] {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  z-index: 3;
+}
+
+.landing-icard[data-pos="1"] {
+  opacity: 0.66;
+  transform: translateY(16px) scale(0.955);
+  z-index: 2;
+}
+
+.landing-icard[data-pos="2"] {
+  opacity: 0.34;
+  transform: translateY(32px) scale(0.91);
+  z-index: 1;
+}
+
+.landing-icard[data-pos="1"] .landing-icard__face,
+.landing-icard[data-pos="2"] .landing-icard__face {
+  pointer-events: none;
+}
+
+.landing-icard__inner {
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 560ms var(--landing-ease);
+  width: 100%;
+}
+
+.landing-icard--flipped .landing-icard__inner {
+  transform: rotateY(180deg);
+}
+
+.landing-icard__face {
+  backface-visibility: hidden;
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--landing-lift);
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  overflow: hidden;
+  padding: calc(var(--space-lg) + 3px) var(--space-lg) var(--space-lg);
+  position: absolute;
+}
+
+.landing-icard__face--back {
+  background: var(--surface-soft);
+  transform: rotateY(180deg);
+}
+
+.landing-icard[data-pos="0"] .landing-icard__face--front:hover {
+  box-shadow: var(--landing-lift), 0 0 0 1px var(--hairline-strong);
+}
+
+.landing-icard__head {
+  align-items: baseline;
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: space-between;
+}
+
+.landing-icard__type {
+  align-items: center;
+  color: var(--text-secondary);
+  display: inline-flex;
+  font-size: var(--font-size-body-sm);
+  font-weight: 600;
+  gap: 6px;
+}
+
+.landing-icard__impact {
+  color: var(--brand-red-dark);
+  font-size: var(--font-size-insight-impact);
+  font-weight: 600;
+  letter-spacing: -0.6px;
+}
+
+.landing-icard__subject {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-body-sm);
+  margin-top: 10px;
+}
+
+.landing-icard__text {
+  color: var(--ink);
+  font-size: var(--font-size-copy);
+  line-height: 1.7;
+  margin-top: 8px;
+}
+
+.landing-icard__foot {
+  margin-top: auto;
+  padding-top: var(--space-sm);
+}
+
+.landing-icard__link {
+  background: transparent;
+  border: 0;
+  color: var(--text-link);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+  padding: 0;
+}
+
+.landing-icard__link:hover {
+  text-decoration: underline;
+}
+
+.landing-raw {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-body-xs);
+  margin-top: var(--space-sm);
+}
+
+.landing-raw__row {
+  display: grid;
+  gap: var(--space-xs);
+  grid-template-columns: 106px minmax(0, 1fr);
+  padding: 3px 0;
+}
+
+.landing-raw__k {
+  color: var(--text-muted);
+}
+
+.landing-raw__v {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.landing-raw__v--pass {
+  color: var(--success-accent);
+  font-weight: 600;
+}
+
+.landing-raw__src {
+  color: var(--text-muted);
+  font-family: var(--font-core);
+  font-size: var(--font-size-label);
+  margin-top: 10px;
+}
+
+.landing-ev__title {
+  align-items: center;
+  color: var(--ink);
+  display: flex;
+  font-size: var(--font-size-body-sm);
+  font-weight: 600;
+  justify-content: space-between;
+}
+
+.landing-ev__back {
+  background: transparent;
+  border: 0;
+  color: var(--text-link);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--font-size-body-sm);
+  padding: 0;
+}
+
+.landing-ev__list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: var(--space-sm);
+}
+
+.landing-ev__row {
+  align-items: center;
+  display: grid;
+  font-size: var(--font-size-body-xs);
+  gap: var(--space-xs);
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+}
+
+.landing-ev__row span:first-child {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.landing-ev__row span:nth-child(2) {
+  color: var(--text-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-ev__row span:last-child {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.landing-ev__sum {
+  border-top: var(--line-width) solid var(--hairline);
+  color: var(--text-secondary);
+  display: flex;
+  font-size: var(--font-size-body-xs);
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.landing-ev__sum b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.landing-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: var(--space-sm);
+}
+
+.landing-dot {
+  background: var(--hairline-strong);
+  border: 0;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  height: 6px;
+  padding: 0;
+  transition:
+    width 200ms var(--landing-ease),
+    background 200ms var(--landing-ease);
+  width: 6px;
+}
+
+.landing-dot[aria-current="true"] {
+  background: var(--ink);
+  width: 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-icard,
+  .landing-icard__inner,
+  .landing-dot,
+  .landing-seg__btn {
+    transition: none;
+  }
+}
+
 @media (max-width: 767px) {
   .app-sidebar {
     display: none;
