@@ -210,6 +210,26 @@ scripts/browser-test/reset.sh cache   # 이 유저의 CSV 형식 fingerprint 만
 `_next/static/*` 404 가 쏟아지고 페이지가 빈 화면이 된다. 앱 버그가 아니다.
 빌드 전에 dev 서버를 내린다.
 
+**Claude Code 로 테스트한다면 이 일이 매 턴 자동으로 일어난다.** `.claude/settings.json` 의
+`Stop` 훅이 턴이 끝날 때마다 `npm run lint && npm run build && npm run test` 를 돌린다.
+그 `build` 가 실행 중인 dev 서버의 `.next` 를 덮어쓴다. 브라우저 테스트를 길게 할 때는
+**턴이 바뀔 때마다 `up.sh` 로 다시 세우거나**, 그 세션 동안 Stop 훅을 잠시 꺼라.
+증상이 `up.sh` 의 `✗ /api/inngest 가 dev 모드가 아니다 ()` 로 나타나는 것도 이 때문이다 —
+Inngest 설정이 틀린 게 아니라 라우트가 500 을 내서 응답이 비어 있는 것이다.
+
+이미 깨졌다면 — 증상은 `Cannot find module './873.js'` 와 대시보드 **500** 이고,
+브라우저 스크립트에서는 버튼을 못 찾아 `Script timed out after 30s` 로 나타난다.
+복구는 셋뿐이다.
+
+```bash
+kill $(lsof -ti :3000 -sTCP:LISTEN)        # dev 서버를 내린다
+mv .next /tmp/next-broken-$(date +%s)      # rm -rf 는 PreToolUse 훅이 막는다
+scripts/browser-test/up.sh                 # 다시 세운다
+```
+
+재기동 뒤 **첫 요청은 컴파일 때문에 느리다.** 곧바로 업로드 스크립트를 돌리면 30초에
+걸리므로, 대시보드를 한 번 열어 컴파일을 끝낸 다음 진행한다.
+
 **Inngest dev 서버는 `npm run dev` 를 kill 하면 같이 죽는다.** dev 를 재시작할 때마다
 `up.sh` 를 다시 돌린다. 동기화(`curl -X PUT /api/inngest`)를 빠뜨리면 업로드가
 `pending` 에서 멈추고 원인이 화면에 안 보인다.

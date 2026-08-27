@@ -53,16 +53,25 @@ done
 > 여기만 `<<EOF` 다(따옴표 없음). `$m` 을 셸이 치환해야 하기 때문이다.
 > 나머지 블록은 전부 `<<'EOF'` — 스크립트 안의 `$` 와 백틱이 셸에 먹히면 안 된다.
 
+**`settleMs` 는 9000 을 넘기지 마라.** 30초 제한은 스크립트 전체에 걸리고
+`upload()` 는 그 앞에 대시보드 이동(2.5초)·다이얼로그·첨부를 이미 쓴다. 거래가 쌓여
+대시보드가 무거워지면 15000 으로는 **제출 전에 잘려 job 이 아예 생기지 않는다**
+(2026-08-27 실측 — `upload_jobs` 에 행이 남지 않는다). 워커는 제출 뒤 비동기로 도니
+오래 기다릴 이유도 없다. 결과는 다음 스크립트에서 재방문해 확인한다.
+
 ---
 
 # 1. 정상 흐름 (S1~S8)
 
-## S1 — 첫 방문 → 가입 ◻︎
+## S1 — 첫 방문 → 가입 ✅
 
 구글 OAuth 는 자동화할 수 없다. **랜딩이 로그인으로 보내는 데까지**만 브라우저로 보고,
 `profiles` 생성은 DB 로 확인한다.
 
 **전제** U1 (쿠키를 심지 않는다)
+
+**본문 문자열로 판정하지 마라.** 랜딩은 마케팅 카피라 자주 바뀌고 본문이 1,600자를 넘어
+`slice(0, 400)` 로는 넷째 섹션까지 가지도 못한다. 구조(heading·CTA 개수)로 본다.
 
 ```bash
 run <<'EOF'
@@ -70,15 +79,46 @@ const page = await browser.getPage("anon");
 await page.context().clearCookies();
 await page.goto("http://localhost:3000/", { waitUntil: "domcontentloaded" });
 await page.waitForTimeout(1500);
-console.log((await page.evaluate(() => document.body.innerText)).slice(0, 400));
-await page.click("text=구글로 시작하기").catch(() => console.log("버튼 문구 확인 필요"));
+console.log(JSON.stringify(await page.evaluate(() => ({
+  h1: document.querySelector("h1")?.innerText,
+  sections: [...document.querySelectorAll("h2")].map((h) => h.innerText.trim()),
+  cta: [...document.querySelectorAll("button")].filter((b) => b.innerText.includes("구글로 시작하기")).length,
+})), null, 1));
+await page.click("text=구글로 시작하기").catch((e) => console.log("클릭 실패:", String(e).slice(0, 200)));
 await page.waitForTimeout(2000);
 console.log("URL:", page.url());
 EOF
 ```
 
-**화면 판정** 랜딩이 보이고, 로그인 클릭이 `accounts.google.com/o/oauth2/...` 로 진행한다.
+**화면 판정** `h1` 이 하나 있고, `h2` 섹션이 **세 단계로 끝납니다 · 왜 계좌를 연동하지 않나 ·
+이런 문장을 받게 됩니다 · 요금제 · 월간 · 연간** 순으로 나온다(요금 카드 제목도 `h2` 다).
+"구글로 시작하기" 버튼은 **4개**다 — 헤더 · 히어로 · 월간 카드 · 연간 카드.
+`page.click("text=…")` 는 그중 첫 번째(헤더)를 누른다.
+
+**⚠︎ 랜딩의 숫자를 실데이터로 읽지 마라.** 히어로 옆 대시보드 미리보기와 세 단계 카드는
+`src/components/LandingStepPreview.tsx` 의 **예시 데이터**다("2026년 3월", "1,284,000원",
+"식비 382,000원" 등). 로그인 전 화면이라 DB 와 아무 관계가 없다.
+
+**URL 판정** 클릭하면 **로컬 Supabase 의 authorize 엔드포인트**로 간다.
+
+```
+http://127.0.0.1:54321/auth/v1/authorize?provider=google&redirect_to=http%3A%2F%2Flocalhost%3A3000%2Fauth%2Fcallback&code_challenge=…
+```
+
+`accounts.google.com` 이 아니다 — 로컬에서는 Supabase 가 먼저 받고 거기서 구글로 넘긴다.
+프로덕션에서만 `accounts.google.com/o/oauth2/…` 가 보인다.
 버튼이 아무 반응도 없으면 클라이언트 Supabase 클라이언트가 죽은 것이다 — 그 결함이 실제로 있었다.
+
+**로그인 상태 리다이렉트** 쿠키가 있으면 `/` 는 랜딩을 그리지 않고 `/dashboard` 로 보낸다.
+
+```bash
+run <<'EOF'
+const page = await auth();
+await page.goto("http://localhost:3000/", { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(2500);
+console.log("URL:", page.url());   // http://localhost:3000/dashboard
+EOF
+```
 
 **DB 판정** 🔍 실제 가입까지 갔다면 `profiles` 에 `trial_started_at` 이 now 로 박힌다.
 
@@ -88,7 +128,7 @@ psql -c "select user_id, trial_started_at, subscription_status from profiles;"
 
 ---
 
-## S2 — 첫 업로드 ◻︎
+## S2 — 첫 업로드 ✅
 
 **전제** U2 — 거래 0건
 
@@ -122,37 +162,70 @@ EOF
 **화면 판정** 진행률 카드 → 완료 요약. 요약은 **네 숫자 규칙**을 따른다:
 "새로 추가된 거래 12건" (0이어도 반드시 표시) · 중복 0건은 표시하지 않음.
 
+⚠︎ 진행률 카드에 파일명 대신 **job UUID** 가 뜬다(`KNOWN_ISSUES` ⓔ). 그 자리에
+`7695a099-…` 같은 문자열이 보이는 것은 알려진 결함이지 이 시나리오의 실패가 아니다.
+
+완료되면 **그 자리에서 집계가 갱신된다** — 빈 상태 문구가 사라지고 카테고리·차트가 채워진다.
+폴링이 터미널 상태를 만나는 순간 `router.refresh()` 가 한 번 돌기 때문이다(`fix(progress)`).
+빈 상태가 그대로 남아 있으면 그 새로고침이 죽은 것이다.
+
 **DB 판정** 🔍 원본 파일이 **Next 서버를 통과하지 않고** Storage 에 직접 올라갔는지,
-Storage 키의 파일명을 **서버가 생성**했는지 본다.
+Storage 키의 파일명을 **서버가 생성**했는지 본다. 컬럼명은 `storage_key` 다.
 
 ```bash
-psql -c "select status, original_filename, storage_path, inserted_count
-         from upload_jobs order by created_at desc limit 1;"
+psql -x -c "select status, original_filename, storage_key, card_label,
+                   inserted_count, duplicate_count, skipped_rows
+            from upload_jobs order by created_at desc limit 1;"
 ```
 
-`storage_path` 가 클라이언트가 준 `base-2026-06.csv` 그대로면 **결함이다** — 서버가
+`storage_key` 가 클라이언트가 준 `base-2026-06.csv` 그대로면 **결함이다** — 서버가
 생성한 이름이어야 하고, 원래 이름은 `original_filename` 컬럼에만 있어야 한다.
+2026-08-27 실측값은 아래처럼 `{user_id}/{job_id}/{서버가 만든 uuid}.csv` 였다.
+
+```
+status            | completed
+original_filename | base-2026-06.csv
+storage_key       | c6e42962-…/7695a099-…/cac2f45f-….csv
+inserted_count    | 12
+```
 
 ---
 
-## S3 — 다음 달 업로드 ◻︎
+## S3 — 다음 달 업로드 ✅ ⚠︎
 
 **전제** U3 — 기본 시리즈 04~06 이 올라가 있다
+
+**월 칩은 업로드가 끝나면 그 자리에서 갱신된다.** 예전에는 재방문해야 새 달이 보였는데
+(`fix(progress)` 이전) 지금은 완료 시점에 서버 데이터를 다시 가져온다.
 
 ```bash
 run <<'EOF'
 const page = await auth();
-console.log((await upload(page, "base-2026-07.csv", "카드 1", 15000)).slice(0, 400));
-console.log("--- 월 선택 ---");
-console.log(await page.evaluate(() =>
-  [...document.querySelectorAll(".app-header__month-chip")].map((e) => e.innerText).join(" ")));
+console.log((await upload(page, "base-2026-07.csv", "카드 1", 9000)).slice(0, 200).replace(/\n+/g, " | "));
 EOF
 ```
 
-**화면 판정** 월 선택 칩에 새 달(2026-07)이 생기고 거기로 이동한다.
+```bash
+run <<'EOF'
+const page = await auth();
+await go(page, "/dashboard", 3000);
+console.log("월 칩:", await page.evaluate(() =>
+  [...document.querySelectorAll(".app-header__month-chip")].map((e) => e.innerText.trim()).join(" ")));
+EOF
+```
+
+**화면 판정** 대시보드의 월 선택 칩에 새 달(2026-07)이 생기고 거기로 이동해 있다.
+
+2026-08-27 실측(수정 전후) — 결함 ⓙ 일 때는 업로드 직후 `2026-06 2026-05 2026-04` 였고
+재방문해야 `2026-07 …` 이 나왔다. 고친 뒤에는 업로드 직후 06월 막대가 그 자리에서
+`33만원 → 35만원` 으로 바뀌는 것까지 확인했다(`add-one-2026-06.csv`, +19,000원).
+
+**갱신이 안 되면 그것이 회귀다.** `UploadProgressCard` 의 폴링이 터미널 상태에서
+`router.refresh()` 를 부르는지 본다.
 
 **⚠︎ 결함 ⓐ** 칩은 `months.slice(0, 4)` 로 **4개만** 그린다. 기본 시리즈 4개월을
 전부 올렸다면 가장 오래된 달이 칩에서 사라진다. 이건 알려진 결함이다.
+위 실측이 정확히 상한선(4개)이라 여기서 한 달만 더 올리면 2026-04 가 사라진다.
 
 **DB 판정**
 
@@ -163,56 +236,104 @@ psql -c "select date_trunc('month', transacted_on)::date as m, count(*), sum(amo
 
 ---
 
-## S4 — 분류 수정 ◻︎ 🔍
+## S4 — 분류 수정 ✅ 🔍
 
 **핵심은 한 건이 아니라 같은 가맹점 전부가 바뀌는가다.**
+
+카테고리 `<select>` 는 React 가 제어하므로 값을 그냥 넣으면 무시된다. native setter 로
+넣고 `change` 를 직접 쏜다(`prelude.js` 의 `setCard` 와 같은 방식). `option` 의 `value` 는
+표시 이름 그대로다(`"식비"`, `"카페/간식"` …).
 
 ```bash
 run <<'EOF'
 const page = await auth();
-const t = await textOf(page, "/dashboard/transactions", 3000);
-console.log(t.slice(0, 600));
+await go(page, "/dashboard/transactions", 3000);
+const r = await page.evaluate(() => {
+  const row = [...document.querySelectorAll("tbody tr")].find((r) => r.innerText.includes("스타벅스"));
+  const sel = row.querySelector("select");
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value").set;
+  setter.call(sel, "식비");
+  sel.dispatchEvent(new Event("change", { bubbles: true }));
+  return sel.value;
+});
+console.log("변경:", r);
+await page.waitForTimeout(4000);
 EOF
 ```
 
-화면에서 거래 하나의 카테고리를 바꾼 뒤:
-
-**DB 판정** 🔍
+**🚨 `transactions.category` 를 보고 판정하지 마라.** 수정은 원본 행을 고치지 않는다 —
+`user_category_overrides` 에 쌓고 **조회할 때 겹친다.** 그래서 아래 SQL 은 고친 뒤에도
+`카페/간식 5건` 을 그대로 돌려준다. 이걸 실패로 읽으면 안 된다.
 
 ```bash
 psql -c "select merchant_normalized, category, count(*)
-         from transactions where merchant_normalized like '%스타벅스%'
-         group by 1,2;"
-psql -c "select * from user_category_overrides;"
+         from transactions where merchant_normalized like '%스타벅스%' group by 1,2;"
+# → 스타벅스 | 카페/간식 | 5   (정상. 원본은 그대로다)
 ```
 
 **통과 기준 세 가지를 모두 만족해야 한다.**
-1. 같은 가맹점의 **다른 거래도 함께** 바뀐다
+
+1. 같은 가맹점의 **다른 거래도 함께** 바뀐다 — **다른 달 화면**으로 본다
+
+```bash
+run <<'EOF'
+const page = await auth();
+for (const m of ["2026-06", "2026-04"]) {
+  await go(page, `/dashboard/transactions?month=${m}`, 2500);
+  console.log(m, await page.evaluate(() =>
+    [...document.querySelectorAll("tbody tr")]
+      .filter((r) => r.innerText.includes("스타벅스"))
+      .map((r) => r.querySelector("select").value).join(",")));
+}
+EOF
+```
+
+2026-08-27 실측: `2026-06 식비,식비` · `2026-04 식비`. 대시보드 집계도 함께 옮겨간다
+(06월 식비 19,000원 1건 → 36,100원 3건, 카페/간식 48,400원 6건 → 31,300원 4건).
+
 2. `user_category_overrides` 에만 기록된다
+
+```bash
+psql -c "select * from user_category_overrides;"
+# → user_id | 스타벅스 | 식비
+```
+
 3. **전역 캐시 `merchant_categories` 가 덮어써지지 않는다** — 한 사람의 취향이 전체에 퍼지면 안 된다
 
 ```bash
 psql -c "select merchant_normalized, category from merchant_categories
          where merchant_normalized like '%스타벅스%';"
+# → 0 rows (시드 룰로 분류된 가맹점은 애초에 캐시에 없다)
 ```
 
 ---
 
-## S5 — 리포트 생성 ◻︎ 🔍
+## S5 — 리포트 생성 ✅ 🔍
 
 **전제** U3 또는 U5. 해당 달에 거래가 있어야 한다.
+
+생성 요청과 결과 확인을 **두 스크립트로 나눈다** — 한 스크립트에서 20초를 기다리면
+30초 제한에 걸린다.
 
 ```bash
 run <<'EOF'
 const page = await auth();
-await go(page, "/dashboard/report/2026-06", 2000);
-await page.click("text=리포트 만들기").catch((e) => console.log("이미 있음:", e.message));
-await page.waitForTimeout(20000);
-console.log((await page.evaluate(() => document.body.innerText)).slice(0, 900));
+await go(page, "/dashboard/report/2026-06", 2500);
+await page.click("text=리포트 만들기").catch((e) => console.log("이미 있음:", String(e).slice(0, 120)));
+await page.waitForTimeout(8000);
 EOF
 ```
 
-**화면 판정** 생성 중 표시 → 문단. 상단 통계와 문단의 숫자가 **같아야 한다**.
+```bash
+run <<'EOF'
+const page = await auth();
+const t = await textOf(page, "/dashboard/report/2026-06", 3000);
+console.log(t.slice(t.indexOf("지출 요약")).slice(0, 1200));
+EOF
+```
+
+**화면 판정** "아직 생성되지 않음 / 리포트 만들기" → "N월 N일에 생성됨 / 다시 만들기".
+상단 통계와 문단의 숫자가 **같아야 한다**.
 
 **DB 판정** 🔍 **이게 이 시나리오의 본체다.** 문단의 모든 수치는 SQL 집계여야 한다.
 
@@ -231,27 +352,71 @@ psql -c "select sum(amount) filter (where transaction_type = 'expense'), count(*
 문단 안의 숫자를 눈으로 읽어 위 SQL 결과와 대조한다. **LLM 이 만들어낸 숫자가 하나라도
 있으면 실패다.**
 
+**퍼센트가 나오면 페이로드까지 파고든다.** 문단의 비율은 LLM 이 나눗셈해서 만든 것이
+아니라 신호 `payload` 의 비율을 `asWholePercent` 가 정수로 바꿔 넘긴 값이어야 한다.
+컬럼명은 `type` · `impact` 다(`signal_type` · `impact_krw` 가 아니다).
+
+```bash
+psql -x -c "select type, target_key, impact, payload from spending_signals
+            where period = '2026-06-01' order by impact desc limit 3;"
+```
+
+2026-08-27 실측 — 문단의 "생활/마트 항목 220,100원 중 99%"는 아래 페이로드에서 왔다.
+`0.9859154929577465 → 99`. 문단에 이 원시 실수가 그대로 박혀 있으면 결함 ⓗ 의 재발이다.
+
+```
+type    | outlier_transaction
+impact  | 217000
+payload | {"amount": 217000, "categoryTotal": 220100, "transactedOn": "2026-06-22",
+           "shareOfCategory": 0.9859154929577465, "merchantNormalized": "코스트코"}
+```
+
+같은 실측에서 스냅샷(`total_expense` 326850 · `transaction_count` 12)과 실시간 집계가
+정확히 일치했고, 문단의 총지출·전월·카테고리별·가맹점 금액이 전부 SQL 값과 같았다.
+
 ---
 
-## S6 — 처리 중 이탈 후 재방문 ◻︎
+## S6 — 처리 중 이탈 후 재방문 ✅
+
+**🚨 이탈 타이밍으로 재현하려 들지 마라.** 이 시나리오는 "처리 중"이라는 상태를 봐야 하는데
+로컬 처리가 너무 빨라 그 창이 거의 없다. 2026-08-27 실측:
+
+- `base-2026-05.csv` 재업로드 → **4.5초 만에 completed**(전부 중복 10건, fingerprint
+  캐시 히트라 LLM 호출이 아예 없다). 돌아왔을 때는 이미 끝나 카드가 없다
+- 처음 보는 가맹점이 든 `unknown-merchants.csv` → 13초. 그래도 이탈·복귀 왕복(약 4.5초)
+  안에 상태가 어디까지 갔는지 매번 달라 **판정이 흔들린다**
+
+그래서 **상태를 직접 만들어** 본다. 이게 재현 가능한 유일한 방법이다.
+
+```bash
+psql -c "update upload_jobs set status='categorizing'
+         where original_filename='unknown-merchants.csv';"
+```
 
 ```bash
 run <<'EOF'
 const page = await auth();
-await openDialog(page, "카드 1");
-await attach(page, "base-2026-05.csv", await readFile("base-2026-05.csv"));
-await submit(page, 1500);           // 처리가 끝나기 전에
-await page.goto("http://localhost:3000/settings", { waitUntil: "domcontentloaded" });
-await page.waitForTimeout(1000);
-console.log("--- 돌아온 뒤 ---");
-console.log((await dash(page, 2000)).slice(0, 400));
+const t = await dash(page, 2500);
+const i = t.indexOf("명세서 처리");
+console.log(i >= 0 ? t.slice(i, i + 180).replace(/\n+/g, " | ") : "진행률 카드 없음");
 EOF
 ```
 
-**화면 판정** 대시보드에 진행률 카드가 그대로 있고 "거래 내역을 읽는 중" 또는
-"카테고리를 분류하는 중" 이 보인다. 브라우저를 떠나 있어도 워커는 계속 돈다.
+```bash
+psql -c "update upload_jobs set status='completed' where status='categorizing';"
+```
 
-**⚠︎ 결함 ⓔ** 카드 제목이 파일명이 아니라 job UUID 다.
+**끝나면 반드시 되돌려라.** `categorizing` 으로 남겨 두면 진행률 카드가 영영 폴링해
+이후 모든 시나리오에서 `networkidle` 이 오지 않는다(결함 ⓒ와 같은 상태가 된다).
+
+**화면 판정** 대시보드에 진행률 카드가 그대로 있고 "카테고리를 분류하는 중"과 진행률(75%)이
+보인다. 브라우저를 떠나 있어도 워커는 계속 돈다. 2026-08-27 실측 출력:
+
+```
+명세서 처리 | 카테고리를 분류하는 중 | bec9a815-… | 카테고리를 분류하는 중 | 75%
+```
+
+**⚠︎ 결함 ⓔ** 카드 제목이 파일명이 아니라 job UUID 다 — 위 출력에서도 그렇다.
 
 ---
 
@@ -266,14 +431,20 @@ Polar 체크아웃은 외부 서비스라 브라우저로 끝까지 갈 수 없�
 scripts/browser-test/actor.sh u4
 ```
 
-**화면 판정** `/dashboard/billing` 에서 요금제가 보이고 체크아웃 버튼이 동작한다.
+**화면 판정 ✅ (2026-08-27 실측)** `/dashboard/billing` 에서 요금제가 보이고 체크아웃
+버튼이 동작한다. **웹훅 판정은 아직 안 돌렸다** — 그래서 이 시나리오는 `◻︎` 로 둔다.
 
 ```bash
 run <<'EOF'
 const page = await auth();
-console.log((await textOf(page, "/dashboard/billing", 2500)).slice(0, 500));
+console.log((await textOf(page, "/dashboard/billing", 2500)).slice(0, 450).replace(/\n+/g, " | "));
 EOF
 ```
+
+`actor.sh u4` 는 `trial_started_at` 을 7일 이전으로 밀어 만료를 만든다(실측 `2026-07-28`).
+화면에 **읽기 전용 배너**("체험 또는 결제 기간이 끝나 새 업로드와 수정은 잠겨 있습니다")와
+월간 4,900원 · 연간 49,000원 카드, "연간 결제는 월간 결제 12개월보다 9,800원 저렴합니다"가
+나온다. 헤더 버튼도 "명세서 올리기"가 아니라 **"결제하고 계속 쓰기"** 다.
 
 **웹훅 판정** 🔍 서명이 틀린 요청은 **401**, 맞으면 처리, 같은 `webhook-id` 재전송은
 **중복으로 무시**되어야 한다. 서명 대상은 `"{webhook-id}.{timestamp}.{raw body}"` 이고
@@ -289,7 +460,7 @@ psql -c "select subscription_status, current_period_end from profiles;"
 
 ---
 
-## S8 — 해지 ◻︎
+## S8 — 해지 ✅
 
 **전제** U5 → U6
 
@@ -306,6 +477,18 @@ EOF
 
 **화면 판정** "○월 ○일까지 이용할 수 있습니다" 형태로 **남은 기간**이 보인다.
 `canceled` 라고 해서 즉시 차단되면 결함이다 — 기간 내에는 `active` 와 같은 권한이다.
+
+2026-08-27 실측(`canceled` · `current_period_end = 2026-09-06`):
+
+```
+구독 상태 | 해지 예정 | 9월 6일까지 이용할 수 있습니다.
+```
+
+**권한이 살아 있는지는 헤더 버튼으로 본다.** 여기서 "명세서 올리기"가 그대로 보이면 통과다
+(잠겼다면 S7 처럼 "결제하고 계속 쓰기"로 바뀐다). 상태 문자열만 보고 판정하지 마라.
+
+> `actor.sh` 는 `profiles` 의 상태 컬럼만 바꾸므로 결제 이력이 없다. 그래서 "아직 결제한
+> 적이 없어 관리할 구독이 없습니다"가 함께 뜨는 것은 픽스처의 한계지 결함이 아니다.
 
 **DB 판정** 업로드 버튼이 여전히 있는지 확인한다(권한 매트릭스: `canceled` 기간 내 = 쓰기 허용).
 
@@ -335,7 +518,7 @@ psql -x -c "select id, status, failed_reason, mapping_attempt_count, original_fi
 | 행은 읽혔는데 **값이 말이 안 된다** (sanity 3종) | `failed` | 컬럼을 바꿔도 소용없다 |
 | 데이터 행이 **0건** | `failed` "거래가 없는 파일입니다." | 읽지 못한 게 아니라 읽을 것이 없었다 |
 
-## S9 — 자동 컬럼 매핑 실패 ◻︎
+## S9 — 자동 컬럼 매핑 실패 ✅
 
 **전제** 형식 캐시를 지워야 자동 추론을 다시 본다.
 
@@ -395,35 +578,98 @@ console.log(await page.evaluate(() =>
 EOF
 ```
 
+드롭다운에는 `id` 도 `name` 도 없다. **순서로 잡는다** — `[날짜, 금액, 가맹점, 유형]`.
+React 제어 컴포넌트라 native setter + `change` 가 필요하다(S4 와 같은 방식).
+
+```bash
+run <<'EOF'
+const page = await auth();
+await go(page, "/dashboard", 2000);
+const link = await page.evaluate(() => {
+  const a = [...document.querySelectorAll("a")].find((x) => x.href.includes("/mapping"));
+  return a ? a.href : null;
+});
+await page.goto(link, { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(2000);
+await page.evaluate(() => {
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value").set;
+  const sels = [...document.querySelectorAll("select")];
+  [["f2", 0], ["f3", 1], ["f2", 2]].forEach(([v, i]) => {   // 날짜를 일부러 틀리게
+    setter.call(sels[i], v);
+    sels[i].dispatchEvent(new Event("change", { bubbles: true }));
+  });
+});
+await page.waitForTimeout(400);
+await page.click("text=매핑 확정");
+await page.waitForTimeout(6000);
+EOF
+```
+
 **화면 판정**
-- 시도 후: "선택한 컬럼으로 날짜를 읽지 못했습니다. 다른 컬럼을 골라주세요"
-- 금액만 틀렸을 때: **날짜 이야기가 아니라 금액 사유가 나와야 한다.**
-  원인과 무관하게 "날짜를 읽지 못했습니다" 가 뜨면 예전 결함으로 되돌아간 것이다
-- 상한 도달 시: "이 파일은 읽을 수 없습니다." + 업로드 취소
+- 시도 후 **(a) 2026-08-27 실측 통과**: 매핑 화면에 "시도 1회 · 남은 시도 2회"와
+  "선택한 컬럼으로 날짜를 읽지 못했습니다. 다른 컬럼을 골라주세요". DB 는
+  `needs_mapping` 유지 · `mapping_attempt_count = 1`
+- **(b) 금액만 틀렸을 때는 아직 검증하지 못했다.** `opaque-headers.csv` 에는 **날짜로 읽히는
+  컬럼이 아예 없어**(`X0091` · `ZZ-ALPHA` · `1200` · `Q`) "날짜는 맞고 금액만 틀린" 조합을
+  만들 수 없다. 검증하려면 **헤더는 불투명하지만 날짜 컬럼은 유효한 픽스처**가 있어야 한다.
+  판정 기준은 그대로다 — 원인과 무관하게 "날짜를 읽지 못했습니다" 가 뜨면 예전 결함으로
+  되돌아간 것이다
+- 상한 도달 시 **2026-08-27 실측 통과**: 3회를 쓰면 `failed` 로 끝나고 대시보드 카드가
+  "업로드를 처리하지 못했습니다 / 이 파일은 읽을 수 없습니다. / **다시 시도**" 가 된다
+  (매핑 화면의 "업로드 취소"는 상한 전에 있는 버튼이다)
 
 **DB 판정** 🔍 시도마다 `mapping_attempt_count` 가 오르고, 상한 전에는 `needs_mapping` 을 유지한다.
 
 ```bash
-psql -c "select status, mapping_attempt_count, failed_reason
-         from upload_jobs order by created_at desc limit 1;"
+psql -x -c "select status, mapping_attempt_count, failed_reason
+            from upload_jobs order by created_at desc limit 1;"
 ```
+
+2026-08-27 실측 — 1회: `needs_mapping` / 1 / "거래를 읽지 못했습니다. 컬럼을 다시 골라주세요.",
+3회: `failed` / 3 / "이 파일은 읽을 수 없습니다."
+
+> **이 시나리오는 (b) 를 못 돌려 `◻︎` 로 남긴다.** (a) 와 상한은 통과했다.
 
 ---
 
-## S11 — 매핑 포기 ◻︎ 🔍
+## S11 — 매핑 포기 ✅ 🔍
 
-매핑 화면에서 업로드 취소를 누른다.
+매핑 화면에서 업로드 취소를 누른다. `needs_mapping` job 이 없으면
+`reset.sh cache` 후 `opaque-headers.csv` 를 올려 하나 만든다.
 
-**화면 판정** "업로드 취소 완료". 업로드 이력에서 사라진다.
+```bash
+run <<'EOF'
+const page = await auth();
+await go(page, "/dashboard", 2000);
+const link = await page.evaluate(() => {
+  const a = [...document.querySelectorAll("a")].find((x) => x.href.includes("/mapping"));
+  return a ? a.href : null;
+});
+await page.goto(link, { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(2000);
+await page.click("text=업로드 취소");
+await page.waitForTimeout(5000);
+console.log("URL:", page.url());
+EOF
+```
+
+**화면 판정** `/dashboard/uploads` 로 이동하고 그 job 이 이력에서 사라진다.
 
 **DB 판정** 🔍 job row 와 **Storage 파일이 둘 다** 지워져야 한다. row 만 지우고
 파일이 남으면 원본 CSV 가 영구히 남는다 — 계정 삭제(S27)가 유일한 삭제 경로라는
 전제가 깨진다.
 
+**버킷 이름은 `transaction-csv-uploads` 다**(`uploads` 가 아니다). 로컬에서는 CLI 말고
+`storage.objects` 를 직접 보는 쪽이 빠르다.
+
 ```bash
 psql -c "select count(*) from upload_jobs where status = 'needs_mapping';"
-npx supabase storage ls ss:///uploads 2>/dev/null || echo "Storage 는 대시보드에서 확인"
+psql -c "select count(*) from storage.objects where bucket_id='transaction-csv-uploads';"
+psql -c "select count(*) from storage.objects where name like '%<job-id>%';"
 ```
+
+2026-08-27 실측 — 취소 전 오브젝트 26개 → 취소 후 **25개**, 그 job 의 키는 **0건**,
+`upload_jobs` 의 해당 row 도 0건. 파일과 row 가 함께 사라졌다.
 
 ---
 
