@@ -14,6 +14,9 @@ const eslintConfig = [
     ignores: [
       "node_modules/**",
       ".next/**",
+      // 워크트리는 자기 자리에서 자기 설정으로 검사한다. 여기서 훑으면 남의
+      // node_modules 와 빌드 산출물까지 딸려 들어온다.
+      ".claude/**",
       "out/**",
       "next-env.d.ts",
       "design/**",
