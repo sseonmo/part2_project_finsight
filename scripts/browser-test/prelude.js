@@ -56,9 +56,18 @@ async function openDialog(page, cardLabel) {
   }
 }
 
+/**
+ * 카드 필드는 두 모드로 그려진다.
+ *  - 이미 올린 카드가 있으면 `<select id="card-label">`
+ *  - 하나도 없으면(첫 업로드) `<input type="text">` — **id 가 없다**
+ * 그래서 id 로만 찾으면 첫 업로드에서 조용히 빗나가고, 지정한 이름 대신
+ * 기본값 "카드 1" 로 올라간다. 클래스 폴백이 그 구멍을 막는다.
+ */
 async function setCard(page, label) {
   const state = await page.evaluate((label) => {
-    const el = document.querySelector("#card-label");
+    const el =
+      document.querySelector("#card-label") ||
+      document.querySelector(".upload-dialog__input[type=text]");
 
     if (!el) return "missing-field";
 
