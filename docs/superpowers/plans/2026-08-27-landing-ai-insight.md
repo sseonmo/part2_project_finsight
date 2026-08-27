@@ -448,15 +448,15 @@ export const LANDING_SIGNAL_ROWS: readonly LandingSignalRow[] = [
 
 export const LANDING_DASHBOARD = {
   period: "2026년 3월 · 대시보드",
-  total: "1,284,000원",
+  total: "1,136,000원",
   delta: "지난달보다 +8.2%",
-  donutTotal: "128만원",
+  donutTotal: "114만원",
   bars: [
     { category: "식비", amount: "382,000원", share: 100 },
     { category: "쇼핑", amount: "214,000원", share: 56 },
     { category: "카페/간식", amount: "168,000원", share: 44 },
     { category: "교통", amount: "146,000원", share: 38 },
-    { category: "주거/통신", amount: "128,000원", share: 33 },
+    { category: "주거/통신", amount: "128,000원", share: 34 },
     { category: "기타", amount: "98,000원", share: 26 },
   ],
 } as const satisfies {
@@ -2576,7 +2576,7 @@ describe("DashboardShowcase", () => {
   it("shows the month total and how it moved against last month", () => {
     render(<DashboardShowcase />);
 
-    expect(screen.getByText("1,284,000원")).toBeInTheDocument();
+    expect(screen.getByText("1,136,000원")).toBeInTheDocument();
     expect(screen.getByText("지난달보다 +8.2%")).toBeInTheDocument();
   });
 
@@ -2740,8 +2740,6 @@ export function DashboardShowcase() {
 
 - [ ] **Step 4: CSS를 추가한다**
 
-도넛의 `conic-gradient` 조각 비율은 시안 값 그대로다. 조각 사이 0.6%의 `--canvas` 틈은 `docs/DESIGN.md` "도넛 조각에는 구분선을 넣는다" 규칙이다.
-
 ```css
 /* ══════ 랜딩 ⑤ 대시보드 ══════ */
 
@@ -2820,18 +2818,21 @@ export function DashboardShowcase() {
 }
 
 .landing-donut {
+  /* 조각 비율은 LANDING_DASHBOARD.bars 금액에서 나온 것이다 —
+     식비 33.6 · 쇼핑 18.8 · 카페/간식 14.8 · 교통 12.9 · 주거/통신 11.3 · 기타 8.6.
+     조각 사이 0.6% 의 --canvas 틈은 docs/DESIGN.md "도넛 조각에는 구분선을 넣는다" 규칙이다. */
   background: conic-gradient(
-    var(--cat-food) 0 30%,
-    var(--canvas) 30% 30.6%,
-    var(--cat-shopping) 30.6% 47%,
-    var(--canvas) 47% 47.6%,
-    var(--cat-cafe-snack) 47.6% 60%,
-    var(--canvas) 60% 60.6%,
-    var(--cat-transport) 60.6% 72%,
-    var(--canvas) 72% 72.6%,
-    var(--cat-housing-telecom) 72.6% 85%,
-    var(--canvas) 85% 85.6%,
-    var(--cat-other) 85.6% 100%
+    var(--cat-food) 0 33.6%,
+    var(--canvas) 33.6% 34.2%,
+    var(--cat-shopping) 34.2% 52.5%,
+    var(--canvas) 52.5% 53.1%,
+    var(--cat-cafe-snack) 53.1% 67.3%,
+    var(--canvas) 67.3% 67.9%,
+    var(--cat-transport) 67.9% 80.1%,
+    var(--canvas) 80.1% 80.7%,
+    var(--cat-housing-telecom) 80.7% 91.4%,
+    var(--canvas) 91.4% 92%,
+    var(--cat-other) 92% 100%
   );
   border-radius: var(--radius-full);
   display: grid;
@@ -3050,7 +3051,7 @@ git commit -m "feat(landing): 매달 쌓이는 대시보드를 지적 카드와 
     expect(
       screen.getByRole("heading", { name: "매달 이 화면이 한 장 쌓입니다" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("1,284,000원")).toBeInTheDocument();
+    expect(screen.getByText("1,136,000원")).toBeInTheDocument();
   });
 
   it("drops the standalone sample sentence section that the hero absorbed", () => {
