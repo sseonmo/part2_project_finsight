@@ -3514,76 +3514,6 @@ a:hover {
   width: var(--space-xs);
 }
 
-.landing-preview__glance {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  padding: var(--space-md);
-}
-
-.landing-preview__kpi {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xxs);
-}
-
-.landing-preview__kpi-label {
-  color: var(--text-tertiary);
-  font-size: var(--font-size-label);
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.landing-preview__kpi-value {
-  color: var(--ink);
-  font-size: var(--font-size-kpi-value);
-  font-weight: 600;
-  letter-spacing: -0.6px;
-  line-height: 1.1;
-}
-
-.landing-preview__kpi-delta {
-  color: var(--text-secondary);
-  font-size: var(--font-size-body-xs);
-  line-height: 1.4;
-}
-
-.landing-preview__bars {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.landing-preview__cat-row {
-  align-items: center;
-  display: grid;
-  gap: var(--space-xs);
-  grid-template-columns: 5.5rem minmax(0, 1fr) auto;
-}
-
-.landing-preview__category-name {
-  align-items: center;
-  color: var(--text-secondary);
-  display: inline-flex;
-  font-size: var(--font-size-body-xs);
-  gap: var(--space-xxs);
-  line-height: 1.4;
-}
-
-.landing-preview__track {
-  background: var(--surface);
-  border-radius: var(--radius-full);
-  display: block;
-  height: var(--space-xs);
-  overflow: hidden;
-}
-
-.landing-preview__fill {
-  border-radius: var(--radius-full);
-  display: block;
-  height: 100%;
-}
-
 .landing-preview__insight {
   display: flex;
   flex-direction: column;
@@ -4883,7 +4813,11 @@ a:hover {
   .landing-dashwrap {
     padding-bottom: 0;
   }
+}
 
+/* 767px 이하는 기존 블록이 더 좁은 패딩(가로 16px 포함)을 준다. 900px 블록이 소스상 뒤라
+   그대로 두면 특이도가 같아 이 규칙이 이겨 모바일에서 내용이 화면 끝에 붙는다 — 구간을 끊는다. */
+@media (min-width: 768px) and (max-width: 900px) {
   .landing-section {
     padding: 48px 0;
   }
