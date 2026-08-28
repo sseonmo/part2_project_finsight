@@ -30,13 +30,14 @@ describe("marketing page", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the finsight wordmark and a tool-sized value proposition heading", () => {
+  it("renders the finsight wordmark and leads with what the product tells you", () => {
     render(<Page />);
 
     expect(screen.getAllByText("finsight").length).toBeGreaterThan(0);
-    expect(
-      screen.getByRole("heading", { level: 1 }).textContent,
-    ).toContain("CSV");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain(
+      "문장으로 짚어 드립니다",
+    );
+    expect(screen.getByText(/카드 명세서 CSV 한 장이면 됩니다/)).toBeInTheDocument();
   });
 
   it("starts Google OAuth through Supabase with the original redirect path", async () => {
@@ -141,32 +142,26 @@ describe("marketing page", () => {
     ).toBeInTheDocument();
   });
 
-  it("labels the sample sentences as examples rather than real data", () => {
+  it("labels the insight previews as examples rather than real data", () => {
     render(<Page />);
 
-    const samples = screen.getByRole("list", { name: "예시 문장" });
-    const items = within(samples).getAllByRole("listitem");
-
-    expect(items).toHaveLength(3);
-    items.forEach((item) => {
-      expect(within(item).getByText("예시")).toBeInTheDocument();
-    });
-    expect(
-      screen.getByText(/실제 사용자 데이터가 아니라 예시 문장/),
-    ).toBeInTheDocument();
+    expect(screen.getAllByText("예시").length).toBeGreaterThanOrEqual(2);
+    // 신뢰줄은 <b> 안에 있고 부모 <span>·<p> 의 textContent 에도 같은 문구가 들어간다.
+    // 정규식으로 찾으면 세 요소가 매칭되므로 <b> 하나만 잡히는 완전 일치를 쓴다.
+    expect(screen.getByText("금액은 계산된 값입니다.")).toBeInTheDocument();
   });
 
-  it("lifts the amount out of each sample sentence so the number reads first", () => {
-    render(<Page />);
+  it("lifts the impact amount out of each insight card so the number reads first", () => {
+    const { container } = render(<Page />);
 
-    const samples = screen.getByRole("list", { name: "예시 문장" });
-    const items = within(samples).getAllByRole("listitem");
+    const impacts = container.querySelectorAll(
+      ".landing-stack .landing-icard__impact",
+    );
 
-    items.forEach((item) => {
-      const amount = within(item).getByTestId("sample-amount");
-
-      expect(amount).toHaveClass("tabular-nums");
-      expect(amount.textContent).toMatch(/원/);
+    expect(impacts).toHaveLength(3);
+    impacts.forEach((impact) => {
+      expect(impact).toHaveClass("tabular-nums");
+      expect(impact.textContent).toMatch(/원/);
     });
   });
 
@@ -226,5 +221,60 @@ describe("marketing page", () => {
         screen.getByText("로그인을 시작하지 못했습니다. 다시 시도해 주세요."),
       ).toBeInTheDocument();
     });
+  });
+
+  it("says the numbers are computed and the AI only writes them into sentences", () => {
+    render(<Page />);
+
+    expect(screen.getByText("금액은 계산된 값입니다.")).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/무엇을 지적할지는 정해진 규칙이 고르고/).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("shows the raw signal fields behind the sentence when the toggle is pressed", () => {
+    render(<Page />);
+
+    fireEvent.click(screen.getByRole("button", { name: "규칙이 고른 것" }));
+
+    expect(screen.getByText("category_spike")).toBeVisible();
+  });
+
+  it("connects an uploaded csv line to the signal it became", () => {
+    const { container } = render(<Page />);
+
+    fireEvent.focus(
+      screen.getByRole("button", { name: "2026-03-02,스트리밍 구독,12900" }),
+    );
+
+    expect(container.querySelector(".landing-transform")).toHaveAttribute(
+      "data-focus",
+      "sub",
+    );
+  });
+
+  it("lists every signal type the detector can produce", () => {
+    render(<Page />);
+
+    const grid = screen.getByRole("list", { name: "잡는 지적 5종" });
+
+    expect(within(grid).getAllByRole("listitem")).toHaveLength(6);
+  });
+
+  it("moves the dashboard preview into its own section", () => {
+    render(<Page />);
+
+    expect(
+      screen.getByRole("heading", { name: "매달 이 화면이 한 장 쌓입니다" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("1,136,000원")).toBeInTheDocument();
+  });
+
+  it("drops the standalone sample sentence section that the hero absorbed", () => {
+    render(<Page />);
+
+    expect(
+      screen.queryByRole("heading", { name: "이런 문장을 받게 됩니다" }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -93,6 +93,15 @@
   --font-size-landing-amount: 22px;
   --landing-step-index-size: 28px;
   --landing-max-width: 1040px;
+  --landing-ease: cubic-bezier(0.2, 0, 0.2, 1);
+  --landing-glow-a: rgba(37, 87, 230, 0.32);
+  --landing-glow-b: rgba(217, 80, 139, 0.25);
+  --landing-lift: 0 18px 40px -24px rgba(11, 11, 18, 0.42);
+  --landing-lift-hover: 0 20px 38px -20px rgba(11, 11, 18, 0.34);
+  --landing-lift-strong: 0 32px 60px -34px rgba(11, 11, 18, 0.4);
+  --landing-mark: rgba(251, 210, 78, 0.46);
+  --landing-mark-line: rgba(179, 141, 18, 0.55);
+  --landing-accent-height: 3px;
 }
 
 [data-theme="dark"] {
@@ -134,6 +143,13 @@
   --cat-culture-leisure: #E07A2F;
   --cat-finance-insurance: #65657D;
   --cat-other: #A8A8B8;
+  --landing-glow-a: rgba(37, 87, 230, 0.52);
+  --landing-glow-b: rgba(217, 80, 139, 0.38);
+  --landing-lift: 0 18px 40px -20px rgba(0, 0, 0, 0.7);
+  --landing-lift-hover: 0 20px 38px -16px rgba(0, 0, 0, 0.8);
+  --landing-lift-strong: 0 32px 60px -30px rgba(0, 0, 0, 0.8);
+  --landing-mark: rgba(232, 184, 24, 0.22);
+  --landing-mark-line: rgba(232, 184, 24, 0.55);
 }
 
 @theme inline {
@@ -3098,6 +3114,10 @@ a:hover {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  /* 글로우 두 곳은 컨테이너보다 넓게 퍼져 좁은 화면에서 뷰포트 밖으로 나간다. 그대로 두면
+     모바일에서 빈 배경만 나오는 가로 스크롤이 생긴다. `hidden` 이 아니라 `clip` 인 이유는
+     `hidden` 은 스크롤 컨테이너를 만들어 안에 있는 sticky 헤더를 깨뜨리기 때문이다. */
+  overflow-x: clip;
   overflow-wrap: break-word;
   word-break: keep-all;
 }
@@ -3127,7 +3147,7 @@ a:hover {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--space-xl);
+  gap: 0;
   margin-inline: auto;
   max-width: var(--landing-max-width);
   padding: var(--space-xxl) var(--app-main-padding-inline)
@@ -3150,13 +3170,13 @@ a:hover {
   flex-direction: column;
 }
 
+/* 섹션은 카드가 아니다 — 카드는 섹션 안의 타일로 한 단 내려갔다.
+   전부 카드면 타일과 층이 갈리지 않는다. */
 .landing-section {
-  background: var(--canvas);
-  border: var(--line-width) solid var(--hairline);
-  border-radius: var(--radius-xl);
+  border-top: var(--line-width) solid var(--hairline-soft);
   display: flex;
   flex-direction: column;
-  padding: var(--space-xl);
+  padding: 56px 0;
 }
 
 .landing-hero__eyebrow {
@@ -3234,8 +3254,7 @@ a:hover {
 }
 
 .landing-reason-list,
-.landing-flow-list,
-.landing-sample-list {
+.landing-flow-list {
   display: grid;
   gap: var(--space-sm);
   list-style: none;
@@ -3244,8 +3263,7 @@ a:hover {
 }
 
 .landing-reason-list,
-.landing-flow-list,
-.landing-sample-list {
+.landing-flow-list {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
@@ -3255,8 +3273,7 @@ a:hover {
 }
 
 .landing-reason,
-.landing-flow,
-.landing-sample {
+.landing-flow {
   background: var(--surface-soft);
   border: var(--line-width) solid var(--hairline-soft);
   border-radius: var(--radius-lg);
@@ -3326,39 +3343,6 @@ a:hover {
   color: var(--text-tertiary);
   font-weight: 600;
   margin-right: var(--space-xxs);
-}
-
-.landing-sample__header {
-  align-items: center;
-  display: flex;
-  gap: var(--space-xs);
-}
-
-.landing-sample__signal {
-  color: var(--text-tertiary);
-  font-size: var(--font-size-label);
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  line-height: 1.4;
-  text-transform: uppercase;
-}
-
-/* 금액을 문장에서 꺼내 가장 먼저 읽히게 한다 — 랜딩에서만 "숫자가 주인공"이
-   깨져 있었다 (DESIGN.md 원칙 3). */
-.landing-sample__amount {
-  color: var(--ink);
-  font-size: var(--font-size-landing-amount);
-  font-weight: 600;
-  letter-spacing: -0.4px;
-  line-height: 1.2;
-  margin: var(--space-sm) 0 0;
-}
-
-.landing-sample__text {
-  color: var(--text-secondary);
-  font-size: var(--font-size-body-sm);
-  line-height: 1.6;
-  margin: var(--space-xxs) 0 0;
 }
 
 .landing-plan-grid {
@@ -3534,76 +3518,6 @@ a:hover {
   width: var(--space-xs);
 }
 
-.landing-preview__glance {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  padding: var(--space-md);
-}
-
-.landing-preview__kpi {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xxs);
-}
-
-.landing-preview__kpi-label {
-  color: var(--text-tertiary);
-  font-size: var(--font-size-label);
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.landing-preview__kpi-value {
-  color: var(--ink);
-  font-size: var(--font-size-kpi-value);
-  font-weight: 600;
-  letter-spacing: -0.6px;
-  line-height: 1.1;
-}
-
-.landing-preview__kpi-delta {
-  color: var(--text-secondary);
-  font-size: var(--font-size-body-xs);
-  line-height: 1.4;
-}
-
-.landing-preview__bars {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.landing-preview__cat-row {
-  align-items: center;
-  display: grid;
-  gap: var(--space-xs);
-  grid-template-columns: 5.5rem minmax(0, 1fr) auto;
-}
-
-.landing-preview__category-name {
-  align-items: center;
-  color: var(--text-secondary);
-  display: inline-flex;
-  font-size: var(--font-size-body-xs);
-  gap: var(--space-xxs);
-  line-height: 1.4;
-}
-
-.landing-preview__track {
-  background: var(--surface);
-  border-radius: var(--radius-full);
-  display: block;
-  height: var(--space-xs);
-  overflow: hidden;
-}
-
-.landing-preview__fill {
-  border-radius: var(--radius-full);
-  display: block;
-  height: 100%;
-}
-
 .landing-preview__insight {
   display: flex;
   flex-direction: column;
@@ -3672,6 +3586,727 @@ a:hover {
   font-size: var(--font-size-body-sm);
   line-height: 1.4;
   margin: 0;
+}
+
+/* ══════ 랜딩 개편 — 공통 ══════ */
+
+.landing-section__eyebrow {
+  align-items: center;
+  align-self: flex-start;
+  color: var(--text-tertiary);
+  display: inline-flex;
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  gap: 7px;
+  letter-spacing: 0.6px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.landing-section__eyebrow::before {
+  background: var(--text-muted);
+  border-radius: var(--radius-full);
+  content: "";
+  height: 7px;
+  width: 7px;
+}
+
+.landing-section__hint {
+  align-items: center;
+  color: var(--text-tertiary);
+  display: inline-flex;
+  font-size: var(--font-size-body-sm);
+  gap: 7px;
+  margin-top: var(--space-md);
+}
+
+.landing-trustline {
+  align-items: flex-start;
+  background: color-mix(in srgb, var(--surface-soft) 84%, transparent);
+  border: var(--line-width) solid var(--hairline-soft);
+  border-radius: var(--radius-lg);
+  color: var(--text-tertiary);
+  display: flex;
+  font-size: var(--font-size-body-xs);
+  gap: var(--space-xs);
+  line-height: 1.55;
+  margin-top: var(--space-lg);
+  padding: 11px var(--space-sm);
+}
+
+.landing-trustline b {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* 카드 상단 액센트 라인. --landing-accent 를 인라인으로 받는다. */
+.landing-acc {
+  position: relative;
+}
+
+.landing-acc::before {
+  background: var(--landing-accent, var(--hairline-strong));
+  content: "";
+  height: var(--landing-accent-height);
+  inset-inline: 0;
+  position: absolute;
+  top: 0;
+  z-index: 2;
+}
+
+.landing-lift {
+  transition:
+    transform 180ms var(--landing-ease),
+    box-shadow 180ms var(--landing-ease),
+    border-color 180ms var(--landing-ease);
+}
+
+.landing-lift:hover {
+  box-shadow: var(--landing-lift-hover);
+  transform: translateY(-1px);
+}
+
+.landing-sigdot {
+  border-radius: var(--radius-full);
+  display: inline-block;
+  flex: none;
+  height: 8px;
+  width: 8px;
+}
+
+.landing-reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 460ms var(--landing-ease),
+    transform 460ms var(--landing-ease);
+}
+
+.landing-reveal--in {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-reveal {
+    opacity: 1;
+    transform: none;
+  }
+
+  .landing-lift,
+  .landing-reveal {
+    transition: none;
+  }
+}
+
+/* ══════ 랜딩 — 숫자 하이라이트 ══════ */
+
+.landing-hl {
+  background: var(--landing-mark);
+  border-radius: 3px;
+  box-shadow: inset 0 -1px 0 var(--landing-mark-line);
+  color: inherit;
+  cursor: help;
+  display: inline;
+  font-weight: 600;
+  padding: 0 2px;
+  position: relative;
+}
+
+.landing-hl__tip {
+  background: var(--ink);
+  border-radius: var(--radius-lg);
+  bottom: calc(100% + 9px);
+  color: var(--surface-page);
+  font-size: var(--font-size-body-xs);
+  font-weight: 400;
+  left: 50%;
+  line-height: 1.5;
+  max-width: 250px;
+  opacity: 0;
+  padding: 9px 11px;
+  pointer-events: none;
+  position: absolute;
+  transform: translate(-50%, 4px);
+  transition:
+    opacity 160ms var(--landing-ease),
+    transform 160ms var(--landing-ease);
+  width: max-content;
+  z-index: 30;
+}
+
+.landing-hl__tip::after {
+  border: 5px solid transparent;
+  border-top-color: var(--ink);
+  content: "";
+  left: 50%;
+  margin-left: -5px;
+  position: absolute;
+  top: 100%;
+}
+
+.landing-hl:hover .landing-hl__tip,
+.landing-hl:focus-visible .landing-hl__tip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hl__tip {
+    transition: none;
+  }
+}
+
+/* ══════ 랜딩 ① 히어로 인사이트 스택 ══════ */
+
+.landing-modebar {
+  align-items: center;
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.landing-seg {
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+}
+
+.landing-seg__btn {
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-full);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--font-size-body-xs);
+  font-weight: 600;
+  height: 28px;
+  padding: 0 13px;
+  transition:
+    background 150ms var(--landing-ease),
+    color 150ms var(--landing-ease);
+}
+
+.landing-seg__btn[aria-pressed="true"] {
+  background: var(--canvas);
+  box-shadow: 0 1px 3px rgba(11, 11, 18, 0.14);
+  color: var(--ink);
+}
+
+.landing-modenote {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-body-xs);
+  line-height: 1.55;
+  margin-top: 10px;
+  min-height: 34px;
+}
+
+.landing-modenote b {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.landing-stack {
+  height: 272px;
+  perspective: 1400px;
+  position: relative;
+}
+
+.landing-icard {
+  height: 248px;
+  inset-inline: 0;
+  position: absolute;
+  top: 0;
+  transition:
+    transform 520ms var(--landing-ease),
+    opacity 520ms var(--landing-ease);
+}
+
+.landing-icard[data-pos="0"] {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  z-index: 3;
+}
+
+.landing-icard[data-pos="1"] {
+  opacity: 0.66;
+  transform: translateY(16px) scale(0.955);
+  z-index: 2;
+}
+
+.landing-icard[data-pos="2"] {
+  opacity: 0.34;
+  transform: translateY(32px) scale(0.91);
+  z-index: 1;
+}
+
+.landing-icard[data-pos="1"] .landing-icard__face,
+.landing-icard[data-pos="2"] .landing-icard__face {
+  pointer-events: none;
+}
+
+.landing-icard__inner {
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 560ms var(--landing-ease);
+  width: 100%;
+}
+
+.landing-icard--flipped .landing-icard__inner {
+  transform: rotateY(180deg);
+}
+
+.landing-icard__face {
+  backface-visibility: hidden;
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--landing-lift);
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  overflow: hidden;
+  padding: calc(var(--space-lg) + 3px) var(--space-lg) var(--space-lg);
+  position: absolute;
+}
+
+.landing-icard__face--back {
+  background: var(--surface-soft);
+  transform: rotateY(180deg);
+}
+
+.landing-icard[data-pos="0"] .landing-icard__face--front:hover {
+  box-shadow: var(--landing-lift), 0 0 0 1px var(--hairline-strong);
+}
+
+.landing-icard__head {
+  align-items: baseline;
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: space-between;
+}
+
+.landing-icard__type {
+  align-items: center;
+  color: var(--text-secondary);
+  display: inline-flex;
+  font-size: var(--font-size-body-sm);
+  font-weight: 600;
+  gap: 6px;
+}
+
+.landing-icard__impact {
+  color: var(--brand-red-dark);
+  font-size: var(--font-size-insight-impact);
+  font-weight: 600;
+  letter-spacing: -0.6px;
+}
+
+.landing-icard__subject {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-body-sm);
+  margin-top: 10px;
+}
+
+.landing-icard__text {
+  color: var(--ink);
+  font-size: var(--font-size-copy);
+  line-height: 1.7;
+  margin-top: 8px;
+}
+
+.landing-icard__foot {
+  margin-top: auto;
+  padding-top: var(--space-sm);
+}
+
+.landing-icard__link {
+  background: transparent;
+  border: 0;
+  color: var(--text-link);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+  padding: 0;
+}
+
+.landing-icard__link:hover {
+  text-decoration: underline;
+}
+
+.landing-raw {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-body-xs);
+  margin-top: var(--space-sm);
+}
+
+.landing-raw__row {
+  display: grid;
+  gap: var(--space-xs);
+  grid-template-columns: 106px minmax(0, 1fr);
+  padding: 3px 0;
+}
+
+.landing-raw__k {
+  color: var(--text-muted);
+}
+
+.landing-raw__v {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.landing-raw__v--pass {
+  color: var(--success-accent);
+  font-weight: 600;
+}
+
+.landing-raw__src {
+  color: var(--text-muted);
+  font-family: var(--font-core);
+  font-size: var(--font-size-label);
+  margin-top: 10px;
+}
+
+.landing-ev__title {
+  align-items: center;
+  color: var(--ink);
+  display: flex;
+  font-size: var(--font-size-body-sm);
+  font-weight: 600;
+  justify-content: space-between;
+}
+
+.landing-ev__back {
+  background: transparent;
+  border: 0;
+  color: var(--text-link);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--font-size-body-sm);
+  padding: 0;
+}
+
+.landing-ev__list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: var(--space-sm);
+}
+
+.landing-ev__row {
+  align-items: center;
+  display: grid;
+  font-size: var(--font-size-body-xs);
+  gap: var(--space-xs);
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+}
+
+.landing-ev__row span:first-child {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.landing-ev__row span:nth-child(2) {
+  color: var(--text-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-ev__row span:last-child {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.landing-ev__sum {
+  border-top: var(--line-width) solid var(--hairline);
+  color: var(--text-secondary);
+  display: flex;
+  font-size: var(--font-size-body-xs);
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.landing-ev__sum b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.landing-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: var(--space-sm);
+}
+
+.landing-dot {
+  background: var(--hairline-strong);
+  border: 0;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  height: 6px;
+  padding: 0;
+  transition:
+    width 200ms var(--landing-ease),
+    background 200ms var(--landing-ease);
+  width: 6px;
+}
+
+.landing-dot[aria-current="true"] {
+  background: var(--ink);
+  width: 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-icard,
+  .landing-icard__inner,
+  .landing-dot,
+  .landing-seg__btn {
+    transition: none;
+  }
+}
+
+/* ══════ 랜딩 ② CSV ↔ 지적 ══════ */
+
+.landing-transform {
+  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr);
+  margin-top: var(--space-lg);
+}
+
+.landing-csvbox {
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--landing-lift);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-body-xs);
+  height: 258px;
+  overflow: hidden;
+  padding: var(--space-sm);
+  position: relative;
+}
+
+.landing-csvbox::after {
+  background: linear-gradient(to bottom, transparent, var(--canvas));
+  bottom: 0;
+  content: "";
+  height: 56px;
+  inset-inline: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.landing-csvbox__label {
+  color: var(--text-muted);
+  font-family: var(--font-core);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  position: absolute;
+  right: 12px;
+  top: 9px;
+  z-index: 3;
+}
+
+.landing-csvrow {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: block;
+  font: inherit;
+  line-height: 1.7;
+  padding: 3px 7px;
+  text-align: left;
+  transition:
+    background 150ms var(--landing-ease),
+    color 150ms var(--landing-ease),
+    opacity 150ms var(--landing-ease);
+  width: 100%;
+}
+
+.landing-arrow {
+  color: var(--text-muted);
+  display: grid;
+  place-items: center;
+}
+
+.landing-outbox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.landing-outrow {
+  align-items: center;
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  display: flex;
+  font-family: inherit;
+  gap: var(--space-sm);
+  overflow: hidden;
+  padding: calc(12px + var(--landing-accent-height)) var(--space-md) 12px;
+  text-align: left;
+  transition:
+    border-color 150ms var(--landing-ease),
+    opacity 150ms var(--landing-ease),
+    transform 150ms var(--landing-ease),
+    box-shadow 150ms var(--landing-ease);
+  width: 100%;
+}
+
+.landing-outrow:hover {
+  box-shadow: var(--landing-lift-hover);
+  transform: translateY(-1px);
+}
+
+.landing-outrow__name {
+  color: var(--ink);
+  flex: 1;
+  font-size: var(--font-size-body);
+  font-weight: 500;
+}
+
+.landing-outrow__amt {
+  color: var(--brand-red-dark);
+  font-size: var(--font-size-body);
+  font-weight: 600;
+}
+
+.landing-outmore {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-body-sm);
+  padding: 2px var(--space-md) 0;
+}
+
+/* 하나를 짚으면 나머지가 물러난다 — 어느 줄이 어느 문장이 됐는지가 남는다. */
+.landing-transform[data-focus] .landing-csvrow {
+  opacity: 0.3;
+}
+
+.landing-transform[data-focus] .landing-outrow {
+  opacity: 0.36;
+}
+
+.landing-transform[data-focus="cafe"] .landing-csvrow[data-sig="cafe"],
+.landing-transform[data-focus="sub"] .landing-csvrow[data-sig="sub"],
+.landing-transform[data-focus="outlier"] .landing-csvrow[data-sig="outlier"] {
+  background: var(--landing-mark);
+  color: var(--ink);
+  font-weight: 600;
+  opacity: 1;
+}
+
+.landing-transform[data-focus="cafe"] .landing-outrow[data-sig="cafe"],
+.landing-transform[data-focus="sub"] .landing-outrow[data-sig="sub"],
+.landing-transform[data-focus="outlier"] .landing-outrow[data-sig="outlier"] {
+  border-color: var(--ink);
+  box-shadow: var(--landing-lift-hover);
+  opacity: 1;
+  transform: translateX(3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-csvrow,
+  .landing-outrow {
+    transition: none;
+  }
+}
+
+/* ══════ 랜딩 ③ 지적 5종 ══════ */
+
+.landing-sig-grid {
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+  margin: var(--space-lg) 0 0;
+  padding: 0;
+}
+
+.landing-sig {
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  padding: calc(var(--space-lg) + var(--landing-accent-height)) var(--space-md)
+    var(--space-md);
+  position: relative;
+}
+
+.landing-sig--lead {
+  align-items: center;
+  display: grid;
+  gap: var(--space-md);
+  grid-column: span 3;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: calc(var(--space-md) + var(--landing-accent-height)) var(--space-md)
+    var(--space-md);
+}
+
+.landing-sig--muted {
+  background: transparent;
+  border-style: dashed;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.landing-sig__icon {
+  border-radius: 9px;
+  display: grid;
+  flex: none;
+  height: 28px;
+  place-items: center;
+  width: 28px;
+}
+
+.landing-sig__name {
+  color: var(--ink);
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  margin-top: 12px;
+}
+
+.landing-sig--lead .landing-sig__name,
+.landing-sig--muted .landing-sig__name {
+  margin-top: 0;
+}
+
+.landing-sig__cond {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-body-xs);
+  line-height: 1.55;
+  margin-top: 5px;
+}
+
+.landing-sig__amt {
+  color: var(--brand-red-dark);
+  font-size: var(--font-size-landing-amount);
+  font-weight: 600;
+  letter-spacing: -0.4px;
+}
+
+/* ══════ 랜딩 ④ 근거 패널 미리보기 ══════ */
+
+.landing-preview__rows .landing-preview__row--total {
+  border-top: var(--line-width) solid var(--hairline);
+  color: var(--text-tertiary);
+  padding-top: 6px;
 }
 
 @media (max-width: 767px) {
@@ -3754,7 +4389,6 @@ a:hover {
 
   .landing-reason-list,
   .landing-flow-list,
-  .landing-sample-list,
   .landing-plan-grid {
     grid-template-columns: 1fr;
   }
@@ -3874,5 +4508,321 @@ a:hover {
 
   .landing-hero__actions .finsight-button {
     width: 100%;
+  }
+}
+
+/* ══════ 랜딩 ⑤ 대시보드 ══════ */
+
+.landing-dashwrap {
+  margin-top: var(--space-lg);
+  padding-bottom: 56px;
+  position: relative;
+}
+
+.landing-dashwrap::before {
+  background: radial-gradient(
+    52% 60% at 50% 34%,
+    var(--landing-glow-a) 0%,
+    transparent 72%
+  );
+  content: "";
+  inset: 14% -14% -4% -14%;
+  pointer-events: none;
+  position: absolute;
+}
+
+.landing-dash {
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--landing-lift-strong);
+  overflow: hidden;
+  position: relative;
+}
+
+.landing-dash__bar {
+  align-items: center;
+  background: var(--surface-soft);
+  border-bottom: var(--line-width) solid var(--hairline-soft);
+  color: var(--text-tertiary);
+  display: flex;
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  justify-content: space-between;
+  letter-spacing: 0.5px;
+  padding: 10px var(--space-lg);
+}
+
+.landing-dash__body {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+}
+
+.landing-dash__left {
+  border-right: var(--line-width) solid var(--hairline-soft);
+  padding: var(--space-xl);
+}
+
+.landing-kpi-label {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.landing-kpi-value {
+  color: var(--ink);
+  display: block;
+  font-size: var(--font-size-kpi-value);
+  font-weight: 600;
+  letter-spacing: -0.6px;
+  margin-top: 6px;
+}
+
+.landing-kpi-delta {
+  color: var(--brand-red-dark);
+  display: block;
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.landing-donut {
+  /* 조각 비율은 LANDING_DASHBOARD.bars 금액에서 나온 것이다 —
+     식비 33.6 · 쇼핑 18.8 · 카페/간식 14.8 · 교통 12.9 · 주거/통신 11.3 · 기타 8.6.
+     조각 사이 0.6% 의 --canvas 틈은 docs/DESIGN.md "도넛 조각에는 구분선을 넣는다" 규칙이다.
+     틈 5개가 3% 를 먹으므로 조각은 전부 0.97 배로 줄인다 — 그래야 조각끼리의 비율이
+     금액 비율과 정확히 같다. 앞 조각만 온전히 두고 뒤에서 깎으면 첫 조각이 부풀어 보인다. */
+  background: conic-gradient(
+    var(--cat-food) 0 32.59%,
+    var(--canvas) 32.59% 33.19%,
+    var(--cat-shopping) 33.19% 51.43%,
+    var(--canvas) 51.43% 52.03%,
+    var(--cat-cafe-snack) 52.03% 66.39%,
+    var(--canvas) 66.39% 66.99%,
+    var(--cat-transport) 66.99% 79.5%,
+    var(--canvas) 79.5% 80.1%,
+    var(--cat-housing-telecom) 80.1% 91.06%,
+    var(--canvas) 91.06% 91.66%,
+    var(--cat-other) 91.66% 100%
+  );
+  border-radius: var(--radius-full);
+  display: grid;
+  height: 128px;
+  margin: var(--space-lg) auto 0;
+  place-items: center;
+  width: 128px;
+}
+
+.landing-donut__hole {
+  align-items: center;
+  background: var(--canvas);
+  border-radius: var(--radius-full);
+  color: var(--ink);
+  display: grid;
+  font-size: var(--font-size-body-sm);
+  font-weight: 600;
+  height: 82px;
+  place-items: center;
+  width: 82px;
+}
+
+.landing-dash__right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: var(--space-xl);
+}
+
+.landing-barrow {
+  align-items: center;
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: 92px minmax(0, 1fr) 82px;
+}
+
+.landing-barname {
+  align-items: center;
+  color: var(--text-secondary);
+  display: inline-flex;
+  font-size: var(--font-size-body-sm);
+  gap: 6px;
+}
+
+.landing-track {
+  background: var(--surface);
+  border-radius: var(--radius-full);
+  height: 8px;
+  overflow: hidden;
+}
+
+.landing-fill {
+  border-radius: var(--radius-full);
+  display: block;
+  height: 100%;
+}
+
+.landing-baramt {
+  color: var(--ink);
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+  text-align: right;
+}
+
+.landing-floatcard {
+  background: var(--canvas);
+  border: var(--line-width) solid var(--hairline-strong);
+  border-radius: var(--radius-xl);
+  bottom: 0;
+  box-shadow: var(--landing-lift);
+  overflow: hidden;
+  position: absolute;
+  right: -6px;
+  width: 340px;
+}
+
+.landing-floatcard__flag {
+  align-items: center;
+  background: var(--surface-yellow);
+  border-bottom: var(--line-width) solid var(--hairline-soft);
+  color: var(--text-secondary);
+  display: flex;
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  gap: 6px;
+  letter-spacing: 0.5px;
+  margin-top: var(--landing-accent-height);
+  padding: 8px var(--space-lg);
+}
+
+.landing-floatcard__body {
+  padding: var(--space-lg);
+}
+
+/* ══════ 랜딩 — 히어로 글로우 ══════ */
+
+.landing-hero {
+  position: relative;
+}
+
+.landing-hero::before {
+  background:
+    radial-gradient(
+      46% 52% at 70% 34%,
+      var(--landing-glow-a) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      40% 44% at 40% 70%,
+      var(--landing-glow-b) 0%,
+      transparent 72%
+    );
+  content: "";
+  filter: blur(6px);
+  inset: -14% -22% 14% 28%;
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
+
+.landing-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* 3단계 카드의 액센트는 장식이 아니라 진행률이다. */
+.landing-flow {
+  overflow: hidden;
+  position: relative;
+}
+
+.landing-flow::before {
+  background: var(--ink);
+  content: "";
+  height: var(--landing-accent-height);
+  inset-inline-start: 0;
+  position: absolute;
+  top: 0;
+}
+
+.landing-flow--1::before {
+  width: 33.3%;
+}
+
+.landing-flow--2::before {
+  width: 66.6%;
+}
+
+.landing-flow--3::before {
+  width: 100%;
+}
+
+/* 연간 요금제도 액센트를 받는다 — 지적 타일·인사이트 카드와 같은 강조 문법이다.
+   카테고리 색이 아니라 --ink 인 이유는 요금제가 카테고리에 속하지 않기 때문이다.
+   .pricing-card--featured 는 앱의 요금제 화면도 쓰는 클래스라 랜딩으로 범위를 좁힌다. */
+.landing-plan-grid .pricing-card--featured {
+  overflow: hidden;
+  padding-top: calc(var(--space-xl) + var(--landing-accent-height));
+  position: relative;
+}
+
+.landing-plan-grid .pricing-card--featured::before {
+  background: var(--ink);
+  content: "";
+  height: var(--landing-accent-height);
+  inset-inline: 0;
+  position: absolute;
+  top: 0;
+}
+
+@media (max-width: 900px) {
+  .landing-transform {
+    gap: var(--space-md);
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .landing-arrow {
+    height: 40px;
+    transform: rotate(90deg);
+  }
+
+  .landing-csvbox {
+    height: 170px;
+  }
+
+  .landing-sig-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .landing-sig--lead {
+    grid-column: span 1;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .landing-dash__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .landing-dash__left {
+    border-bottom: var(--line-width) solid var(--hairline-soft);
+    border-right: 0;
+  }
+
+  .landing-floatcard {
+    margin-top: var(--space-md);
+    position: static;
+    width: auto;
+  }
+
+  .landing-dashwrap {
+    padding-bottom: 0;
+  }
+}
+
+/* 767px 이하는 기존 블록이 더 좁은 패딩(가로 16px 포함)을 준다. 900px 블록이 소스상 뒤라
+   그대로 두면 특이도가 같아 이 규칙이 이겨 모바일에서 내용이 화면 끝에 붙는다 — 구간을 끊는다. */
+@media (min-width: 768px) and (max-width: 900px) {
+  .landing-section {
+    padding: 48px 0;
   }
 }
