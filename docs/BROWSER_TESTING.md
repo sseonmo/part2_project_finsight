@@ -67,12 +67,16 @@ EOF
 
 구글 OAuth 는 자동화할 수 없다. 이메일·비밀번호 유저를 직접 만들고 세션 쿠키를 심는다.
 
+**도메인을 `.local` 로 두지 마라.** Polar 는 `.local`·`.test`·`example.com` 같은
+예약 도메인을 이메일로 받지 않아 체크아웃 생성이 422 로 떨어지고, 앱에서는 원인이
+보이지 않는 500 으로만 나타난다(2026-08-30 실측). 실재하는 TLD 를 쓴다.
+
 ```bash
 SERVICE_KEY=$(grep SUPABASE_SERVICE_ROLE_KEY .env.local | cut -d= -f2)
 curl -s -X POST http://127.0.0.1:54321/auth/v1/admin/users \
   -H "apikey: $SERVICE_KEY" -H "Authorization: Bearer $SERVICE_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"email":"e2e-test@finsight.local","password":"e2e-test-pw-1234","email_confirm":true}'
+  -d '{"email":"e2e-test@finsight.app","password":"e2e-test-pw-1234","email_confirm":true}'
 ```
 
 **`profiles` row 는 앱이 `/auth/callback` 에서만 만든다.** 위 경로로 만든 유저에게는
@@ -81,7 +85,7 @@ curl -s -X POST http://127.0.0.1:54321/auth/v1/admin/users \
 ```bash
 docker exec supabase_db_part2_project_finsight psql -U postgres -d postgres -c "
   insert into public.profiles (user_id, trial_started_at, subscription_status)
-  select id, now(), 'trialing' from auth.users where email = 'e2e-test@finsight.local'
+  select id, now(), 'trialing' from auth.users where email = 'e2e-test@finsight.app'
   on conflict (user_id) do nothing;"
 ```
 

@@ -420,19 +420,21 @@ psql -c "update upload_jobs set status='completed' where status='categorizing';"
 
 ---
 
-## S7 — 결제 ◻︎ 🔍
+## S7 — 결제 ✅ 🔍
 
-Polar 체크아웃은 외부 서비스라 브라우저로 끝까지 갈 수 없다. **웹훅 서명 검증과
-멱등 처리**를 직접 확인한다.
+**끝까지 갈 수 있다.** Polar sandbox 는 실제 결제를 처리하지 않으므로(`livemode: false`)
+체크아웃부터 웹훅 반영까지 전 구간을 실제로 돌린다. 준비는 `docs/POLAR_SETUP.md` 를 따른다.
 
-**전제** U4
+**전제** U4 + `.env.local` 에 `POLAR_*` 5개 + ngrok 터널 + Polar 에 그 URL 로 등록한 웹훅
 
 ```bash
 scripts/browser-test/actor.sh u4
 ```
 
-**화면 판정 ✅ (2026-08-27 실측)** `/dashboard/billing` 에서 요금제가 보이고 체크아웃
-버튼이 동작한다. **웹훅 판정은 아직 안 돌렸다** — 그래서 이 시나리오는 `◻︎` 로 둔다.
+**화면 판정 ✅ (2026-08-27 실측)** `actor.sh u4` 는 `trial_started_at` 을 밀어 만료를 만든다.
+화면에 **읽기 전용 배너**("체험 또는 결제 기간이 끝나 새 업로드와 수정은 잠겨 있습니다")와
+월간 4,900원 · 연간 49,000원 카드, "연간 결제는 월간 결제 12개월보다 9,800원 저렴합니다"가
+나온다. 헤더 버튼도 "명세서 올리기"가 아니라 **"결제하고 계속 쓰기"** 다.
 
 ```bash
 run <<'EOF'
@@ -441,21 +443,68 @@ console.log((await textOf(page, "/dashboard/billing", 2500)).slice(0, 450).repla
 EOF
 ```
 
-`actor.sh u4` 는 `trial_started_at` 을 7일 이전으로 밀어 만료를 만든다(실측 `2026-07-28`).
-화면에 **읽기 전용 배너**("체험 또는 결제 기간이 끝나 새 업로드와 수정은 잠겨 있습니다")와
-월간 4,900원 · 연간 49,000원 카드, "연간 결제는 월간 결제 12개월보다 9,800원 저렴합니다"가
-나온다. 헤더 버튼도 "명세서 올리기"가 아니라 **"결제하고 계속 쓰기"** 다.
+**결제 판정 ✅ (2026-08-30 실측)** 체크아웃을 만들고 결제까지 간다.
 
-**웹훅 판정** 🔍 서명이 틀린 요청은 **401**, 맞으면 처리, 같은 `webhook-id` 재전송은
-**중복으로 무시**되어야 한다. 서명 대상은 `"{webhook-id}.{timestamp}.{raw body}"` 이고
-HMAC 키는 `POLAR_WEBHOOK_SECRET` 의 **UTF-8 바이트 그대로**다.
+```bash
+COOKIE=$(cat /tmp/finsight-cookie.txt)   # up.sh 가 만든 쿠키를 "name=value" 로 합친 것
+curl -s -X POST http://localhost:3000/api/billing/checkout \
+  -H "content-type: application/json" -H "Cookie: $COOKIE" \
+  -d '{"plan":"monthly"}'
+# -> {"checkoutUrl":"https://sandbox.polar.sh/checkout/polar_c_..."}
+```
+
+그 URL 을 브라우저로 연다. **KRW 상품이라 한국 결제수단(Kakao Pay·Naver Pay·Local card)이
+먼저 뜬다.** 아무거나 고르면 Stripe 의 **테스트 결제 시뮬레이터**로 넘어가는데, 카드 정보를
+넣는 화면이 아니라 `AUTHORIZE TEST PAYMENT` / `FAIL TEST PAYMENT` 버튼만 있는 페이지다.
+승인을 누르면 결제가 끝나고 `success_url` 로 돌아온다.
+
+> **실제 카드번호를 넣지 마라.** 넣을 자리도 없고, test mode 라 어차피 거부된다.
+> 실패 경로를 보고 싶으면 `FAIL TEST PAYMENT` 를 쓴다.
+
+**DB 판정 ✅** 웹훅 3건이 순서대로 들어오고 `profiles` 가 바뀐다.
+
+```bash
+docker exec supabase_db_part2_project_finsight psql -U postgres -d postgres -c "
+  select subscription_status, current_period_end, polar_customer_id from public.profiles;
+  select event_type, received_at from public.processed_webhook_events order by received_at desc limit 5;"
+```
+
+2026-08-30 실측: `subscription.created` → `active` → `updated` 세 건이 1초 간격으로 들어오고
+`profiles` 가 `active` · `current_period_end` 는 한 달 뒤 · `polar_customer_id` 가 채워졌다.
+Polar 대시보드의 Deliveries 에도 셋 다 **200** 으로 남는다.
+
+**멱등 판정 ✅** Polar 대시보드에서 배달 하나를 펼쳐 `Redeliver` 를 누른다. 같은
+`webhook-id` 로 다시 오므로 **`processed_webhook_events` 행 수가 늘지 않아야 한다**
+(응답은 200 `duplicate`). 실측에서 요청 4건 · 행 3건이었다.
+
+**서명 판정 ✅** 서명이 없거나 틀린 요청은 **401** 이다.
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -X POST http://localhost:3000/api/webhooks/polar \
+  -H "content-type: application/json" -d '{}'   # -> 401
+```
+
+**곁가지 판정 ✅** 구독이 살아 있는 동안 다시 결제를 시도하면 **409**, 고객 포털은
+`polar_customer_id` 가 생긴 뒤에야 **200** 이다(그 전에는 409 + `redirectTo`).
+
+```bash
+curl -s -X POST http://localhost:3000/api/billing/portal -H "Cookie: $COOKIE"
+curl -s -X POST http://localhost:3000/api/billing/checkout \
+  -H "content-type: application/json" -H "Cookie: $COOKIE" -d '{"plan":"monthly"}'   # -> 409
+```
+
+**웹훅을 손으로 만들어 쏘는 방법**(터널 없이 서명 로직만 볼 때) 🔍 서명 대상은
+`"{webhook-id}.{timestamp}.{raw body}"` 이고 HMAC 키는 `POLAR_WEBHOOK_SECRET` 의
+**UTF-8 바이트 그대로**다.
 
 > 페이로드 스키마가 빡빡해 필드가 하나라도 빠지면 **401 이 아니라 200 `ignored`** 로
 > 조용히 무시된다. `WebhookSubscriptionActivePayload$inboundSchema.parse()` 로 먼저
 > 맞춰 본 뒤 보낸다.
 
+**끝나고 되돌린다.** 결제 상태가 남아 있으면 다른 시나리오가 오염된다.
+
 ```bash
-psql -c "select subscription_status, current_period_end from profiles;"
+scripts/browser-test/actor.sh u4
 ```
 
 ---
