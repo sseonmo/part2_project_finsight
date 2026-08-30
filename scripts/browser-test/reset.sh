@@ -10,7 +10,7 @@
 set -euo pipefail
 
 CONTAINER="${SUPABASE_CONTAINER:-supabase_db_part2_project_finsight}"
-EMAIL="${TEST_EMAIL:-e2e-test@finsight.local}"
+EMAIL="${TEST_EMAIL:-e2e-test@finsight.app}"
 MODE="${1:-}"
 UID_SQL="(select id from auth.users where email = '$EMAIL')"
 

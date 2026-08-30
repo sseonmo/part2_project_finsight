@@ -13,7 +13,7 @@ import { createServerClient } from "../../node_modules/@supabase/ssr/dist/main/i
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:54321";
 const ANON = process.env.ANON;
-const EMAIL = process.env.TEST_EMAIL ?? "e2e-test@finsight.local";
+const EMAIL = process.env.TEST_EMAIL ?? "e2e-test@finsight.app";
 const PASSWORD = process.env.TEST_PASSWORD ?? "e2e-test-pw-1234";
 
 if (!ANON) {

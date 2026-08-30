@@ -12,7 +12,7 @@
 set -euo pipefail
 
 CONTAINER="${SUPABASE_CONTAINER:-supabase_db_part2_project_finsight}"
-EMAIL="${TEST_EMAIL:-e2e-test@finsight.local}"
+EMAIL="${TEST_EMAIL:-e2e-test@finsight.app}"
 ACTOR="${1:-}"
 
 case "$ACTOR" in
