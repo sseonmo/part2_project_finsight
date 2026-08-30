@@ -155,7 +155,16 @@ site_url = "http://127.0.0.1:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# 앱은 window.location.origin 으로 콜백 URL 을 만든다. 여기에 없는 redirect_to 는
+# 조용히 버려지고 site_url 로 폴백해서, 로그인 후 ?code= 를 달고 랜딩으로 떨어진다.
+# localhost 와 127.0.0.1 은 Google 과 Supabase 모두 다른 문자열로 본다 — 둘 다 적는다.
+# 정확히 일치해야 하므로 경로만 적으면 부족하다. 보호된 경로로 들어오면 미들웨어가
+# ?redirectTo= 를 붙여 콜백 URL 에 쿼리가 생기고, 그 순간 매칭이 깨져 폴백한다.
+additional_redirect_urls = [
+  "https://127.0.0.1:3000",
+  "http://localhost:3000/**",
+  "http://127.0.0.1:3000/**",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -327,6 +336,19 @@ url = ""
 # If enabled, the nonce check will be skipped. Required for local sign in with Google auth.
 skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
+email_optional = false
+
+# 로컬에서 Google 로그인을 확인하기 위한 설정. 원격 프로젝트의 provider 설정은
+# 대시보드에 있고 이 파일과 무관하므로, 로컬 컨테이너에는 여기서 따로 켜야 한다.
+# 값은 .env 에서 온다(git 무시 대상). 키 이름은 .env.example 참조.
+[auth.external.google]
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+redirect_uri = ""
+url = ""
+# 로컬 로그인에는 켜야 한다(위 apple 섹션 주석의 "Required for local sign in with Google auth").
+skip_nonce_check = true
 email_optional = false
 
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.

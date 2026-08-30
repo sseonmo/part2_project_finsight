@@ -22,9 +22,15 @@ FinSight 의 유일한 로그인 수단은 Google OAuth 다. **코드는 이미 
 | 게시 상태 | **테스트 중** — 테스트 사용자에 등록된 계정만 로그인된다 |
 | 테스트 사용자 | `mo3509@gmail.com` |
 | Supabase provider | Google 활성화, Site URL·Redirect URLs 등록 완료 |
+| 로컬 Supabase | 2026-08-30 부터 함께 동작한다 — 4단계 참조 |
 
-Client Secret 은 Supabase 에만 있고 어디에도 기록하지 않는다. 분실하면 Google 콘솔에서
-새로 발급해 Supabase 에 다시 넣는다(클라이언트를 다시 만들 필요는 없다).
+Client Secret 은 **두 개**다. Google 은 클라이언트 하나에 시크릿을 2개까지 동시에 유효하게
+둔다(콘솔의 `Add secret`). 프로덕션 Supabase 가 첫 번째를, 로컬 `.env` 가 두 번째를 쓴다.
+**어느 쪽도 삭제하지 말 것** — 지우는 순간 그쪽 환경의 로그인이 끊긴다.
+
+한 번 만든 시크릿은 **콘솔에서 다시 볼 수 없다**(생성 직후 대화상자에서만 전체가 보이고,
+이후에는 `****u62m` 처럼 끝 4자만 남는다). 분실하면 `Add secret` 으로 새로 발급해 넣는다.
+클라이언트를 다시 만들 필요는 없다.
 
 ---
 
@@ -34,7 +40,7 @@ Client Secret 은 Supabase 에만 있고 어디에도 기록하지 않는다. �
 
 | 어디에 | 값 |
 |---|---|
-| Google — 승인된 리디렉션 URI | `https://rokvlbizwfdqsmzojesq.supabase.co/auth/v1/callback` |
+| Google — 승인된 리디렉션 URI | `https://rokvlbizwfdqsmzojesq.supabase.co/auth/v1/callback`<br>`http://127.0.0.1:54321/auth/v1/callback` (로컬용, 4단계) |
 | Google — 승인된 JavaScript 원본 | `https://part2-project-finsight.vercel.app`<br>`http://localhost:3000` |
 | Supabase — Site URL | `https://part2-project-finsight.vercel.app` |
 | Supabase — Redirect URLs | `https://part2-project-finsight.vercel.app/auth/callback`<br>`http://localhost:3000/auth/callback` |
@@ -170,15 +176,61 @@ curl -s "$URL/rest/v1/profiles?select=user_id,subscription_status,trial_started_
 
 ---
 
+## 4단계 — 로컬 Supabase 에서 Google 로그인 (2026-08-30 추가)
+
+**원격 프로젝트의 provider 설정은 대시보드에 있고 로컬 컨테이너와 무관하다.** 로컬은
+`supabase/config.toml` 로 따로 켠다. 켜지 않은 상태의 증상은 `authorize` 가 **400** 이다:
+
+```
+{"code":400,"error_code":"validation_failed",
+ "msg":"Unsupported provider: provider is not enabled"}
+```
+
+1. **Google 콘솔에 로컬 콜백 추가** — `클라이언트` → `FinSight Web` → 승인된 리디렉션 URI 에
+   `http://127.0.0.1:54321/auth/v1/callback` 을 **한 줄 더** 넣는다(기존 것은 지우지 않는다).
+   `localhost` 가 아니라 `127.0.0.1`, 포트는 앱(3000)이 아니라 Supabase(54321)다.
+
+2. **로컬용 Client Secret 발급** — 같은 화면의 `Add secret`. 기존 시크릿은 프로덕션이
+   쓰는 중이므로 그대로 둔다. 새 시크릿은 **생성 직후에만 전체가 보인다.**
+
+3. **`.env` 에 값 주입** — `.gitignore` 대상이라 커밋되지 않는다. 키 이름은 `.env.example` 참조.
+
+```
+SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=<위 표의 Client ID>
+SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET=<2번에서 받은 값>
+```
+
+4. **`supabase/config.toml`** — `[auth.external.google]` 이 위 두 값을 `env()` 로 읽는다.
+   `skip_nonce_check = true` 가 필요하다(파일의 apple 섹션 주석: *"Required for local sign
+   in with Google auth"*). 그리고 `[auth]` 의 `additional_redirect_urls` 에 앱 주소를
+   **와일드카드로** 넣어야 한다 — 이유는 함정 ⑥.
+
+5. **재시작** — config 변경은 컨테이너 재기동에서만 반영된다.
+
+```bash
+npx supabase stop && npx supabase start   # stop 은 데이터를 백업하고 start 가 복원한다
+```
+
+6. **검증** — 400 이 302 로 바뀌고 파라미터가 맞는지 본다.
+
+```bash
+curl -s -o /dev/null -w "%{redirect_url}\n" \
+  "http://127.0.0.1:54321/auth/v1/authorize?provider=google&redirect_to=http://localhost:3000/auth/callback"
+```
+
+`accounts.google.com/o/oauth2/v2/auth` 로 가고 `redirect_uri` 가
+`http://127.0.0.1:54321/auth/v1/callback` 이면 된다. 그 뒤 브라우저에서
+로그인 → 로그아웃 → 재로그인까지 실제로 확인했다(2026-08-30).
+
+---
+
 ## 함정
 
 **① `.env.local` 이 있으면 로컬은 프로덕션 Supabase 를 보지 않는다.**
 그 파일은 브라우저 테스트용으로 `NEXT_PUBLIC_SUPABASE_URL` 을 `http://127.0.0.1:54321`
-로 덮는다. 로컬에서 진짜 Google 로그인을 시험하려면 파일을 잠시 옮겨야 하고
-(`mv .env.local .env.local.off`), 그동안 브라우저 테스트 환경은 쓸 수 없다.
-로컬 Supabase 에서 Google 로그인을 쓰려면 `supabase/config.toml` 에
-`[auth.external.google]` 을 따로 추가하고 Google 쪽 승인된 리디렉션 URI 에
-`http://127.0.0.1:54321/auth/v1/callback` 을 더해야 한다 — 지금은 둘 다 없다.
+로 덮는다. **4단계를 마친 뒤로는 이 상태에서도 Google 로그인이 된다** — 파일을 옮길
+필요가 없어졌다(예전에는 `mv .env.local .env.local.off` 로 프로덕션을 보게 해야 했다).
+로컬에서 로그인이 안 되면 4단계가 빠졌는지부터 본다.
 
 **② 로그인이 되는데 `authError` 를 달고 랜딩으로 되돌아온다면** OAuth 가 아니라
 `/auth/callback` 이후를 본다. `profiles` upsert 실패도 같은 화면으로 나온다.
@@ -192,3 +244,29 @@ curl -s "$URL/rest/v1/profiles?select=user_id,subscription_status,trial_started_
 
 **⑤ 본인 말고 다른 사람이 로그인하려면** `대상` → `테스트 사용자` 에 그 계정을 먼저
 추가해야 한다. 빠뜨리면 Google 동의 화면 대신 `access_denied` 가 뜬다.
+
+**⑥ 로그인 직후 `?code=` 를 달고 랜딩으로 떨어진다면** `redirect_to` 가 Supabase 의 허용
+목록에 없는 것이다. **Supabase 는 허용되지 않은 `redirect_to` 를 에러 없이 버리고 `site_url`
+로 폴백한다.** 그래서 화면상으로는 "로그인이 그냥 안 된 것"처럼 보이고, 착지 주소만이
+단서다(`http://127.0.0.1:3000/?code=...` — `code` 를 처리할 핸들러가 없는 경로).
+
+목록은 **정확히 일치**해야 한다(`config.toml` 주석의 *"A list of \*exact\* URLs"*). 경로만
+적으면 부족하다 — 보호된 경로로 들어오면 미들웨어가 `?redirectTo=` 를 붙여 콜백 URL 에
+쿼리가 생기고 그 순간 매칭이 깨진다. **1차 로그인은 되는데 `/dashboard` 직행 후 재로그인만
+실패하는** 증상이 이것이다. 와일드카드로 적는다:
+
+```toml
+additional_redirect_urls = [
+  "https://127.0.0.1:3000",
+  "http://localhost:3000/**",
+  "http://127.0.0.1:3000/**",
+]
+```
+
+원격도 같은 규칙이다 — Supabase 대시보드의 `Redirect URLs` 가 이 목록에 해당한다.
+
+**⑦ 로그아웃 후 재로그인이 비밀번호 없이 통과하는 것은 정상이다.** 로그아웃이 끊는 것은
+앱의 `sb-*` 쿠키뿐이고, `accounts.google.com` 의 세션과 동의 기록은 그대로 남는다. 앱
+세션이 끊겼는지는 `/dashboard` 직접 접근으로 확인한다 — 랜딩으로 되돌아오면 끊긴 것이다.
+매번 계정을 고르게 하려면 `signInWithOAuth` 에 `queryParams: { prompt: "select_account" }`
+를 준다(현재는 넣지 않았다).
