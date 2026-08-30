@@ -814,6 +814,42 @@ a:hover {
   white-space: nowrap;
 }
 
+.app-sidebar__signout {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--space-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  min-height: var(--app-nav-item-height);
+  padding-inline: var(--space-sm);
+  text-align: left;
+}
+
+.app-sidebar__signout:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.app-sidebar__signout:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.app-sidebar__signout:focus-visible {
+  outline: var(--focus-ring-width) solid var(--brand-blue);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.app-sidebar__signout-error {
+  color: var(--brand-red-dark);
+  font-size: var(--font-size-body-xs);
+  line-height: 1.4;
+  margin: 0;
+  padding-inline: var(--space-sm);
+}
+
 .theme-toggle {
   align-items: center;
   background: transparent;

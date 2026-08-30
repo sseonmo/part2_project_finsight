@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useTransition } from "react";
 
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -65,6 +66,24 @@ function navItems(latestYearMonth: string | null): NavItem[] {
 
 export function AppSidebar({ email, latestYearMonth }: AppSidebarProps) {
   const pathname = usePathname();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function signOut() {
+    setErrorMessage(null);
+    startTransition(async () => {
+      const response = await fetch("/api/auth/signout", { method: "POST" });
+
+      if (!response.ok) {
+        setErrorMessage("로그아웃하지 못했습니다. 다시 시도해 주세요.");
+        return;
+      }
+
+      // router.push 가 아니다. 전체 이동이어야 Next 클라이언트 캐시에 남은
+      // 이전 사용자의 화면까지 함께 버려진다.
+      window.location.assign("/");
+    });
+  }
 
   return (
     <aside className="app-sidebar">
@@ -128,6 +147,19 @@ export function AppSidebar({ email, latestYearMonth }: AppSidebarProps) {
             {email ?? "이메일 없음"}
           </span>
         </Link>
+        <button
+          className="app-sidebar__signout"
+          disabled={isPending}
+          onClick={signOut}
+          type="button"
+        >
+          로그아웃
+        </button>
+        {errorMessage ? (
+          <p className="app-sidebar__signout-error" role="status">
+            {errorMessage}
+          </p>
+        ) : null}
       </div>
     </aside>
   );
