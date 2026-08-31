@@ -84,4 +84,8 @@ describe("sheetToCsv", () => {
     expect(sheetToCsv([])).toBe("");
     expect(sheetToCsv([[null, null], ["한칸만"]])).toBe("");
   });
+
+  it("헤더만 있고 데이터 행이 없으면 빈 문자열을 돌려준다", () => {
+    expect(sheetToCsv([["이용일자", "이용금액"]])).toBe("");
+  });
 });

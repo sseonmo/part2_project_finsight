@@ -96,6 +96,11 @@ export function sheetToCsv(sheet: readonly (readonly unknown[])[]): string {
   }
 
   const body = rows.slice(headerIndex).filter((row) => countFilled(row) > 0);
+
+  if (body.length < 2) {
+    return "";
+  }
+
   const columns = usedColumnIndexes(body);
 
   return body
