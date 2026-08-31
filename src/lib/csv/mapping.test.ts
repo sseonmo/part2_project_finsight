@@ -63,11 +63,15 @@ describe("csv mapping", () => {
   });
 
   it("skips rows with unknown transaction types instead of treating them as expenses", () => {
-    const trial = applyMapping(HEADER, [row("2026-03-04", "가맹점", "5,100", "보류")], MAPPING);
+    // 컬럼이 대체로 읽히면 그 컬럼을 신뢰한다. 거기서 벗어난 행은 컬럼을 잘못
+    // 고른 신호일 수 있으므로 지출로 밀어 넣지 않고 실패로 남긴다.
+    const trial = applyMapping(HEADER, [
+      ...Array.from({ length: 9 }, () => row("2026-03-04")),
+      row("2026-03-04", "가맹점", "5,100", "보류"),
+    ], MAPPING);
 
-    expect(trial.parsed).toEqual([]);
+    expect(trial.parsed).toHaveLength(9);
     expect(trial.failed).toBe(1);
-    expect(trial.successRate).toBe(0);
   });
 
   it.each([
@@ -116,6 +120,27 @@ describe("csv mapping", () => {
     expect(trial.dateFormat).toBe("YY.MM.DD");
     expect(trial.failed).toBe(0);
     expect(trial.parsed[0]?.transactedOn).toBe("2026-07-15");
+  });
+
+  it("ignores a type column whose values are almost never recognizable", () => {
+    // 카드 명세서의 `구분` 은 거래 유형이 아니라 결제 방식(리볼빙-일시)을 담는
+    // 경우가 있다. 그 컬럼 하나 때문에 날짜·금액·가맹점이 멀쩡한 행을 전부
+    // 버리면 첫 업로드가 통째로 실패한다. 읽을 값이 없는 컬럼은 안 읽은 것으로
+    // 치고 금액 부호로 판정한다.
+    const rows = [
+      row("2026-03-04", "매머드커피 판교역점", "6,200", "리볼빙-일시"),
+      row("2026-03-05", "샐러디 판교역점", "9,900", "리볼빙-일시"),
+      row("2026-03-06", "이동통신할인", "-1,890", "리볼빙-일시"),
+    ];
+
+    const trial = applyMapping(HEADER, rows, MAPPING);
+
+    expect(trial.failed).toBe(0);
+    expect(trial.parsed.map((parsed) => parsed.transactionType)).toEqual([
+      "expense",
+      "expense",
+      "refund",
+    ]);
   });
 
   it("returns the scanned DD/MM/YYYY date format decision", () => {

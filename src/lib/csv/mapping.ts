@@ -6,6 +6,7 @@ import {
 } from "./amount";
 import { decideDateFormat, parseDate, toSeoulDateString } from "./date";
 import { normalizeHeaderForMapping } from "./parse";
+import { CSV_TYPE_RECOGNITION_RATE_MIN } from "./thresholds";
 
 export type ColumnMapping = {
   date: string;
@@ -60,6 +61,38 @@ function rowToRawRow(header: string[], row: string[]): RawRow {
   ) as RawRow;
 }
 
+/**
+ * type 컬럼을 믿을지 정한다. 값이 유형으로 읽히지 않으면 `decideTransactionType`
+ * 이 행마다 null 을 돌려주고 `applyMapping` 이 그 행을 통째로 버리는데, 날짜와
+ * 금액과 가맹점이 멀쩡한 행까지 사라진다. 실제 카드 명세서의 `구분` 컬럼이
+ * 전 행 `리볼빙-일시` 여서 46건이 한 건도 남지 않은 적이 있다(KNOWN_ISSUES ⓚ).
+ * 그래서 읽히는 비율을 먼저 보고, 낮으면 그 컬럼은 없는 셈 치고 금액 부호로
+ * 판정한다. 반대로 대부분 읽히는 컬럼은 신뢰해 예외 행을 실패로 남긴다 —
+ * 그것은 컬럼을 잘못 고른 신호일 수 있다.
+ */
+function isTypeColumnReadable(
+  rows: string[][],
+  typeIndex: number | null,
+): boolean {
+  if (typeIndex === null) {
+    return false;
+  }
+
+  const values = rows
+    .map((row) => cellAt(row, typeIndex)?.trim() ?? "")
+    .filter((value) => value !== "");
+
+  if (values.length === 0) {
+    return false;
+  }
+
+  const readable = values.filter(
+    (value) => decideTransactionType({ type: value, amount: "0" }) !== null,
+  ).length;
+
+  return readable / values.length >= CSV_TYPE_RECOGNITION_RATE_MIN;
+}
+
 export function applyMapping(
   header: string[],
   rows: string[][],
@@ -73,7 +106,10 @@ export function applyMapping(
   const dateIndex = findColumnIndex(headerIndex, mapping.date);
   const amountIndex = findColumnIndex(headerIndex, mapping.amount);
   const merchantIndex = findColumnIndex(headerIndex, mapping.merchant);
-  const typeIndex = findColumnIndex(headerIndex, mapping.type);
+  const declaredTypeIndex = findColumnIndex(headerIndex, mapping.type);
+  const typeIndex = isTypeColumnReadable(rows, declaredTypeIndex)
+    ? declaredTypeIndex
+    : null;
   const total = rows.length;
 
   if (dateIndex === null || amountIndex === null || merchantIndex === null) {
@@ -112,7 +148,7 @@ export function applyMapping(
 
     const raw = rowToRawRow(header, row);
 
-    if (mapping.type) {
+    if (typeIndex !== null) {
       raw.type = rawType ?? "";
     }
     raw.amount = rawAmount;
