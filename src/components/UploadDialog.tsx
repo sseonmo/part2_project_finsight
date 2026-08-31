@@ -12,9 +12,9 @@ import {
   type UploadJobSnapshot,
   type UploadJobStatus,
 } from "@/components/UploadProgressCard";
-import { createBrowserClient } from "@/services/supabase";
 import { readSheet } from "@/lib/xlsx/readSheet";
 import { sheetToCsv } from "@/lib/xlsx/sheetToCsv";
+import { createBrowserClient } from "@/services/supabase";
 
 const UPLOAD_BUCKET = "transaction-csv-uploads";
 const UNSUPPORTED_FILE_MESSAGE = "CSV 또는 엑셀(.xlsx) 파일만 올릴 수 있습니다.";

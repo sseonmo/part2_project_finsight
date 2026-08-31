@@ -82,7 +82,7 @@ sanity 판정은 `{ ok: true }`, 유효 거래 46건, 실패 7건(failureRate 13
 가 쓰는 `read-excel-file/browser` 는 OOXML 만 읽으므로 이런 파일은 파싱 단계에서
 실패한다. UI 는 안내 문구(`UploadDialog.tsx:338`, "엑셀은 .xlsx 만 됩니다. .xls 로
 받아졌다면 CSV 로 저장해 주세요.")로 미리 경고하지만, 확장자만 `.xlsx`로 바뀐
-BIFF/HTML 파일은 이 안내를 우회해 통과하지만, `UploadDialog.tsx:62-66` 의
+BIFF/HTML 파일은 이 안내를 우회해 통과하고, `UploadDialog.tsx:62-66` 의
 `toUploadBlob` 이 그 실패를 잡아 `XLSX_READ_FAILED_MESSAGE`("엑셀 파일을
 읽지 못했습니다. 카드사에서 CSV 로 내려받아 올려주세요.")로 바꿔 던지므로
 사용자에게는 읽을 수 있는 안내가 뜬다. 다만 원인 에러(`catch` 가 삼키는
