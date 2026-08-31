@@ -1,9 +1,12 @@
 /**
  * 사용자가 xlsx 를 고른 순간에만 파서를 내려받는다. CSV 만 올리는 대다수
  * 사용자의 번들에 넣지 않기 위해 정적 import 를 쓰지 않는다.
+ *
+ * 라이브러리는 시트 배열을 주지만 명세서는 첫 시트만 쓴다.
  */
 export async function readSheet(file: File): Promise<unknown[][]> {
-  const { default: readXlsxFile } = await import("read-excel-file");
+  const { default: readXlsxFile } = await import("read-excel-file/browser");
+  const [firstSheet] = await readXlsxFile(file);
 
-  return readXlsxFile(file) as unknown as Promise<unknown[][]>;
+  return firstSheet?.data ?? [];
 }
