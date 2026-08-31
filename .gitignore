@@ -17,3 +17,6 @@ __pycache__/
 phases/**/phase*-output.json
 phases/**/step*-output.json
 .vercel
+
+# local scratch (not committed)
+.local/
