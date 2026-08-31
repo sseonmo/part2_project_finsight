@@ -68,6 +68,24 @@
 보인다. 시드 데이터의 `header_hash='hash-a'` 가 여러 카드에 걸쳐 있어 생긴
 현상일 가능성이 있으나 **확인하지 않았다.** 재현 조건부터 좁혀야 한다.
 
+### ⓙ 엑셀 업로드는 `.xlsx` (OOXML) 만 지원한다
+
+`src/components/UploadDialog.tsx:48` 의 `hasExtension(file, ".xlsx")` 가 확장자로만
+거른다. 실제 명세서 하나(`이용대금명세서_20260803.xlsx`, 46건 거래 + 서브헤더 1행 +
+합계 4행 + 날짜 없는 할인 2행)로 `sheetToCsv` → `parseCsv` → `applyMapping` →
+`runSanityCheck` 를 통과시켜 확인했다(2026-08-31, `.local/` 스크립트로 실측).
+sanity 판정은 `{ ok: true }`, 유효 거래 46건, 실패 7건(failureRate 13.2%,
+`CSV_FULL_FAILURE_RATE_MAX` 20% 이내)으로 정상 처리된다.
+
+**확인하지 않고 코드로만 추정한 것:** 구형 `.xls`(BIFF) 파일이나, 은행이 흔히
+내보내는 확장자만 `.xls`/`.xlsx`인 HTML 표는 지원 대상이 아니다. `readSheet.ts`
+가 쓰는 `read-excel-file/browser` 는 OOXML 만 읽으므로 이런 파일은 파싱 단계에서
+실패한다. UI 는 안내 문구(`UploadDialog.tsx:338`, "엑셀은 .xlsx 만 됩니다. .xls 로
+받아졌다면 CSV 로 저장해 주세요.")로 미리 경고하지만, 확장자만 `.xlsx`로 바뀐
+BIFF/HTML 파일은 이 안내를 우회해 통과한 뒤 라이브러리의 원문 에러 메시지가
+그대로 사용자에게 노출될 것으로 보인다(catch 블록이 `error.message` 를 그대로 띄운다).
+실제 그런 파일로는 테스트하지 않았다.
+
 ## 중간 — AI 리뷰의 서술과 우선순위
 
 `docs/BROWSER_TEST_CASES.md` 의 픽스처를 실행하다 나왔다. 화면에는 그럴듯한
