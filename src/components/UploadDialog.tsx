@@ -92,6 +92,9 @@ function initialJobSnapshot(
   return {
     id,
     status,
+    // 방금 만든 job 이라 이 값이 곧 서버의 created_at 이다. 2초 뒤 첫 폴링 응답이
+    // 서버 값으로 덮어쓰므로 경과 시간이 어긋나 있는 구간은 없다.
+    createdAt: new Date().toISOString(),
     failedReason: null,
     summary: {
       duplicateCount: 0,

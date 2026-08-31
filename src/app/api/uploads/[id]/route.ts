@@ -8,7 +8,7 @@ import { createServerClient } from "@/services/supabase";
 
 const UPLOAD_BUCKET = "transaction-csv-uploads";
 const UPLOAD_JOB_SELECT =
-  "id, status, failed_reason, inserted_count, duplicate_count, skipped_rows, uncategorized_count, card_label_mismatch_warning" as const;
+  "id, status, created_at, failed_reason, inserted_count, duplicate_count, skipped_rows, uncategorized_count, card_label_mismatch_warning" as const;
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -56,6 +56,7 @@ export async function GET(_request: Request, context: RouteContext) {
   return NextResponse.json({
     id: job.id,
     status: job.status,
+    createdAt: job.created_at,
     failedReason: job.failed_reason,
     summary: {
       insertedCount: job.inserted_count,

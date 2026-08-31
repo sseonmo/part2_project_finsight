@@ -425,44 +425,150 @@ a:hover {
   gap: var(--space-sm);
 }
 
-.progress-bar {
+/* 분모를 약속하지 않는 바다. 서버는 진행률을 주지 않으므로 채워진 길이가
+   아니라 흐르는 움직임만으로 "지금 돌고 있다"를 전한다. */
+.processing-bar {
+  background: var(--surface);
+  border-radius: var(--radius-full);
+  height: 4px;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.processing-bar::after {
+  animation: processing-slide 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  background: var(--brand-blue);
+  border-radius: inherit;
+  content: "";
+  inset: 0 auto 0 0;
+  position: absolute;
+  width: 38%;
+}
+
+@keyframes processing-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(363%);
+  }
+}
+
+.upload-steps {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.progress-bar__header {
-  align-items: center;
-  display: flex;
-  justify-content: space-between;
+.upload-step {
+  column-gap: var(--space-sm);
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  row-gap: var(--space-xs);
 }
 
-.progress-bar__label {
-  color: var(--text-body);
+.upload-step__icon {
+  align-self: start;
+  block-size: 16px;
+  inline-size: 16px;
+  margin-block-start: 2px;
+  position: relative;
+}
+
+.upload-step__icon::before {
+  border: var(--line-width) solid var(--hairline-strong);
+  border-radius: var(--radius-full);
+  content: "";
+  inset: 2px;
+  position: absolute;
+}
+
+.upload-step[data-state="done"] .upload-step__icon::before {
+  background: var(--success-accent);
+  border-color: var(--success-accent);
+}
+
+.upload-step[data-state="active"] .upload-step__icon::before {
+  animation: upload-step-spin 0.85s linear infinite;
+  border-color: var(--hairline-strong);
+  border-top-color: var(--brand-blue);
+  inset: 1px;
+}
+
+@keyframes upload-step-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.upload-step__check {
+  fill: none;
+  inset: 2px;
+  opacity: 0;
+  position: absolute;
+  stroke: var(--canvas);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
+}
+
+.upload-step[data-state="done"] .upload-step__check {
+  opacity: 1;
+}
+
+.upload-step__label {
+  color: var(--text-tertiary);
   font-size: var(--font-size-body-sm);
   line-height: 1.4;
 }
 
-.progress-bar__value {
+.upload-step[data-state="done"] .upload-step__label {
+  color: var(--text-secondary);
+}
+
+.upload-step[data-state="active"] .upload-step__label {
+  color: var(--ink);
+}
+
+.upload-step__meta {
   color: var(--text-tertiary);
   font-size: var(--font-size-body-xs);
-  font-variant-numeric: tabular-nums;
   line-height: 1.4;
+  text-align: right;
+  white-space: nowrap;
 }
 
-.progress-bar__track {
-  background: var(--surface);
-  border-radius: var(--radius-full);
-  height: var(--space-xs);
-  overflow: hidden;
-  width: 100%;
+.upload-step__bar {
+  grid-column: 2 / -1;
 }
 
-.progress-bar__fill {
-  background: var(--ink);
-  border-radius: inherit;
-  height: 100%;
-  transition: width 300ms cubic-bezier(0.2, 0, 0.2, 1);
+.upload-progress-card__hint {
+  border-top: var(--line-width) solid var(--hairline);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-body-xs);
+  line-height: 1.5;
+  margin: 0;
+  padding-top: var(--space-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* 움직임을 지우면 경과 시간이 유일한 진행 신호로 남는다. 바는 채운 채로 둔다. */
+  .processing-bar::after {
+    animation: none;
+    inset: 0;
+    opacity: 0.55;
+    width: 100%;
+  }
+
+  .upload-step[data-state="active"] .upload-step__icon::before {
+    animation: none;
+    border-color: var(--brand-blue);
+    border-style: dashed;
+  }
 }
 
 .upload-progress-card,

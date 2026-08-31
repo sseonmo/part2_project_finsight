@@ -75,6 +75,7 @@ function toUploadJobSnapshot(row: UploadCardRow): UploadJobSnapshot {
   return {
     id: row.id,
     status: row.status,
+    createdAt: row.created_at,
     failedReason: row.failed_reason,
     summary: {
       insertedCount: row.inserted_count,

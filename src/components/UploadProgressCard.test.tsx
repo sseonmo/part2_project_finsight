@@ -6,7 +6,10 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { UploadProgressCard } from "./UploadProgressCard";
+import {
+  UploadProgressCard,
+  type UploadJobStatus,
+} from "./UploadProgressCard";
 
 const refreshMock = vi.hoisted(() => vi.fn());
 
@@ -21,18 +24,32 @@ const EMPTY_SUMMARY = {
   uncategorizedCount: 0,
 };
 
+const JOB_STARTED_AT = "2026-08-31T10:00:00.000Z";
+
 function jobResponse(status: string) {
   return {
     ok: true,
     json: () =>
       Promise.resolve({
         cardLabelMismatchWarning: null,
+        createdAt: JOB_STARTED_AT,
         failedReason: null,
         id: "job-1",
         status,
         summary: EMPTY_SUMMARY,
       }),
   };
+}
+
+function runningJob(status: UploadJobStatus, summary = EMPTY_SUMMARY) {
+  return {
+    cardLabelMismatchWarning: null,
+    createdAt: JOB_STARTED_AT,
+    failedReason: null,
+    id: "job-1",
+    status,
+    summary,
+  } as const;
 }
 
 describe("UploadProgressCard", () => {
@@ -51,13 +68,7 @@ describe("UploadProgressCard", () => {
 
     render(
       <UploadProgressCard
-        initialJob={{
-          cardLabelMismatchWarning: null,
-          failedReason: null,
-          id: "job-1",
-          status: "parsing",
-          summary: EMPTY_SUMMARY,
-        }}
+        initialJob={runningJob("parsing")}
       />,
     );
 
@@ -85,13 +96,7 @@ describe("UploadProgressCard", () => {
 
     render(
       <UploadProgressCard
-        initialJob={{
-          cardLabelMismatchWarning: null,
-          failedReason: null,
-          id: "job-1",
-          status: "completed",
-          summary: EMPTY_SUMMARY,
-        }}
+        initialJob={runningJob("completed")}
       />,
     );
 
@@ -108,13 +113,7 @@ describe("UploadProgressCard", () => {
 
     render(
       <UploadProgressCard
-        initialJob={{
-          cardLabelMismatchWarning: null,
-          failedReason: null,
-          id: "job-1",
-          status: "categorizing",
-          summary: EMPTY_SUMMARY,
-        }}
+        initialJob={runningJob("categorizing")}
       />,
     );
 
@@ -147,22 +146,9 @@ describe("UploadProgressCard", () => {
 
     render(
       <UploadProgressCard
-        initialJob={{
-          cardLabelMismatchWarning: null,
-          failedReason: null,
-          id: "job-1",
-          status: "parsing",
-          summary: {
-            duplicateCount: 0,
-            insertedCount: 0,
-            skippedRows: 0,
-            uncategorizedCount: 0,
-          },
-        }}
+        initialJob={runningJob("parsing")}
       />,
     );
-
-    expect(screen.getAllByText("거래 내역을 읽는 중")).toHaveLength(2);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2000);
@@ -177,6 +163,85 @@ describe("UploadProgressCard", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("counts elapsed time from the server-side start, not from mount", async () => {
+    // 마운트 기준으로 세면 처리 중에 새로고침한 사용자에게 "0초 경과"가 뜬다.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-31T10:00:14.000Z"));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jobResponse("parsing")));
+
+    render(<UploadProgressCard initialJob={runningJob("parsing")} />);
+
+    expect(screen.getByText("14초 경과")).toBeInTheDocument();
+  });
+
+  it("keeps the elapsed time ticking while the job is still running", async () => {
+    // 진행률이 상태 상수라 값이 안 변한다. 1초마다 바뀌는 이 숫자가 처리 중이라는
+    // 유일한 증거이므로, 폴링 응답이 같아도 계속 흘러야 한다.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-31T10:00:00.000Z"));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jobResponse("parsing")));
+
+    render(<UploadProgressCard initialJob={runningJob("parsing")} />);
+
+    expect(screen.getByText("0초 경과")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+
+    expect(screen.getByText("3초 경과")).toBeInTheDocument();
+  });
+
+  it("tells the user processing continues after thirty seconds", async () => {
+    // 오래 걸릴 때 같은 파일을 다시 올리거나 새로고침하는 것을 막는다.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-31T10:00:29.000Z"));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jobResponse("parsing")));
+
+    render(<UploadProgressCard initialJob={runningJob("parsing")} />);
+
+    const hint = "거래가 많으면 1~2분 걸릴 수 있습니다. 이 화면을 닫아도 처리는 계속됩니다.";
+    expect(screen.queryByText(hint)).not.toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+
+    expect(screen.getByText(hint)).toBeInTheDocument();
+  });
+
+  it("shows how many transactions were read once parsing is done", async () => {
+    // inserted_count 는 categorizing 으로 넘어가는 시점에 이미 확정된다.
+    // 분류가 도는 동안 이 숫자가 진도의 근거로 남는다.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-31T10:00:05.000Z"));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jobResponse("categorizing")));
+
+    render(
+      <UploadProgressCard
+        initialJob={runningJob("categorizing", {
+          ...EMPTY_SUMMARY,
+          insertedCount: 142,
+        })}
+      />,
+    );
+
+    expect(screen.getByText("거래 내역을 읽었습니다")).toBeInTheDocument();
+    expect(screen.getByText("142건")).toBeInTheDocument();
+    expect(screen.getByText("카테고리를 분류하는 중")).toBeInTheDocument();
+  });
+
+  it("states the running step only once", async () => {
+    // 카드 부제와 진행바 라벨이 같은 문장을 두 번 쓰고 있었다.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-31T10:00:05.000Z"));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jobResponse("parsing")));
+
+    render(<UploadProgressCard initialJob={runningJob("parsing")} />);
+
+    expect(screen.getAllByText("거래 내역을 읽는 중")).toHaveLength(1);
+  });
+
   it("links needs_mapping jobs to the manual mapping route without polling", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn();
@@ -184,18 +249,7 @@ describe("UploadProgressCard", () => {
 
     render(
       <UploadProgressCard
-        initialJob={{
-          cardLabelMismatchWarning: null,
-          failedReason: null,
-          id: "job-2",
-          status: "needs_mapping",
-          summary: {
-            duplicateCount: 0,
-            insertedCount: 0,
-            skippedRows: 0,
-            uncategorizedCount: 0,
-          },
-        }}
+        initialJob={{ ...runningJob("needs_mapping"), id: "job-2" }}
       />,
     );
 

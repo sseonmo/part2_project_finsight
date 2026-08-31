@@ -12,6 +12,7 @@ function createSupabaseMock(
     user_id: string;
     storage_key: string;
     status: string;
+    created_at: string;
     inserted_count: number;
     duplicate_count: number;
     skipped_rows: number;
@@ -73,6 +74,7 @@ const OWNED_JOB = {
   user_id: "user-1",
   storage_key: "user-1/job-1/server.csv",
   status: "completed",
+  created_at: "2026-08-31T10:00:00.000Z",
   inserted_count: 0,
   duplicate_count: 10,
   skipped_rows: 2,
@@ -120,6 +122,20 @@ describe("/api/uploads/[id]", () => {
       },
       cardLabelMismatchWarning: "카드 형식이 다릅니다.",
     });
+  });
+
+  it("exposes when the job started so the card can count elapsed time", async () => {
+    // 경과 시간을 클라이언트 마운트 기준으로 세면 처리 중에 새로고침한 사용자에게
+    // "0초 경과"가 뜬다. 기준점은 서버가 가진 created_at 이어야 한다.
+    createSupabaseMock(OWNED_JOB);
+    const { GET } = await import("./route");
+
+    const response = await GET(new Request("https://finsight.test"), {
+      params: Promise.resolve({ id: "job-1" }),
+    });
+    const body = await response.json();
+
+    expect(body.createdAt).toBe("2026-08-31T10:00:00.000Z");
   });
 
   it("rejects DELETE for job ids not owned by the current user", async () => {
