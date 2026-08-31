@@ -21,6 +21,9 @@ const UNSUPPORTED_FILE_MESSAGE = "CSV 또는 엑셀(.xlsx) 파일만 올릴 수 
 const XLSX_READ_FAILED_MESSAGE =
   "엑셀 파일을 읽지 못했습니다. 카드사에서 CSV 로 내려받아 올려주세요.";
 const XLSX_EMPTY_MESSAGE = "표를 찾지 못했습니다. 파일을 확인해 주세요.";
+const MAX_XLSX_BYTES = 10 * 1024 * 1024;
+const XLSX_TOO_LARGE_MESSAGE =
+  "엑셀 파일이 너무 큽니다(10MB 이하만 가능). 카드사에서 CSV 로 내려받아 올려주세요.";
 const DEFAULT_CARD_LABEL = "카드 1";
 const CSV_CONTENT_TYPE = "text/csv";
 
@@ -169,6 +172,11 @@ export function UploadDialog({
       (!isCsvFile(selectedFile) && !isXlsxFile(selectedFile))
     ) {
       setErrorMessage(UNSUPPORTED_FILE_MESSAGE);
+      return;
+    }
+
+    if (isXlsxFile(selectedFile) && selectedFile.size > MAX_XLSX_BYTES) {
+      setErrorMessage(XLSX_TOO_LARGE_MESSAGE);
       return;
     }
 

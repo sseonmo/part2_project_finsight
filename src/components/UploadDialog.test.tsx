@@ -214,6 +214,32 @@ describe("UploadDialog", () => {
     expect(await readBlobText(uploadedBlob)).toBe(expectedCsv);
   });
 
+  it("rejects an oversized xlsx before parsing or any network call", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    render(<UploadDialog cardLabels={["카드 1"]} onUploadStarted={vi.fn()} />);
+
+    await openDialog();
+
+    const file = new File(["fake"], "big.xlsx", {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    Object.defineProperty(file, "size", { value: 10 * 1024 * 1024 + 1 });
+
+    fireEvent.change(screen.getByLabelText("명세서 파일"), {
+      target: { files: [file] },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "업로드 시작" }));
+
+    expect(
+      await screen.findByText(
+        "엑셀 파일이 너무 큽니다(10MB 이하만 가능). 카드사에서 CSV 로 내려받아 올려주세요.",
+      ),
+    ).toBeInTheDocument();
+    expect(readSheetMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("shows a readable error when the xlsx cannot be parsed", async () => {
     readSheetMock.mockRejectedValue(new Error("boom"));
     const fetchMock = vi.fn();
