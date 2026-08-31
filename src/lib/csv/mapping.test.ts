@@ -74,6 +74,46 @@ describe("csv mapping", () => {
     expect(trial.failed).toBe(1);
   });
 
+  it("subtracts a dateless discount row from the transaction above it", () => {
+    // 카드 명세서는 할인을 독립 거래로 적지 않는다. 날짜·카드·구분을 비운 채
+    // 바로 윗 거래에 딸린 행으로 내려보낸다. 그 행을 버리면 할인 전 금액이
+    // 지출로 남아 조용히 과대 계상된다(실측 13,890원).
+    const trial = applyMapping(HEADER, [
+      row("2026-03-04", "LGUPLUS통신요금자동이체", "18,900", "승인"),
+      row("", "이동통신할인", "-1,890", ""),
+    ], MAPPING);
+
+    expect(trial.parsed).toHaveLength(1);
+    expect(trial.parsed[0]).toEqual(
+      expect.objectContaining({
+        merchantRaw: "LGUPLUS통신요금자동이체",
+        amount: 17010,
+      }),
+    );
+    expect(trial.failed).toBe(0);
+  });
+
+  it("does not subtract a dateless row when it is not a discount", () => {
+    // 소계·합계 행도 날짜가 비어 있다. 금액이 음수인 행만 할인으로 본다.
+    const trial = applyMapping(HEADER, [
+      row("2026-03-04", "매머드커피", "6,200", "승인"),
+      row("", "합   계    1 건", "6,200", ""),
+    ], MAPPING);
+
+    expect(trial.parsed).toHaveLength(1);
+    expect(trial.parsed[0]?.amount).toBe(6200);
+    expect(trial.failed).toBe(1);
+  });
+
+  it("keeps a leading discount row as a failure when there is nothing above it", () => {
+    const trial = applyMapping(HEADER, [
+      row("", "이동통신할인", "-1,890", ""),
+    ], MAPPING);
+
+    expect(trial.parsed).toEqual([]);
+    expect(trial.failed).toBe(1);
+  });
+
   it.each([
     [89, 0.89],
     [90, 0.9],

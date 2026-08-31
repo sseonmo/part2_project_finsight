@@ -1,5 +1,6 @@
 import {
   decideTransactionType,
+  looksNegativeAmount,
   parseAmount,
   type RawRow,
   type TransactionType,
@@ -140,6 +141,20 @@ export function applyMapping(
     const rawAmount = cellAt(row, amountIndex)?.trim() ?? "";
     const rawType = cellAt(row, typeIndex)?.trim();
     const parsedDate = parseDate(rawDate, dateFormat);
+
+    // 카드 명세서는 할인을 독립 거래로 적지 않는다. 날짜와 구분을 비운 채 바로
+    // 윗 거래에 딸린 행으로 내려보내므로, 그대로 버리면 할인 전 금액이 지출로
+    // 남는다. 날짜가 없고 금액이 음수인 행만 윗 거래에서 뺀다 — 소계·합계 행도
+    // 날짜가 비어 있어서 부호로 갈라야 한다.
+    if (!parsedDate && merchantRaw && looksNegativeAmount(rawAmount)) {
+      const previous = parsed.at(-1);
+      const discount = parseAmount(rawAmount);
+
+      if (previous && previous.amount !== null && discount !== null) {
+        previous.amount -= discount;
+        return;
+      }
+    }
 
     if (!parsedDate || !merchantRaw) {
       failed += 1;

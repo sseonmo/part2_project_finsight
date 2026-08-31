@@ -23,7 +23,7 @@ function normalizedText(value: string): string {
   return value.normalize("NFKC").replace(/\s+/g, "").trim();
 }
 
-function looksNegativeAmount(value: string | undefined): boolean {
+export function looksNegativeAmount(value: string | undefined): boolean {
   const normalized = value?.normalize("NFKC").trim() ?? "";
 
   return normalized.startsWith("-") || /^\([^)]*\)$/.test(normalized);
