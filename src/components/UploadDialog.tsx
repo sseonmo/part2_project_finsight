@@ -13,10 +13,14 @@ import {
   type UploadJobStatus,
 } from "@/components/UploadProgressCard";
 import { createBrowserClient } from "@/services/supabase";
+import { readSheet } from "@/lib/xlsx/readSheet";
+import { sheetToCsv } from "@/lib/xlsx/sheetToCsv";
 
 const UPLOAD_BUCKET = "transaction-csv-uploads";
-const CSV_ONLY_MESSAGE =
-  "CSV 파일만 올릴 수 있습니다. 카드사에서 '엑셀 저장' 대신 'CSV 저장'을 선택하세요";
+const UNSUPPORTED_FILE_MESSAGE = "CSV 또는 엑셀(.xlsx) 파일만 올릴 수 있습니다.";
+const XLSX_READ_FAILED_MESSAGE =
+  "엑셀 파일을 읽지 못했습니다. 카드사에서 CSV 로 내려받아 올려주세요.";
+const XLSX_EMPTY_MESSAGE = "표를 찾지 못했습니다. 파일을 확인해 주세요.";
 const DEFAULT_CARD_LABEL = "카드 1";
 const CSV_CONTENT_TYPE = "text/csv";
 
@@ -32,8 +36,40 @@ type UploadDialogProps = {
   onUploadStarted?: (job: UploadJobSnapshot) => void;
 };
 
+function hasExtension(file: File, extension: string): boolean {
+  return file.name.toLocaleLowerCase("ko-KR").endsWith(extension);
+}
+
 function isCsvFile(file: File): boolean {
-  return file.size > 0 && file.name.toLocaleLowerCase("ko-KR").endsWith(".csv");
+  return file.size > 0 && hasExtension(file, ".csv");
+}
+
+function isXlsxFile(file: File): boolean {
+  return file.size > 0 && hasExtension(file, ".xlsx");
+}
+
+/**
+ * xlsx 는 브라우저에서 CSV 로 바꿔 올린다. Storage 에 올라가는 바이트는
+ * CSV 하나뿐이므로 워커는 지금 그대로 둔다.
+ */
+async function toUploadBlob(file: File): Promise<Blob> {
+  if (!isXlsxFile(file)) {
+    return file;
+  }
+
+  let csv: string;
+
+  try {
+    csv = sheetToCsv(await readSheet(file));
+  } catch {
+    throw new Error(XLSX_READ_FAILED_MESSAGE);
+  }
+
+  if (csv === "") {
+    throw new Error(XLSX_EMPTY_MESSAGE);
+  }
+
+  return new Blob([csv], { type: CSV_CONTENT_TYPE });
 }
 
 async function readError(response: Response, fallback: string): Promise<string> {
@@ -128,8 +164,11 @@ export function UploadDialog({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!selectedFile || !isCsvFile(selectedFile)) {
-      setErrorMessage(CSV_ONLY_MESSAGE);
+    if (
+      !selectedFile ||
+      (!isCsvFile(selectedFile) && !isXlsxFile(selectedFile))
+    ) {
+      setErrorMessage(UNSUPPORTED_FILE_MESSAGE);
       return;
     }
 
@@ -142,14 +181,14 @@ export function UploadDialog({
     setErrorMessage(null);
 
     try {
-      const contentType = selectedFile.type || CSV_CONTENT_TYPE;
+      const payload = await toUploadBlob(selectedFile);
       const signedResponse = await fetch("/api/uploads/signed-url", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           filename: selectedFile.name,
-          contentType,
-          size: selectedFile.size,
+          contentType: payload.type || CSV_CONTENT_TYPE,
+          size: payload.size,
           cardLabel,
         }),
       });
@@ -167,7 +206,7 @@ export function UploadDialog({
       const supabase = createBrowserClient();
       const { error: storageError } = await supabase.storage
         .from(UPLOAD_BUCKET)
-        .uploadToSignedUrl(signed.path, signed.token, selectedFile, {
+        .uploadToSignedUrl(signed.path, signed.token, payload, {
           contentType: signed.contentType,
         });
 
@@ -216,7 +255,7 @@ export function UploadDialog({
           <div>
             <h2 className="upload-dialog__title">명세서 올리기</h2>
             <p className="upload-dialog__subtitle">
-              CSV 파일과 카드 이름만 정하면 처리는 대시보드에서 이어집니다.
+              CSV 나 엑셀 파일과 카드 이름만 정하면 처리는 대시보드에서 이어집니다.
             </p>
           </div>
           <button
@@ -231,9 +270,9 @@ export function UploadDialog({
 
         <form className="upload-dialog__form" onSubmit={handleSubmit}>
           <label className="upload-dialog__field">
-            <span className="upload-dialog__label">CSV 파일</span>
+            <span className="upload-dialog__label">명세서 파일</span>
             <input
-              accept=".csv,text/csv"
+              accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               className="upload-dialog__input"
               disabled={isSubmitting}
               onChange={(event) => handleFileChange(event.target.files)}
@@ -286,15 +325,18 @@ export function UploadDialog({
 
           <section className="upload-dialog__guide" aria-labelledby="csv-guide">
             <h3 className="upload-dialog__guide-title" id="csv-guide">
-              CSV 받는 법
+              명세서 받는 법
             </h3>
             <ul className="upload-dialog__guide-list">
-              <li>신한카드: 마이페이지 결제내역에서 CSV 저장</li>
-              <li>KB국민카드: 이용내역 조회 후 파일 저장에서 CSV 선택</li>
-              <li>현대카드: 이용대금명세서 상세 내역을 CSV로 내려받기</li>
-              <li>삼성카드: 카드 이용내역에서 엑셀 대신 CSV 저장 선택</li>
-              <li>우리은행: 카드/계좌 거래내역 조회 후 CSV 다운로드</li>
+              <li>신한카드: 마이페이지 결제내역에서 파일 저장</li>
+              <li>KB국민카드: 이용내역 조회 후 파일 저장</li>
+              <li>현대카드: 이용대금명세서 상세 내역 내려받기</li>
+              <li>삼성카드: 카드 이용내역에서 파일 저장</li>
+              <li>우리은행: 카드/계좌 거래내역 조회 후 다운로드</li>
             </ul>
+            <p className="upload-dialog__guide-note">
+              엑셀은 .xlsx 만 됩니다. .xls 로 받아졌다면 CSV 로 저장해 주세요.
+            </p>
           </section>
 
           {errorMessage ? (
