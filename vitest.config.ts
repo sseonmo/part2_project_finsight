@@ -6,6 +6,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": new URL("./src", import.meta.url).pathname,
+      "read-excel-file": new URL(
+        "./node_modules/read-excel-file/browser/index.js",
+        import.meta.url
+      ).pathname,
     },
   },
   test: {
