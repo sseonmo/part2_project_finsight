@@ -7,12 +7,24 @@ import type { SignalForNarrative } from "@/services/openai";
 const inferColumnMappingMock = vi.hoisted(() => vi.fn());
 const classifyMerchantBatchMock = vi.hoisted(() => vi.fn());
 const describeSignalsMock = vi.hoisted(() => vi.fn());
+const createFunctionMock = vi.hoisted(() =>
+  vi.fn((config: unknown, handler: unknown) => ({ config, handler })),
+);
+const createServiceRoleClientMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/services/openai", () => ({
   CLASSIFY_BATCH_SIZE: 100,
   inferColumnMapping: inferColumnMappingMock,
   classifyMerchantBatch: classifyMerchantBatchMock,
   describeSignals: describeSignalsMock,
+}));
+
+vi.mock("@/inngest/client", () => ({
+  inngest: { createFunction: createFunctionMock },
+}));
+
+vi.mock("@/services/supabase-service-role", () => ({
+  createServiceRoleClient: createServiceRoleClientMock,
 }));
 
 vi.mock("server-only", () => ({}));
@@ -578,5 +590,98 @@ describe("process upload pipeline", () => {
       "signal-3": "문장 3",
       "signal-4": "문장 4",
     });
+  });
+});
+
+type RecordedUpdate = {
+  table: string;
+  id: string;
+  patch: Record<string, unknown>;
+};
+
+/** service role 클라이언트가 실제로 쓴 UPDATE 만 기록하는 최소 스텁. */
+function createUpdateRecorder() {
+  const updates: RecordedUpdate[] = [];
+
+  return {
+    updates,
+    client: {
+      from(table: string) {
+        return {
+          update(patch: Record<string, unknown>) {
+            return {
+              async eq(_column: string, id: string) {
+                updates.push({ table, id, patch });
+                return { error: null };
+              },
+            };
+          },
+        };
+      },
+    },
+  };
+}
+
+type FailureHandler = (args: {
+  event: {
+    name: string;
+    data: {
+      function_id: string;
+      run_id: string;
+      error: { name: string; message: string };
+      event: { name: string; data: { uploadId: string; userId: string } };
+    };
+  };
+}) => Promise<void>;
+
+function failureHandlerOf(fn: unknown): FailureHandler {
+  const { config } = fn as { config: { onFailure?: FailureHandler } };
+
+  if (!config.onFailure) {
+    throw new Error("processUpload 에 onFailure 핸들러가 없다.");
+  }
+
+  return config.onFailure;
+}
+
+describe("process upload failure handling", () => {
+  afterEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  it("marks the job failed when the run gives up, so the progress card stops polling", async () => {
+    const recorder = createUpdateRecorder();
+    createServiceRoleClientMock.mockReturnValue(recorder.client);
+
+    const { processUpload, UPLOAD_RUN_FAILURE_REASON } = await import(
+      "./process-upload"
+    );
+
+    await failureHandlerOf(processUpload)({
+      event: {
+        name: "inngest/function.failed",
+        data: {
+          function_id: "finsight-process-upload",
+          run_id: "run-1",
+          error: {
+            name: "Error",
+            message: "401 Incorrect API key provided",
+          },
+          event: {
+            name: "csv.upload_requested",
+            data: { uploadId: "job-1", userId: "user-1" },
+          },
+        },
+      },
+    });
+
+    expect(recorder.updates).toEqual([
+      {
+        table: "upload_jobs",
+        id: "job-1",
+        patch: { status: "failed", failed_reason: UPLOAD_RUN_FAILURE_REASON },
+      },
+    ]);
   });
 });

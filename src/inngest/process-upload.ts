@@ -49,6 +49,10 @@ export const MAX_MANUAL_MAPPING_ATTEMPTS = 3;
 const CLASSIFICATION_RETRY_ATTEMPTS = 3;
 // 배치가 빌 때까지 도는 루프의 안전 상한. 20,000 고유 가맹점까지 받는다.
 const MAX_CLASSIFICATION_BATCHES = 200;
+// 재시도까지 소진하고 실행이 끝났을 때 남기는 사유. 원인은 사용자가 손댈 수 없는
+// 서버 쪽이라 화면에는 다시 시도만 권한다.
+export const UPLOAD_RUN_FAILURE_REASON =
+  "업로드 처리 중 문제가 생겨 중단했습니다. 잠시 후 다시 시도해주세요.";
 
 type UploadStatus =
   Database["public"]["Enums"]["upload_job_status"];
@@ -1078,6 +1082,16 @@ export const processUpload = inngest.createFunction(
       { event: "csv.upload_requested" },
       { event: "csv.mapping_confirmed" },
     ],
+    // 실행이 재시도까지 소진하고 끝나면 job 은 parsing 에 남는다. 그 상태는
+    // 터미널이 아니라 진행 카드가 2초마다 영원히 폴링한다. 여기서 마감한다.
+    onFailure: async ({ event }) => {
+      const { uploadId } = event.data.event.data as ProcessUploadEvent;
+
+      await createSupabaseUploadRepository(createServiceRoleClient()).updateJob(
+        uploadId,
+        { status: "failed", failedReason: UPLOAD_RUN_FAILURE_REASON },
+      );
+    },
   },
   async ({ event, step }) => {
     await runProcessUploadPipeline({
