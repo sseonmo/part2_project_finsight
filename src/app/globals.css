@@ -659,6 +659,12 @@ a:hover {
   padding-left: var(--space-lg);
 }
 
+.upload-dialog__guide-note {
+  color: var(--text-muted);
+  font-size: var(--font-size-body-sm);
+  margin: 0;
+}
+
 .upload-dialog__error {
   background: color-mix(in srgb, var(--brand-red-dark) 10%, var(--canvas));
   color: var(--brand-red-dark);
