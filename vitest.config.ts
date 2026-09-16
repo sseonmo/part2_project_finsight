@@ -10,7 +10,11 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
-    include: ["src/**/*.test.{ts,tsx}", "supabase/**/*.test.ts"],
+    include: [
+      "src/**/*.test.{ts,tsx}",
+      "supabase/**/*.test.ts",
+      ".claude/workflows/**/*.test.js",
+    ],
     setupFiles: ["./test/setup.ts"],
   },
 });
