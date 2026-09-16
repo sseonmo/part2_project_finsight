@@ -366,7 +366,8 @@ describe('review-code 워크플로 — 검증 판정', () => {
     expect(kept.original_severity).toBe('major')
   })
 
-  it('확인한 검증자끼리 등급이 갈리면 더 무거운 쪽을 따른다', async () => {
+  it('확인한 검증자 과반이 내리면 한 명이 반대해도 내린다', async () => {
+    // 한 명의 반대로 하향이 막히면 과반 원칙과 어긋난다.
     const { result } = await run({
       agentImpl: scenario([finding({ severity: 'critical' })], (_, vote) =>
         vote === 0 ? confirm('major') : confirm('minor')
@@ -374,8 +375,44 @@ describe('review-code 워크플로 — 검증 판정', () => {
     })
 
     const [kept] = dim(result, 'security').findings
+    expect(kept.severity).toBe('minor')
+    expect(kept.original_severity).toBe('critical')
+  })
+
+  it('확인한 검증자 셋의 등급이 모두 다르면 가운데를 따른다', async () => {
+    const { result } = await run({
+      agentImpl: scenario([finding({ severity: 'critical' })], (_, vote) =>
+        confirm(['critical', 'major', 'minor'][vote])
+      ),
+    })
+
+    const [kept] = dim(result, 'security').findings
     expect(kept.severity).toBe('major')
     expect(kept.original_severity).toBe('critical')
+  })
+
+  it('확인한 검증자가 둘뿐이고 등급이 갈리면 무거운 쪽을 따른다', async () => {
+    const { result } = await run({
+      agentImpl: scenario([finding({ severity: 'major' })], (_, vote) =>
+        [confirm('major'), confirm('minor'), refute('major')][vote]
+      ),
+    })
+
+    const [kept] = dim(result, 'security').findings
+    expect(kept.severity).toBe('major')
+    expect(kept).not.toHaveProperty('original_severity')
+  })
+
+  it('올려 매긴 표는 원래 등급으로 잘린 뒤 과반에 들어간다', async () => {
+    const { result } = await run({
+      agentImpl: scenario([finding({ severity: 'major' })], (_, vote) =>
+        confirm(['critical', 'critical', 'minor'][vote])
+      ),
+    })
+
+    const [kept] = dim(result, 'security').findings
+    expect(kept.severity).toBe('major')
+    expect(kept).not.toHaveProperty('original_severity')
   })
 
   it('검증자는 심각도를 올릴 수 없다', async () => {
