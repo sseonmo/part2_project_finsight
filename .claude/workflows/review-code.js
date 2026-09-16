@@ -262,14 +262,15 @@ function bySeverity(x, y) {
   return SEVERITY_RANK[x.severity] - SEVERITY_RANK[y.severity]
 }
 
-// 검증자는 등급을 내릴 수만 있다. 확인한 검증자끼리 갈리면 더 무거운 쪽을 따른다.
+// 검증자는 등급을 내릴 수만 있다. 원래 등급보다 무겁게 매긴 표는 원래 등급으로 자른다.
+// 등급은 확인한 검증자의 과반(동률이면 절반)이 지지하는 가장 무거운 등급이다.
+// 셋이면 가운데 값이고, 한 명의 반대로 과반의 하향이 막히지 않는다.
 function settleSeverity(original, confirmations) {
-  let best = null
-  for (const c of confirmations) {
-    const s = SEVERITY_RANK[c.severity] < SEVERITY_RANK[original] ? original : c.severity
-    if (best === null || SEVERITY_RANK[s] < SEVERITY_RANK[best]) best = s
-  }
-  return best === null ? original : best
+  const clamped = confirmations
+    .map((c) => (SEVERITY_RANK[c.severity] < SEVERITY_RANK[original] ? original : c.severity))
+    .sort((x, y) => SEVERITY_RANK[x] - SEVERITY_RANK[y])
+  if (clamped.length === 0) return original
+  return clamped[Math.ceil(clamped.length / 2) - 1]
 }
 
 async function verifyFinding(f, d, j) {
