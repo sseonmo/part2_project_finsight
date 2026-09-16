@@ -61,11 +61,84 @@ describe("Supabase schema guardrails", () => {
         ),
       );
 
-      for (const action of ["select", "insert", "update", "delete"]) {
+      // profiles 의 쓰기는 아래 전용 테스트가 본다. 결제 컬럼을 사용자에게 열면 안 된다.
+      const actions =
+        tableName === "profiles"
+          ? ["select"]
+          : ["select", "insert", "update", "delete"];
+
+      for (const action of actions) {
         expectOwnPolicy(tableName, action);
       }
     },
   );
+
+  describe("profiles billing columns", () => {
+    // 여러 마이그레이션을 이어 붙인 SQL 에서, 마지막에 남는 상태를 본다.
+    function lastIndexOf(pattern: string): number {
+      const matches = [...migrationSql.matchAll(new RegExp(pattern, "gi"))];
+      return matches.length ? matches[matches.length - 1].index : -1;
+    }
+
+    function lastCreatePolicy(name: string): string {
+      const matches = [
+        ...migrationSql.matchAll(
+          new RegExp(`create\\s+policy\\s+${name}\\b[\\s\\S]*?;`, "gi"),
+        ),
+      ];
+      return matches.length
+        ? matches[matches.length - 1][0].replace(/\s+/g, " ")
+        : "";
+    }
+
+    it.each(["profiles_update_own", "profiles_delete_own"])(
+      "drops %s so users cannot rewrite or recreate their subscription",
+      (policy) => {
+        // 사용자가 PATCH /rest/v1/profiles 로 subscription_status 를 active 로 바꾸거나,
+        // 행을 지운 뒤 다시 넣어 체험을 되돌리면 결제 없이 권한이 켜진다.
+        const created = lastIndexOf(`create\\s+policy\\s+${policy}\\b`);
+        const dropped = lastIndexOf(
+          `drop\\s+policy\\s+(?:if\\s+exists\\s+)?${policy}\\s+on\\s+(?:public\\.)?profiles`,
+        );
+
+        expect(dropped).toBeGreaterThan(created);
+      },
+    );
+
+    it("revokes update and delete on profiles from client roles", () => {
+      const revoke = [
+        ...migrationSql.matchAll(
+          /revoke\s+([^;]+?)\s+on\s+(?:table\s+)?(?:public\.)?profiles\s+from\s+([^;]+);/gi,
+        ),
+      ].map((m) => ({ privileges: m[1], roles: m[2] }));
+
+      const covers = (privilege: string, role: string) =>
+        revoke.some(
+          (r) =>
+            new RegExp(`\\b${privilege}\\b`, "i").test(r.privileges) &&
+            new RegExp(`\\b${role}\\b`, "i").test(r.roles),
+        );
+
+      for (const role of ["anon", "authenticated"]) {
+        expect(covers("update", role)).toBe(true);
+        expect(covers("delete", role)).toBe(true);
+      }
+    });
+
+    it("lets users insert only their own fresh trial row", () => {
+      // 로그인 콜백의 upsert(ignoreDuplicates) 는 INSERT 만 쓴다. 그 한 가지 모양만 허용한다.
+      const policy = lastCreatePolicy("profiles_insert_own");
+
+      expect(policy).toMatch(/for\s+insert/i);
+      expect(policy).toMatch(/to\s+authenticated/i);
+      expect(policy).toMatch(/user_id\s*=\s*auth\.uid\s*\(\s*\)/i);
+      expect(policy).toMatch(/subscription_status\s*=\s*'trialing'/i);
+      expect(policy).toMatch(/polar_customer_id\s+is\s+null/i);
+      expect(policy).toMatch(/current_period_end\s+is\s+null/i);
+      // 체험 시작 시각을 미래로 넣어 체험을 늘리지 못하게 한다.
+      expect(policy).toMatch(/trial_started_at\s*<=\s*now\s*\(\s*\)/i);
+    });
+  });
 
   it("keeps merchant_categories as a global merchant/category cache only", () => {
     const body = tableBody("merchant_categories");
