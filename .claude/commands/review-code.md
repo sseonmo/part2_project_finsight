@@ -137,13 +137,22 @@ critical / major 목록에서 미검증 항목은 끝에 `(미검증)` 을 붙�
 `--comment` 가 있으면:
 
 ```bash
-gh pr view --json number,url                        # 현재 브랜치의 PR
+gh pr view --json number,url,headRefOid             # 현재 브랜치의 PR 과 원격 head 커밋
 gh repo view --json nameWithOwner -q .nameWithOwner  # owner/repo
+git rev-parse HEAD                                   # 로컬 HEAD
+git status --porcelain                               # uncommitted 변경
 ```
 
 **PR 이 없으면** 터미널 출력만 하고 `PR 이 없어 게시를 건너뜁니다` 를 알린 뒤 끝낸다. 리뷰하려고 PR 을 새로 만들지 않는다.
 
-**PR 이 있으면** 인라인과 요약을 **리뷰 1개로 묶어** 게시한다. 코멘트가 흩어지지 않게 한 번에 보낸다.
+**PR 이 있으면** 먼저 **인라인 앵커 전제**를 확인한다. 리뷰어가 매긴 `line`·`in_diff` 는 로컬 작업 트리 기준이고, GitHub 은 `commit_id` 의 파일 기준으로 줄을 잡는다. 둘이 다르면 코멘트가 엉뚱한 줄에 **조용히** 붙는다.
+
+- 로컬 HEAD 가 `headRefOid` 와 다르다 (push 하지 않은 커밋이 있거나 원격이 앞서 있다)
+- `git status --porcelain` 출력이 비어 있지 않다 (uncommitted 변경이 있다)
+
+하나라도 해당하면 `comments` 를 비우고 모든 발견을 "위치 밖 발견"으로 보낸다. 요약 첫 줄 아래에 `⚠ 로컬과 PR head 가 달라 인라인을 생략했다` 를 적는다.
+
+그다음 인라인과 요약을 **리뷰 1개로 묶어** 게시한다. 코멘트가 흩어지지 않게 한 번에 보낸다.
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/{number}/reviews --method POST --input <payload.json>
@@ -152,6 +161,7 @@ gh api repos/{owner}/{repo}/pulls/{number}/reviews --method POST --input <payloa
 payload:
 ```json
 {
+  "commit_id": "<headRefOid>",
   "event": "COMMENT",
   "body": "<층 2 요약>",
   "comments": [
@@ -160,7 +170,7 @@ payload:
 }
 ```
 
-### 게시 규칙 3가지
+### 게시 규칙 4가지
 
 1. **`event` 는 항상 `COMMENT`** 로 보낸다. GitHub 은 자기 PR 에 `APPROVE`/`REQUEST_CHANGES` 를 허용하지 않아 422 로 거절한다. 판정은 요약 본문 첫 줄(`판정: …`)에 텍스트로 남으므로 정보는 잃지 않는다.
 2. **`in_diff: false` 인 발견은 `comments` 에 넣지 않는다.** GitHub 은 diff 에 포함된 줄에만 인라인 코멘트를 허용한다. 이 발견들은 요약 하단에 이렇게 모은다:
@@ -168,7 +178,8 @@ payload:
    ## 위치 밖 발견 (인라인 불가)
    - 🟠 src/lib/entitlement.ts:15 — subscription_status 를 직접 비교한다
    ```
-3. **422 로 실패하면 재시도한다.** `comments` 를 빼고 `body` 만으로 다시 게시하고, 인라인으로 못 붙인 발견 전부를 "위치 밖 발견"에 합친다. 게시 자체를 포기하지 않는다.
+3. **`commit_id` 는 항상 `headRefOid` 로 채운다.** 비우면 GitHub 이 게시 시점의 최신 커밋을 쓰므로, 리뷰 도중 누가 push 하면 줄이 어긋난다.
+4. **422 로 실패하면 재시도한다.** `comments` 를 빼고 `body` 만으로 다시 게시하고, 인라인으로 못 붙인 발견 전부를 "위치 밖 발견"에 합친다. 게시 자체를 포기하지 않는다.
 
 게시가 끝나면 PR URL 을 출력한다.
 
