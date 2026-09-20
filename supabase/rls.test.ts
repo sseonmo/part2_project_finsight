@@ -40,6 +40,13 @@ function expectOwnPolicy(tableName: string, action: string): void {
   expect(migrationSql).toMatch(new RegExp(policyPattern, "i"));
 }
 
+// 쓰기 권한을 회수한 테이블과, 그 테이블에 남는 소유자 정책.
+const REVOKED_WRITE_ACTIONS: Record<string, string[]> = {
+  profiles: ["select"],
+  upload_jobs: ["select", "insert", "delete"],
+  transactions: ["select", "insert"],
+};
+
 describe("Supabase schema guardrails", () => {
   const userDataTables = [
     "profiles",
@@ -61,11 +68,14 @@ describe("Supabase schema guardrails", () => {
         ),
       );
 
-      // profiles 의 쓰기는 아래 전용 테스트가 본다. 결제 컬럼을 사용자에게 열면 안 된다.
-      const actions =
-        tableName === "profiles"
-          ? ["select"]
-          : ["select", "insert", "update", "delete"];
+      // 쓰기 권한을 회수한 테이블은 아래 전용 테스트가 본다. 사용자가 직접 쓰면
+      // 권한 판정(profiles)이나 파이프라인 상태(upload_jobs·transactions)가 흔들린다.
+      const actions = REVOKED_WRITE_ACTIONS[tableName] ?? [
+        "select",
+        "insert",
+        "update",
+        "delete",
+      ];
 
       for (const action of actions) {
         expectOwnPolicy(tableName, action);
@@ -73,22 +83,46 @@ describe("Supabase schema guardrails", () => {
     },
   );
 
-  describe("profiles billing columns", () => {
-    // 여러 마이그레이션을 이어 붙인 SQL 에서, 마지막에 남는 상태를 본다.
-    function lastIndexOf(pattern: string): number {
-      const matches = [...migrationSql.matchAll(new RegExp(pattern, "gi"))];
-      return matches.at(-1)?.index ?? -1;
-    }
+  // 여러 마이그레이션을 이어 붙인 SQL 에서, 마지막에 남는 상태를 본다.
+  function lastIndexOf(pattern: string): number {
+    const matches = [...migrationSql.matchAll(new RegExp(pattern, "gi"))];
+    return matches.at(-1)?.index ?? -1;
+  }
 
-    function lastCreatePolicy(name: string): string {
-      const matches = [
-        ...migrationSql.matchAll(
-          new RegExp(`create\\s+policy\\s+${name}\\b[\\s\\S]*?;`, "gi"),
+  function lastCreatePolicy(name: string): string {
+    const matches = [
+      ...migrationSql.matchAll(
+        new RegExp(`create\\s+policy\\s+${name}\\b[\\s\\S]*?;`, "gi"),
+      ),
+    ];
+    return matches.at(-1)?.[0].replace(/\s+/g, " ") ?? "";
+  }
+
+  function revokesFromClientRoles(
+    tableName: string,
+    privileges: string[],
+  ): boolean {
+    const revoke = [
+      ...migrationSql.matchAll(
+        new RegExp(
+          `revoke\\s+([^;]+?)\\s+on\\s+(?:table\\s+)?(?:public\\.)?${tableName}\\s+from\\s+([^;]+);`,
+          "gi",
         ),
-      ];
-      return matches.at(-1)?.[0].replace(/\s+/g, " ") ?? "";
-    }
+      ),
+    ].map((m) => ({ privileges: m[1] ?? "", roles: m[2] ?? "" }));
 
+    return privileges.every((privilege) =>
+      ["anon", "authenticated"].every((role) =>
+        revoke.some(
+          (r) =>
+            new RegExp(`\\b${privilege}\\b`, "i").test(r.privileges) &&
+            new RegExp(`\\b${role}\\b`, "i").test(r.roles),
+        ),
+      ),
+    );
+  }
+
+  describe("profiles billing columns", () => {
     it.each(["profiles_update_own", "profiles_delete_own"])(
       "drops %s so users cannot rewrite or recreate their subscription",
       (policy) => {
@@ -204,5 +238,53 @@ describe("Supabase schema guardrails", () => {
         ?.map((value) => value.slice(1, -1)) ?? [];
 
     expect(enumValues).toEqual([...CATEGORIES]);
+  });
+
+  describe("upload pipeline columns", () => {
+    // upload_jobs.status 와 mapping_attempt_count 는 파이프라인 상태 머신이고,
+    // transactions.category 는 분류 결과다. 사용자가 PostgREST 로 이 컬럼을
+    // 되돌리면 수동 매핑 3회 상한이 무력화되고 분류 LLM 이 반복 실행된다.
+    // 쓰는 쪽은 전부 서버(라우트 핸들러·워커)의 service role 이다.
+    it.each(["upload_jobs_update_own", "transactions_update_own"])(
+      "drops %s so users cannot rewind pipeline state",
+      (policy) => {
+        const table = policy.startsWith("upload_jobs")
+          ? "upload_jobs"
+          : "transactions";
+        const created = lastIndexOf(`create\\s+policy\\s+${policy}\\b`);
+        const dropped = lastIndexOf(
+          `drop\\s+policy\\s+(?:if\\s+exists\\s+)?${policy}\\s+on\\s+(?:public\\.)?${table}`,
+        );
+
+        expect(dropped).toBeGreaterThan(created);
+      },
+    );
+
+    it("drops transactions_delete_own so rows cannot be removed behind the aggregates", () => {
+      const created = lastIndexOf("create\\s+policy\\s+transactions_delete_own\\b");
+      const dropped = lastIndexOf(
+        "drop\\s+policy\\s+(?:if\\s+exists\\s+)?transactions_delete_own\\s+on\\s+(?:public\\.)?transactions",
+      );
+
+      expect(dropped).toBeGreaterThan(created);
+    });
+
+    it("revokes update on upload_jobs from client roles", () => {
+      expect(revokesFromClientRoles("upload_jobs", ["update"])).toBe(true);
+    });
+
+    it("revokes update and delete on transactions from client roles", () => {
+      expect(revokesFromClientRoles("transactions", ["update", "delete"])).toBe(
+        true,
+      );
+    });
+
+    it("keeps the reads and the rows users still own", () => {
+      // 조회는 계속 RLS 가 막아 주고, 업로드 삭제(cascade 로 거래도 지워진다)는
+      // 사용자 경로로 남는다. 상세 조회 화면과 업로드 삭제가 여기에 달려 있다.
+      expectOwnPolicy("upload_jobs", "select");
+      expectOwnPolicy("upload_jobs", "delete");
+      expectOwnPolicy("transactions", "select");
+    });
   });
 });
