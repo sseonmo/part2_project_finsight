@@ -29,6 +29,7 @@ import {
   fetchPeriodTransactions,
   fetchSeenMerchantsBeforePeriod,
 } from "@/lib/signals/queries";
+import { isOwnedStorageKey } from "@/lib/storage/owned-key";
 import {
   CLASSIFY_BATCH_SIZE,
   classifyMerchantBatch,
@@ -264,6 +265,12 @@ function normalizeRows(rows: readonly ParsedRow[]): ParsedRow[] {
 }
 
 async function loadParsedCsv(repository: UploadPipelineRepository, job: UploadJob) {
+  // storage_key 는 upload_jobs 행에 든 사용자 입력이고 워커는 service role 로
+  // 읽으므로 Storage RLS 가 막아주지 않는다. 남의 폴더를 가리키면 읽지 않는다.
+  if (!isOwnedStorageKey(job.storageKey, job.userId)) {
+    throw new Error("CSV 원본 파일을 읽지 못했습니다.");
+  }
+
   return parseStoredFile(await repository.downloadFile(job.storageKey));
 }
 

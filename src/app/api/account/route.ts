@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getSessionContext } from "@/lib/session";
+import { isOwnedStorageKey } from "@/lib/storage/owned-key";
 import { createServerClient } from "@/services/supabase";
 import { createServiceRoleClient } from "@/services/supabase-service-role";
 
@@ -115,7 +116,11 @@ export async function DELETE(request: Request) {
   try {
     storageKeys = [
       ...new Set([
-        ...(jobs ?? []).map((job) => job.storage_key),
+        // storage_key 는 사용자가 upload_jobs 행에 직접 넣을 수 있고 여기서는
+        // service role 로 지운다. 남의 폴더를 가리키는 값은 버린다.
+        ...(jobs ?? [])
+          .map((job) => job.storage_key)
+          .filter((key) => isOwnedStorageKey(key, userId)),
         ...(await listKeysUnder(bucket, userId)),
       ]),
     ];

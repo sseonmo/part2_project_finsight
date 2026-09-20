@@ -262,6 +262,17 @@ describe("process upload pipeline", () => {
     vi.clearAllMocks();
   });
 
+  it("does not download a storage key pointing outside the job owner's folder", async () => {
+    const repository = createRepository({
+      job: makeJob({ mapping: MAPPING, storageKey: "victim/job-9/server.csv" }),
+    });
+    const downloadFile = vi.spyOn(repository, "downloadFile");
+
+    await expect(runWithRepository(repository)).rejects.toThrow();
+
+    expect(downloadFile).not.toHaveBeenCalled();
+  });
+
   it("does not increase inserted_count when the same file is processed twice", async () => {
     classifyMerchantBatchMock.mockResolvedValue({});
     describeSignalsMock.mockResolvedValue({});

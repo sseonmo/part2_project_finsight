@@ -117,6 +117,25 @@ describe("GET /api/uploads/[id]/preview", () => {
     expect(storage.download).not.toHaveBeenCalled();
   });
 
+  it("refuses to read a storage key that points outside the owner's folder", async () => {
+    createSessionClientMock({
+      id: "job-1",
+      status: "needs_mapping",
+      storage_key: "victim/job-9/server.csv",
+      mapping_attempt_count: 0,
+    });
+    const storage = createServiceRoleStorageMock(createCsv(12));
+    const { GET } = await import("./route");
+
+    const response = await GET(
+      new Request("https://finsight.test"),
+      createRouteContext(),
+    );
+
+    expect(response.status).toBe(404);
+    expect(storage.download).not.toHaveBeenCalled();
+  });
+
   it("returns the CSV header, at most 10 preview rows, and attempt counts", async () => {
     createSessionClientMock({
       id: "job-1",

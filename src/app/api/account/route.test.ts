@@ -175,6 +175,24 @@ describe("DELETE /api/account", () => {
     ]);
   });
 
+  it("never removes a storage key pointing outside the caller's folder", async () => {
+    mockSession();
+    const clients = mockClients({
+      storageKeys: ["user-1/job-1/a.csv", "victim/job-9/secret.csv"],
+      tree: {
+        "user-1": [{ id: null, name: "job-1" }],
+        "user-1/job-1": [{ id: "file-1", name: "a.csv" }],
+      },
+    });
+    const { DELETE } = await import("./route");
+
+    await DELETE(deleteRequest({ confirmation: "계정 삭제" }));
+
+    const [removedKeys] = clients.remove.mock.calls[0] as unknown as [string[]];
+
+    expect(removedKeys).toEqual(["user-1/job-1/a.csv"]);
+  });
+
   it("stops before deleting the auth user when Storage removal fails", async () => {
     mockSession();
     const clients = mockClients({

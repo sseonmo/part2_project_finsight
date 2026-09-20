@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { decodeCsv } from "@/lib/csv/encoding";
 import { parseCsv } from "@/lib/csv/parse";
+import { isOwnedStorageKey } from "@/lib/storage/owned-key";
 import { createServerClient } from "@/services/supabase";
 import { createServiceRoleClient } from "@/services/supabase-service-role";
 
@@ -44,6 +45,12 @@ export async function GET(_request: Request, context: RouteContext) {
 
   if (job.status !== "needs_mapping") {
     return jsonError("수동 매핑이 필요한 업로드가 아닙니다.", 409);
+  }
+
+  // 행 소유자는 위에서 확인했지만 storage_key 값 자체는 사용자가 넣을 수 있다.
+  // service role 은 Storage RLS 를 우회하므로 여기서 한 번 더 막는다.
+  if (!isOwnedStorageKey(job.storage_key, user.id)) {
+    return jsonError("업로드 작업을 찾을 수 없습니다.", 404);
   }
 
   // 이 경로에는 entitlement 쓰기 게이트를 걸지 않는다. 이미 signed-url/start
