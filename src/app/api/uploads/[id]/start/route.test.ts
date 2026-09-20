@@ -20,6 +20,8 @@ vi.mock("@/inngest/client", () => ({
 
 function createSupabaseMock(input: {
   job: { id: string; status: string } | null;
+  /** 클레임 UPDATE 가 잡은 행. null 이면 경쟁에서 진 것이다. */
+  claimed?: { id: string; status: string } | null;
   profile?: {
     subscription_status: "trialing" | "active" | "canceled";
     trial_started_at: string | null;
@@ -64,16 +66,32 @@ function createSupabaseMock(input: {
   // upload_jobs 의 상태 전이는 service role 로만 쓴다. 사용자 자격증명으로
   // 쓸 수 있으면 status 와 mapping_attempt_count 를 PostgREST 로 직접 되돌려
   // 파이프라인을 재실행시킬 수 있다.
-  const serviceSingle = vi.fn().mockResolvedValue({ data: job, error: null });
+  const claimed = input.claimed === undefined ? job : input.claimed;
+  const serviceSingle = vi
+    .fn()
+    .mockResolvedValue({ data: claimed, error: null });
   const serviceSelect = vi.fn(() => ({ single: serviceSingle }));
-  const serviceEqUser = vi.fn(() => ({ select: serviceSelect }));
+  const serviceEqStatus = vi.fn(() => ({ select: serviceSelect }));
+  // 롤백은 status 조건 없이 두 단계로 끝나므로 두 형태를 모두 받는다.
+  const serviceEqUser = vi.fn(() => ({
+    eq: serviceEqStatus,
+    select: serviceSelect,
+  }));
   const serviceEqId = vi.fn(() => ({ eq: serviceEqUser }));
   const serviceUpdate = vi.fn(() => ({ eq: serviceEqId }));
   const serviceFrom = vi.fn(() => ({ update: serviceUpdate }));
 
   createServiceRoleClientMock.mockReturnValue({ from: serviceFrom });
 
-  return { eqId, eqUser, serviceFrom, serviceUpdate, serviceEqId, serviceEqUser };
+  return {
+    eqId,
+    eqUser,
+    serviceFrom,
+    serviceUpdate,
+    serviceEqId,
+    serviceEqUser,
+    serviceEqStatus,
+  };
 }
 
 describe("POST /api/uploads/[id]/start", () => {
@@ -154,6 +172,35 @@ describe("POST /api/uploads/[id]/start", () => {
     });
     expect(supabase.serviceEqId).toHaveBeenCalledWith("id", "job-1");
     expect(supabase.serviceEqUser).toHaveBeenCalledWith("user_id", "user-1");
+  });
+
+  it("claims the job only while it is still pending, in the same statement", async () => {
+    const supabase = createSupabaseMock({
+      job: { id: "job-1", status: "pending" },
+    });
+    inngestSendMock.mockResolvedValue({});
+    const { POST } = await import("./route");
+
+    await POST(new Request("https://finsight.test"), {
+      params: Promise.resolve({ id: "job-1" }),
+    });
+
+    expect(supabase.serviceEqStatus).toHaveBeenCalledWith("status", "pending");
+  });
+
+  it("does not emit the event when a concurrent request already claimed the job", async () => {
+    createSupabaseMock({
+      job: { id: "job-1", status: "pending" },
+      claimed: null,
+    });
+    const { POST } = await import("./route");
+
+    const response = await POST(new Request("https://finsight.test"), {
+      params: Promise.resolve({ id: "job-1" }),
+    });
+
+    expect(response.status).toBe(409);
+    expect(inngestSendMock).not.toHaveBeenCalled();
   });
 
   it("rolls the job back with the service role when the event cannot be sent", async () => {
