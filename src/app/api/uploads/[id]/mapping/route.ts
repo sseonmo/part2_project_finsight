@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { inngest } from "@/inngest/client";
 import type { ColumnMapping } from "@/lib/csv/mapping";
 import { createServerClient } from "@/services/supabase";
+import { createServiceRoleClient } from "@/services/supabase-service-role";
 
 const MAX_MANUAL_MAPPING_ATTEMPTS = 3;
 
@@ -81,8 +82,14 @@ export async function POST(request: Request, context: RouteContext) {
   // 컬럼 추론 LLM 호출을 건너뛴다. 시도 상한 3회가 남용을 막는다. 여기를
   // 막으면 체험 만료 순간 needs_mapping 업로드가 영영 미완으로 남아 ADR-001의
   // 막다른 길이 되살아난다.
+  // 상태·시도 횟수는 service role 로 쓴다. 사용자 자격증명으로 upload_jobs 를
+  // 쓸 수 있으면 PostgREST 로 mapping_attempt_count 를 0 으로 되돌려 아래 3회
+  // 상한을 무력화하고 분류 LLM 을 반복 재실행시킬 수 있다. 위 주석이 전제하는
+  // "시도 상한 3회가 남용을 막는다"는 그때 비로소 성립한다.
+  const serviceRole = createServiceRoleClient();
+
   if (job.mapping_attempt_count >= MAX_MANUAL_MAPPING_ATTEMPTS) {
-    await supabase
+    await serviceRole
       .from("upload_jobs")
       .update({
         status: "failed",
@@ -103,7 +110,7 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const nextAttemptCount = job.mapping_attempt_count + 1;
-  const { error: updateError } = await supabase
+  const { error: updateError } = await serviceRole
     .from("upload_jobs")
     .update({
       status: "parsing",
@@ -126,7 +133,7 @@ export async function POST(request: Request, context: RouteContext) {
       data: { uploadId: id, userId: user.id, mapping },
     });
   } catch {
-    await supabase
+    await serviceRole
       .from("upload_jobs")
       .update({
         status: "needs_mapping",

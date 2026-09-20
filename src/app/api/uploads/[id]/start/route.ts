@@ -6,6 +6,7 @@ import {
   type SubscriptionStatus,
 } from "@/lib/entitlement";
 import { createServerClient } from "@/services/supabase";
+import { createServiceRoleClient } from "@/services/supabase-service-role";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -73,7 +74,11 @@ export async function POST(_request: Request, context: RouteContext) {
     return jsonError("이미 처리 중이거나 완료된 업로드입니다.", 409);
   }
 
-  const { data: claimed, error: claimError } = await supabase
+  // 상태 전이는 service role 로 쓴다. 사용자 자격증명으로 upload_jobs 를 쓸 수
+  // 있으면 PostgREST 로 status 와 mapping_attempt_count 를 직접 되돌려 파이프
+  // 라인을 반복 재실행시킬 수 있다. 소유자 조건은 그대로 유지한다.
+  const serviceRole = createServiceRoleClient();
+  const { data: claimed, error: claimError } = await serviceRole
     .from("upload_jobs")
     .update({ status: "parsing", failed_reason: null })
     .eq("id", id)
@@ -91,7 +96,7 @@ export async function POST(_request: Request, context: RouteContext) {
       data: { uploadId: id, userId: user.id },
     });
   } catch {
-    await supabase
+    await serviceRole
       .from("upload_jobs")
       .update({
         status: "failed",
