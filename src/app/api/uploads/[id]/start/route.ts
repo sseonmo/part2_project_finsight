@@ -77,12 +77,17 @@ export async function POST(_request: Request, context: RouteContext) {
   // 상태 전이는 service role 로 쓴다. 사용자 자격증명으로 upload_jobs 를 쓸 수
   // 있으면 PostgREST 로 status 와 mapping_attempt_count 를 직접 되돌려 파이프
   // 라인을 반복 재실행시킬 수 있다. 소유자 조건은 그대로 유지한다.
+  //
+  // status 조건은 위의 사전 검사와 중복처럼 보이지만 중복이 아니다. 검사와 쓰기
+  // 사이에 같은 job 으로 들어온 다른 요청이 끼어들면 둘 다 pending 을 보고 둘 다
+  // 이벤트를 보낸다. 조건을 UPDATE 문 안에 넣어야 한 요청만 행을 잡는다.
   const serviceRole = createServiceRoleClient();
   const { data: claimed, error: claimError } = await serviceRole
     .from("upload_jobs")
     .update({ status: "parsing", failed_reason: null })
     .eq("id", id)
     .eq("user_id", user.id)
+    .eq("status", "pending")
     .select("id")
     .single();
 
