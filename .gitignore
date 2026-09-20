@@ -20,3 +20,6 @@ phases/**/step*-output.json
 
 # local scratch (not committed)
 .local/
+
+# security scan reports (not committed)
+.security/
