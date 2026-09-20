@@ -112,6 +112,16 @@ function createSupabaseMock(input?: {
   return { from, monthlyReportUpdate, rpc, signalEqPeriod, signalEqUser };
 }
 
+const EMPTY_SUMMARY = {
+  totalExpense: 0,
+  transactionCount: 0,
+  refundTotal: 0,
+  depositTotal: 0,
+  topCategory: null,
+  topCategoryAmount: 0,
+  activeDays: 0,
+};
+
 function mockDashboardFacts(input?: {
   currentTotal?: number;
   previousCount?: number;
@@ -179,6 +189,13 @@ describe("POST /api/reports/[yearMonth]", () => {
 
   it("returns 409 and skips OpenAI when generation is already claimed", async () => {
     const supabase = createSupabaseMock({ claim: false });
+    // claim 앞에서 당월 집계만 한 번 읽는다. 큐에 더 넣으면 mockResolvedValueOnce
+    // 가 남아 다음 테스트로 새어 나간다(clearAllMocks 는 once 큐를 비우지 않는다).
+    fetchDashboardSummaryMock.mockResolvedValueOnce({
+      ...EMPTY_SUMMARY,
+      totalExpense: 520_000,
+      transactionCount: 42,
+    });
     const { POST } = await import("./route");
 
     const response = await POST(new Request("https://finsight.test"), {
@@ -241,6 +258,58 @@ describe("POST /api/reports/[yearMonth]", () => {
       previous_total_expense: 400_000,
       transaction_count: 42,
     });
+  });
+
+  it("rejects year-months outside the supported range before touching the database", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-20T00:00:00.000Z"));
+    const supabase = createSupabaseMock();
+    const { POST } = await import("./route");
+
+    for (const yearMonth of ["1000-01", "1999-12", "2026-11", "9999-12"]) {
+      const response = await POST(new Request("https://finsight.test"), {
+        params: Promise.resolve({ yearMonth }),
+      });
+
+      expect(response.status).toBe(404);
+    }
+
+    expect(fetchDashboardSummaryMock).not.toHaveBeenCalled();
+    expect(supabase.rpc).not.toHaveBeenCalled();
+    expect(describeMonthlyReportMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts the next month as the upper bound across a year boundary", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-12-20T00:00:00.000Z"));
+    createSupabaseMock();
+    fetchDashboardSummaryMock.mockResolvedValueOnce(EMPTY_SUMMARY);
+    const { POST } = await import("./route");
+
+    const response = await POST(new Request("https://finsight.test"), {
+      params: Promise.resolve({ yearMonth: "2027-01" }),
+    });
+
+    // 범위 검사는 통과했고, 거래가 없어서 422 다.
+    expect(response.status).toBe(422);
+    expect(fetchDashboardSummaryMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns 422 without claiming or calling OpenAI when the month has no transactions", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-20T00:00:00.000Z"));
+    const supabase = createSupabaseMock();
+    fetchDashboardSummaryMock.mockResolvedValueOnce(EMPTY_SUMMARY);
+    const { POST } = await import("./route");
+
+    const response = await POST(new Request("https://finsight.test"), {
+      params: Promise.resolve({ yearMonth: "2026-08" }),
+    });
+
+    expect(response.status).toBe(422);
+    // 거래가 없는 달은 monthly_reports 행조차 만들지 않는다.
+    expect(supabase.rpc).not.toHaveBeenCalled();
+    expect(describeMonthlyReportMock).not.toHaveBeenCalled();
   });
 
   it("clears generation_started_at when generation fails", async () => {
