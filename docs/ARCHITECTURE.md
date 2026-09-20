@@ -137,7 +137,7 @@ sha256(user_id | card_label | transacted_on | amount | merchant_normalized | occ
 ## 데이터 모델
 | 테이블 | 핵심 컬럼 | RLS |
 |---|---|---|
-| `profiles` | `user_id` PK, `trial_started_at`, `subscription_status`, `polar_customer_id`, `current_period_end` | 본인만 |
+| `profiles` | `user_id` PK, `trial_started_at`, `subscription_status`, `polar_customer_id`, `current_period_end` | 본인 SELECT. INSERT 는 새 체험 행 모양만, UPDATE/DELETE 는 revoke — 결제 컬럼은 Polar 웹훅(service role)만 쓴다 |
 | `upload_jobs` | `id`, `user_id`, `storage_key`, `original_filename`, `card_label` **NOT NULL**, `header_hash`, `status`, `mapping` jsonb, `failed_reason`, 완료 요약 4종(`inserted_count`, `duplicate_count`, `skipped_rows`, `uncategorized_count`) | 본인만 |
 | `transactions` | `id`, `user_id`, `upload_job_id`, `transacted_on`, `amount`, `merchant_raw`, `merchant_normalized`, `category`, `transaction_type`, `dedupe_key`. `dedupe_key` **UNIQUE** | 본인만 |
 | `merchant_categories` | `merchant_normalized` PK, `category` | **전역** — 읽기 전체 허용, 쓰기는 service role만 |
