@@ -33,14 +33,32 @@ function jsonError(message: string, status: number): NextResponse {
   return NextResponse.json({ error: message }, { status });
 }
 
-function isValidYearMonth(value: string): boolean {
+// 카드 명세서를 다루는 서비스라 2000년 이전 달은 실익이 없고, 미래는 다음
+// 달까지만 받는다. 범위가 없으면 약 10.8만 개 월이 전부 유효해져 요청 하나가
+// 그대로 LLM 호출 하나가 된다.
+const MIN_YEAR_MONTH = "2000-01";
+
+function nextYearMonth(now: Date): string {
+  const next = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
+  );
+
+  return `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function isValidYearMonth(value: string, now: Date): boolean {
   if (!/^\d{4}-\d{2}$/.test(value)) {
     return false;
   }
 
   const month = Number(value.slice(5, 7));
 
-  return month >= 1 && month <= 12;
+  if (month < 1 || month > 12) {
+    return false;
+  }
+
+  // 0 을 채운 YYYY-MM 이라 사전순 비교가 곧 시간순 비교다.
+  return value >= MIN_YEAR_MONTH && value <= nextYearMonth(now);
 }
 
 function toPeriod(yearMonth: string): string {
@@ -82,7 +100,7 @@ async function clearGenerationStartedAt(
 export async function POST(_request: Request, context: RouteContext) {
   const { yearMonth } = await context.params;
 
-  if (!isValidYearMonth(yearMonth)) {
+  if (!isValidYearMonth(yearMonth, new Date())) {
     return jsonError("월 형식이 올바르지 않습니다.", 404);
   }
 
@@ -118,6 +136,23 @@ export async function POST(_request: Request, context: RouteContext) {
     return jsonError("체험 또는 구독이 만료되어 리포트를 만들 수 없습니다.", 403);
   }
 
+  // 거래가 없는 달은 서술할 것이 없다. claim 앞에서 걸러야 monthly_reports 에
+  // 빈 행이 쌓이지 않고, 빈 달을 훑는 요청이 LLM 까지 가지 않는다.
+  let currentSummary: Awaited<ReturnType<typeof fetchDashboardSummary>>;
+
+  try {
+    currentSummary = await fetchDashboardSummary(supabase, {
+      userId: user.id,
+      period,
+    });
+  } catch {
+    return jsonError("리포트를 생성하지 못했습니다.", 500);
+  }
+
+  if (currentSummary.transactionCount === 0) {
+    return jsonError("이 달에는 거래가 없어 리포트를 만들 수 없습니다.", 422);
+  }
+
   const { data: claimed, error: claimError } = await supabase.rpc(
     "claim_monthly_report_generation",
     {
@@ -136,34 +171,28 @@ export async function POST(_request: Request, context: RouteContext) {
   }
 
   try {
-    const [
-      currentSummary,
-      previousSummary,
-      categoryBreakdown,
-      topMerchants,
-      signalsResult,
-    ] = await Promise.all([
-      fetchDashboardSummary(supabase, { userId: user.id, period }),
-      fetchDashboardSummary(supabase, {
-        userId: user.id,
-        period: previousPeriod(period),
-      }),
-      fetchDashboardCategoryBreakdown(supabase, {
-        userId: user.id,
-        period,
-      }),
-      fetchDashboardTopMerchants(supabase, {
-        userId: user.id,
-        period,
-        limit: 5,
-      }),
-      supabase
-        .from("spending_signals")
-        .select("type, payload, impact")
-        .eq("user_id", user.id)
-        .eq("period", period)
-        .order("impact", { ascending: false, nullsFirst: false }),
-    ]);
+    const [previousSummary, categoryBreakdown, topMerchants, signalsResult] =
+      await Promise.all([
+        fetchDashboardSummary(supabase, {
+          userId: user.id,
+          period: previousPeriod(period),
+        }),
+        fetchDashboardCategoryBreakdown(supabase, {
+          userId: user.id,
+          period,
+        }),
+        fetchDashboardTopMerchants(supabase, {
+          userId: user.id,
+          period,
+          limit: 5,
+        }),
+        supabase
+          .from("spending_signals")
+          .select("type, payload, impact")
+          .eq("user_id", user.id)
+          .eq("period", period)
+          .order("impact", { ascending: false, nullsFirst: false }),
+      ]);
 
     if (signalsResult.error) {
       throw new Error(signalsResult.error.message);
