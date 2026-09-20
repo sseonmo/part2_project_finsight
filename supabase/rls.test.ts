@@ -77,7 +77,7 @@ describe("Supabase schema guardrails", () => {
     // 여러 마이그레이션을 이어 붙인 SQL 에서, 마지막에 남는 상태를 본다.
     function lastIndexOf(pattern: string): number {
       const matches = [...migrationSql.matchAll(new RegExp(pattern, "gi"))];
-      return matches.length ? matches[matches.length - 1].index : -1;
+      return matches.at(-1)?.index ?? -1;
     }
 
     function lastCreatePolicy(name: string): string {
@@ -86,9 +86,7 @@ describe("Supabase schema guardrails", () => {
           new RegExp(`create\\s+policy\\s+${name}\\b[\\s\\S]*?;`, "gi"),
         ),
       ];
-      return matches.length
-        ? matches[matches.length - 1][0].replace(/\s+/g, " ")
-        : "";
+      return matches.at(-1)?.[0].replace(/\s+/g, " ") ?? "";
     }
 
     it.each(["profiles_update_own", "profiles_delete_own"])(
@@ -110,7 +108,7 @@ describe("Supabase schema guardrails", () => {
         ...migrationSql.matchAll(
           /revoke\s+([^;]+?)\s+on\s+(?:table\s+)?(?:public\.)?profiles\s+from\s+([^;]+);/gi,
         ),
-      ].map((m) => ({ privileges: m[1], roles: m[2] }));
+      ].map((m) => ({ privileges: m[1] ?? "", roles: m[2] ?? "" }));
 
       const covers = (privilege: string, role: string) =>
         revoke.some(
@@ -135,8 +133,10 @@ describe("Supabase schema guardrails", () => {
       expect(policy).toMatch(/subscription_status\s*=\s*'trialing'/i);
       expect(policy).toMatch(/polar_customer_id\s+is\s+null/i);
       expect(policy).toMatch(/current_period_end\s+is\s+null/i);
-      // 체험 시작 시각을 미래로 넣어 체험을 늘리지 못하게 한다.
-      expect(policy).toMatch(/trial_started_at\s*<=\s*now\s*\(\s*\)/i);
+      // 체험 시작 시각을 미래로 넣어 체험을 늘리지 못하게 한다. 허용 폭은 1분까지다.
+      expect(policy).toMatch(
+        /trial_started_at\s*<=\s*now\s*\(\s*\)\s*(?:\+\s*interval\s*'1\s+minutes?'\s*)?(?:\)|and\b)/i,
+      );
     });
   });
 
