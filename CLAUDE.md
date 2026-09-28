@@ -26,6 +26,7 @@ CSV 거래내역·카드명세서를 업로드하면 자동으로 분류해 지�
 - 모델명은 `src/services/openai.ts` 상수에만 두고 호출 지점에 문자열로 박지 말 것. **세 호출을 한 모델로 통일하지 말 것** — 분류는 비용 지배적이라 최저가(`luna`), 컬럼 매핑은 틀리면 거래가 통째로 엉뚱한 달로 가고 그 오답이 개인 캐시에 굳으므로 상위(`terra`)다 (ADR-008)
 - 모든 사용자 데이터 테이블에 RLS를 걸 것 (`user_id = auth.uid()`)
 - 컴포넌트는 `src/components/`, 타입은 `src/types/`, 외부 API 래퍼는 `src/services/`, 순수 로직은 `src/lib/` 에 분리할 것
+- 데이터 흐름·모듈 관계는 `docs/ARCHITECTURE.md`, 결정 근거는 `docs/ADR.md`(ADR-NNN), 알려진 문제는 `docs/KNOWN_ISSUES.md` 를 먼저 볼 것
 
 ## 개발 프로세스
 - CRITICAL: 새 기능 구현 시 반드시 테스트를 먼저 작성하고, 테스트가 통과하는 구현을 작성할 것 (TDD)
@@ -37,6 +38,7 @@ npm run dev      # 개발 서버
 npm run build    # 프로덕션 빌드
 npm run lint     # ESLint
 npm run test     # 테스트
+npx vitest run <path>  # 파일 하나만 (Stop 훅이 매 턴 lint+build+test 전체를 돌리므로 반복 중엔 이걸 쓸 것)
 npx vercel       # preview 배포 (커밋 없이 확인할 때)
 npx vercel --prod # production 배포
 

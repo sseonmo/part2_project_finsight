@@ -40,7 +40,12 @@ npm run test     # 테스트
 npx vercel       # preview 배포 (커밋 없이 확인할 때)
 npx vercel --prod # production 배포
 
+npx supabase db push --dry-run   # 원격에 안 올라간 마이그레이션 목록
+npx supabase db push --yes       # 원격 스키마 적용
+
 배포는 GitHub push로 자동 실행된다(`main` → production, 브랜치 → preview). 위 CLI는 커밋 없이 확인할 때만 쓴다.
+
+- CRITICAL: **배포되는 것은 코드뿐이고 스키마는 자동으로 따라가지 않는다.** 마이그레이션이 든 커밋을 push 하기 전에 `npx supabase db push --yes` 로 원격에 먼저 적용할 것. (CLAUDE.md 와 같은 규칙. `execute.py --push` 는 Claude 의 push 프리플라이트 훅을 거치지 않는다)
 
 ## Harness (step 실행기)
 
@@ -64,4 +69,4 @@ python3 scripts/execute.py <phase-dir> --push   # 완료 후 브랜치 push
 python3 -m pytest scripts/          # harness·hook (Python)
 node --test scripts/hooks/*.test.mjs  # TDD Guard 어댑터 (Node)
 
-`package.json` 이 생기기 전까지는 위 두 명령을 직접 쓴다.
+앱 테스트는 `npm run test`, harness·hook 테스트는 위 두 명령.
