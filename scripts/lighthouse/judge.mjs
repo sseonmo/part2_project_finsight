@@ -76,7 +76,7 @@ export function decide(best, candidates) {
   return { winner: winner ? winner.id : null, results }
 }
 
-const FAILED = new Set(['discard', 'crash', 'scope'])
+const FAILED = new Set(['discard', 'crash', 'scope', 'visual'])
 
 // keep 된 audit 도 다시 고른다. 가장 큰 진단은 한 번의 최소 변경으로 다 해소되지 않는다.
 export function pickHypotheses(opportunities, history, n = THRESHOLDS.CANDIDATES) {

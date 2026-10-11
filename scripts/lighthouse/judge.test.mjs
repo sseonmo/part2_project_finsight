@@ -64,6 +64,16 @@ describe('guardDrops', () => {
 })
 
 describe('decide', () => {
+  test('visual 후보는 측정값 없이 탈락하고, 다른 후보가 keep 돼도 outcompeted 로 바뀌지 않는다', () => {
+    const r = decide(best, [
+      cand('A', m(70)),
+      { id: 'B', auditId: 'audit-B', branch: 'perf/cand/B', description: 'B 설명', status: 'visual', reason: 'mobile / 1.20%' },
+    ])
+    assert.equal(r.winner, 'A')
+    const b = r.results.find((x) => x.id === 'B')
+    assert.deepEqual([b.status, b.perfAvg, b.reason], ['visual', null, 'mobile / 1.20%'])
+  })
+
   test('+1.0 은 keep, +0.9 는 discard', () => {
     const r = decide(best, [cand('A', m(60.9)), cand('B', m(61))])
     assert.equal(r.winner, 'B')
@@ -103,6 +113,15 @@ describe('decide', () => {
 })
 
 describe('pickHypotheses', () => {
+  test('visual 도 실패로 센다 — 화면을 두 번 깨뜨린 진단은 다시 고르지 않는다', () => {
+    const ops = [{ auditId: 'font', savingsMs: 900, pages: ['/'] }, { auditId: 'js', savingsMs: 100, pages: ['/'] }]
+    const history = [
+      { run: 1, round: 1, auditId: 'font', status: 'visual' },
+      { run: 1, round: 2, auditId: 'font', status: 'visual' },
+    ]
+    assert.deepEqual(pickHypotheses(ops, history).map((o) => o.auditId), ['js'])
+  })
+
   const ops = [
     { auditId: 'a', savingsMs: 100, pages: ['/'] },
     { auditId: 'b', savingsMs: 900, pages: ['/'] },
