@@ -3,9 +3,11 @@
 //
 // 판정은 엄격하다 — 같은 커밋 두 번 촬영이 22장 전부 0px 이었으므로 허용치를 두지 않는다.
 
-import { readFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-import { preflightErrorCode } from './measure.mjs'
+import { MeasureError, preflight, preflightErrorCode, withServer } from './measure.mjs'
 
 export const VIEWPORTS = {
   mobile: { width: 390, height: 844, isMobile: true, hasTouch: true },
@@ -55,4 +57,152 @@ export function navErrorCode(status, redirected) {
   if (redirected) return 1
   if (status === 200) return null
   return preflightErrorCode(status)
+}
+
+const FREEZE = '*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}'
+
+async function launchBrowser() {
+  const { Launcher } = await import('chrome-launcher')
+  const executablePath = Launcher.getInstallations()[0]
+  if (!executablePath) throw new MeasureError(1, 'Chrome 을 찾지 못했다')
+  const { default: puppeteer } = await import('puppeteer-core')
+  try {
+    return await puppeteer.launch({ executablePath, headless: true, args: ['--font-render-hinting=none', '--disable-gpu'] })
+  } catch (e) {
+    throw new MeasureError(1, `Chrome 실행 실패: ${e.message}`)
+  }
+}
+
+export async function capture({ baseUrl, cookies }, outDir, only) {
+  mkdirSync(outDir, { recursive: true })
+  const domain = new URL(baseUrl).hostname
+  const targets = listScreens(SCREENS).filter((s) => !only || only.includes(s.name))
+  const browser = await launchBrowser()
+  try {
+    for (const s of targets) {
+      const ctx = await browser.createBrowserContext()
+      try {
+        const page = await ctx.newPage()
+        await page.setViewport({ ...VIEWPORTS[s.viewport], deviceScaleFactor: 1 })
+        if (s.auth) await ctx.setCookie(...cookies.map(({ name, value }) => ({ name, value, domain, path: '/' })))
+        let res
+        try {
+          res = await page.goto(baseUrl + s.path, { waitUntil: 'networkidle0', timeout: 60000 })
+        } catch (e) {
+          throw new MeasureError(2, `${s.label} 이동 실패: ${e.message}`)
+        }
+        const code = navErrorCode(res.status(), res.request().redirectChain().length > 0)
+        if (code) throw new MeasureError(code, `${s.label} HTTP ${res.status()} → ${page.url()}`)
+        await page.addStyleTag({ content: FREEZE })
+        await page.evaluate(() => document.fonts.ready)
+        await new Promise((r) => setTimeout(r, 500))
+        await page.screenshot({ path: path.join(outDir, s.name), fullPage: true })
+        log(s.label)
+      } finally {
+        await ctx.close()
+      }
+    }
+  } finally {
+    await browser.close()
+  }
+}
+
+async function writeDiff(sharp, A, mask, file) {
+  const { width, height } = A.info
+  const img = Buffer.alloc(width * height * 4)
+  for (let p = 0; p < mask.length; p++) {
+    const i = p * 4
+    if (mask[p]) img.set([255, 0, 0, 255], i)
+    else {
+      const g = Math.round(((A.data[i] + A.data[i + 1] + A.data[i + 2]) / 3) * 0.3 + 178)
+      img.set([g, g, g, 255], i)
+    }
+  }
+  await sharp(img, { raw: { width, height, channels: 4 } }).png().toFile(file)
+}
+
+export async function compare(refDir, dir, diffDir) {
+  const { default: sharp } = await import('sharp')
+  rmSync(diffDir, { recursive: true, force: true })
+  mkdirSync(diffDir, { recursive: true })
+  const read = (f) => (existsSync(f) ? sharp(f).ensureAlpha().raw().toBuffer({ resolveWithObject: true }) : null)
+  const results = []
+  for (const s of listScreens(SCREENS)) {
+    const A = await read(path.join(refDir, s.name))
+    if (!A) throw new MeasureError(1, `기준 이미지가 없다: ${path.join(refDir, s.name)}`)
+    const B = await read(path.join(dir, s.name))
+    const sizeA = `${A.info.width}x${A.info.height}`
+    const sizeB = B ? `${B.info.width}x${B.info.height}` : null
+    const total = A.info.width * A.info.height
+    if (sizeA !== sizeB) {
+      results.push({ ...s, sizeA, sizeB, diffPx: null, total })
+      continue
+    }
+    const { count, mask } = comparePixels(A.data, B.data)
+    results.push({ ...s, sizeA, sizeB, diffPx: count, total })
+    if (count) await writeDiff(sharp, A, mask, path.join(diffDir, s.name))
+  }
+  return results
+}
+
+// 기준은 연속 두 촬영이 같아야 채택한다. 기준이 틀리면 그 실행의 모든 후보가 억울하게 탈락한다.
+// CSS 없이 찍힌 촬영(99.8% diff)이 실제로 1회 관측됐다.
+export async function captureRef(server, refDir) {
+  const checkDir = `${refDir}-check`
+  rmSync(refDir, { recursive: true, force: true })
+  rmSync(checkDir, { recursive: true, force: true })
+  await capture(server, refDir)
+  await capture(server, checkDir)
+  let results = await compare(refDir, checkDir, `${refDir}-diff`)
+  for (let i = 0; i < RETAKES && !judgeShots(results).ok; i++) {
+    const names = pickRetakes(results)
+    // 직전 촬영을 새 기준 후보로 두고 한 번 더 찍어 맞춰 본다
+    for (const n of names) copyFileSync(path.join(checkDir, n), path.join(refDir, n))
+    await capture(server, checkDir, names)
+    results = await compare(refDir, checkDir, `${refDir}-diff`)
+  }
+  const { ok, diffs } = judgeShots(results)
+  if (!ok) throw new MeasureError(1, `기준 이미지가 안정되지 않는다: ${diffs.join(', ')}`)
+}
+
+export async function captureCandidate(server, refDir, dir) {
+  const shotDir = path.join(dir, 'shots')
+  const diffDir = path.join(dir, 'diff')
+  rmSync(shotDir, { recursive: true, force: true })
+  await capture(server, shotDir)
+  let results = await compare(refDir, shotDir, diffDir)
+  for (let i = 0; i < RETAKES && !judgeShots(results).ok; i++) {
+    await capture(server, shotDir, pickRetakes(results))
+    results = await compare(refDir, shotDir, diffDir)
+  }
+  return judgeShots(results)
+}
+
+function log(msg) {
+  process.stderr.write(`[shots] ${msg}\n`)
+}
+
+// 사람이 기준 이미지를 확인하거나 관문만 따로 돌릴 때. build 된 체크아웃에서 실행한다.
+//   node scripts/lighthouse/shots.mjs ref <refDir>
+//   node scripts/lighthouse/shots.mjs check <refDir> <dir>
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const [cmd, refDir, dir] = process.argv.slice(2)
+  const cwd = process.cwd()
+  try {
+    await preflight(cwd)
+    if (cmd === 'ref') {
+      await withServer(cwd, (server) => captureRef(server, refDir))
+      log(`기준 이미지 확정: ${refDir}`)
+    } else if (cmd === 'check') {
+      const r = await withServer(cwd, (server) => captureCandidate(server, refDir, dir))
+      log(r.ok ? '통과 — 기준과 같다' : `다름: ${r.diffs.join(', ')}`)
+      process.exitCode = r.ok ? 0 : 3
+    } else {
+      log('사용법: shots.mjs ref <refDir> | check <refDir> <dir>')
+      process.exitCode = 64
+    }
+  } catch (e) {
+    log(e.message)
+    process.exitCode = e instanceof MeasureError ? e.code : 1
+  }
 }
