@@ -5,7 +5,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { classifyCandidate, encodeCandidates, decodeCandidates, visualReason, missingRef, seoulDate } from './round.mjs'
+import { classifyCandidate, encodeCandidates, decodeCandidates, visualReason, missingRef, seoulDate, gateResult } from './round.mjs'
 
 describe('classifyCandidate', () => {
   test('브랜치가 없으면 crash — 후보 에이전트가 커밋하지 못했다', () => {
@@ -71,5 +71,19 @@ describe('seoulDate — 화면의 일자는 서버가 서울 날짜로 계산한
   test('UTC 14:59:59 는 아직 서울 같은 날, 15:00 부터 다음 날', () => {
     assert.equal(seoulDate(new Date('2026-10-11T14:59:59Z')), '2026-10-11')
     assert.equal(seoulDate(new Date('2026-10-11T15:00:00Z')), '2026-10-12')
+  })
+})
+
+describe('gateResult — 관문이 다르다고 할 때 날짜를 다시 본다', () => {
+  test('같으면 null — 측정으로 넘어간다', () => {
+    assert.equal(gateResult({ ok: true, diffs: [] }, '2026-10-11', '2026-10-11'), null)
+  })
+
+  test('다르고 날짜가 같으면 visual', () => {
+    assert.deepEqual(gateResult({ ok: false, diffs: ['mobile / 1.00%'] }, '2026-10-11', '2026-10-11'), { status: 'visual', reason: 'visual mobile / 1.00%' })
+  })
+
+  test('촬영 도중 자정을 넘겨 달라졌으면 후보 visual 이 아니라 환경 오류로 던진다', () => {
+    assert.throws(() => gateResult({ ok: false, diffs: ['mobile /dashboard 4.00%'] }, '2026-10-11', '2026-10-12'), /서울 날짜/)
   })
 })

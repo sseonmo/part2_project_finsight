@@ -5,7 +5,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { shotName, listScreens, comparePixels, judgeShots, pickRetakes, navErrorCode } from './shots.mjs'
+import { shotName, listScreens, comparePixels, judgeShots, pickRetakes, navErrorCode, gotoFailure } from './shots.mjs'
 
 const px = (...rgba) => Uint8Array.from(rgba)
 const r = (label, extra = {}) => ({ label, name: label.replace(' ', '_') + '.png', sizeA: '390x844', sizeB: '390x844', diffPx: 0, total: 390 * 844, ...extra })
@@ -76,4 +76,13 @@ describe('navErrorCode — measure 프리플라이트와 같은 기준', () => {
     assert.equal(navErrorCode(401, false), 1)
   })
   test('5xx 는 후보 crash(2)', () => assert.equal(navErrorCode(500, false), 2))
+})
+
+describe('gotoFailure — 이동 예외는 환경 오류(1)', () => {
+  test('서버가 죽었거나(ERR_CONNECTION_REFUSED) 타임아웃이면 후보 crash 가 아니라 루프 정지 — crash 로 세면 멀쩡한 진단이 이력에서 빠진다', () => {
+    const e = gotoFailure('mobile /', new Error('net::ERR_CONNECTION_REFUSED at http://localhost:3100/'))
+    assert.equal(e.code, 1)
+    assert.match(e.message, /mobile \/ 이동 실패: net::ERR_CONNECTION_REFUSED/)
+    assert.equal(gotoFailure('desktop /', new Error('Navigation timeout of 60000 ms exceeded')).code, 1)
+  })
 })

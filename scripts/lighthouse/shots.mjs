@@ -59,6 +59,13 @@ export function navErrorCode(status, redirected) {
   return preflightErrorCode(status)
 }
 
+// 이동 예외(서버 다운·연결 거부·타임아웃)는 후보 탓이라 단정할 수 없다. crash 로 세면 pickHypotheses 가
+// 실패로 쳐서 멀쩡한 진단이 이력에서 영구히 빠지므로, measure 의 runtimeError 처럼 환경 오류로 멈춘다.
+// 후보가 페이지를 깨뜨린 것은 5xx 응답(navErrorCode → 2)으로 잡힌다.
+export function gotoFailure(label, e) {
+  return new MeasureError(1, `${label} 이동 실패: ${e.message}`)
+}
+
 const FREEZE = '*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}'
 
 async function launchBrowser() {
@@ -89,7 +96,7 @@ export async function capture({ baseUrl, cookies }, outDir, only) {
         try {
           res = await page.goto(baseUrl + s.path, { waitUntil: 'networkidle0', timeout: 60000 })
         } catch (e) {
-          throw new MeasureError(2, `${s.label} 이동 실패: ${e.message}`)
+          throw gotoFailure(s.label, e)
         }
         const code = navErrorCode(res.status(), res.request().redirectChain().length > 0)
         if (code) throw new MeasureError(code, `${s.label} HTTP ${res.status()} → ${page.url()}`)

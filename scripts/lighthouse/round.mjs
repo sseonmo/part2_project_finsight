@@ -54,6 +54,14 @@ export function seoulDate(now) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(now)
 }
 
+// 관문이 다르다고 하면 날짜를 다시 본다. 촬영 직전 확인을 통과한 뒤 22장과 재촬영 사이에 자정을
+// 넘기면 화면이 바뀌어 다르게 나오는데, 그건 후보 탓이 아니다.
+export function gateResult(v, refDate, today) {
+  if (v.ok) return null
+  if (today !== refDate) throw new Error(`서울 날짜가 기준선(${refDate})과 다르다(${today}) — 화면의 일자가 바뀌므로 새 run 으로 다시 시작하라`)
+  return { status: 'visual', reason: visualReason(v.diffs) }
+}
+
 const shotsDir = (runNo, sub) => path.join(STATE_DIR, 'shots', `run${runNo}`, sub)
 
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim()
@@ -149,7 +157,8 @@ async function inspect(m, shots, best, dir) {
       const today = seoulDate(new Date())
       if (today !== best.refDate) throw new Error(`서울 날짜가 기준선(${best.refDate})과 다르다(${today}) — 화면의 일자가 바뀌므로 새 run 으로 다시 시작하라`)
       const v = await shots.captureCandidate(server, best.refDir, dir)
-      if (!v.ok) return { status: 'visual', reason: visualReason(v.diffs) } // 화면이 바뀌면 측정하지 않는다
+      const rejected = gateResult(v, best.refDate, seoulDate(new Date()))
+      if (rejected) return rejected // 화면이 바뀌면 측정하지 않는다
       return { status: 'measured', measurement: await m.lighthouse(server) }
     })
   } catch (e) {
