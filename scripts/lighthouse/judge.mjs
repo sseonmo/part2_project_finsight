@@ -47,7 +47,8 @@ export function guardDrops(best, m) {
   return drops
 }
 
-const round1 = (n) => Math.round(n * 10) / 10
+// 표시용. 판정은 반올림 전 차이로 한다.
+const round2 = (n) => Math.round(n * 100) / 100
 
 export function decide(best, candidates) {
   const bestPerf = best.measurement.perfAvg
@@ -60,8 +61,9 @@ export function decide(best, candidates) {
     const drops = guardDrops(best.measurement, c.measurement)
     if (drops.length) return { ...base, status: 'discard', perfAvg, reason: 'guard ' + drops.join(', ') }
 
-    const gain = round1(perfAvg - bestPerf)
-    if (gain < THRESHOLDS.MIN_GAIN) return { ...base, status: 'discard', perfAvg, reason: `gain +${gain} < ${THRESHOLDS.MIN_GAIN}` }
+    const diff = perfAvg - bestPerf
+    const gain = round2(diff)
+    if (diff < THRESHOLDS.MIN_GAIN - 1e-9) return { ...base, status: 'discard', perfAvg, reason: `gain +${gain} < ${THRESHOLDS.MIN_GAIN}` }
     return { ...base, status: 'eligible', perfAvg, reason: `gain +${gain}` }
   })
 

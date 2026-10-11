@@ -71,6 +71,13 @@ describe('decide', () => {
     assert.match(r.results[0].reason, /\+0\.9/)
   })
 
+  test('+0.95 는 반올림되어 keep 되지 않는다', () => {
+    const r = decide(best, [cand('A', m(60.95))])
+    assert.equal(r.winner, null)
+    assert.equal(r.results[0].status, 'discard')
+    assert.match(r.results[0].reason, /\+0\.95/)
+  })
+
   test('조건을 넘은 후보가 여럿이면 최고만 keep, 나머지는 discard', () => {
     const r = decide(best, [cand('A', m(63)), cand('B', m(65)), cand('C', m(62))])
     assert.equal(r.winner, 'B')
