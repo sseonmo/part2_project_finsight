@@ -1,4 +1,4 @@
-// round 의 순수 헬퍼 테스트 — node --test scripts/lighthouse/
+// round 의 순수 헬퍼 테스트 — node --test scripts/lighthouse/*.test.mjs
 //
 // git·측정을 실제로 엮는 부분은 Task 6 의 1회 실행으로 확인한다.
 

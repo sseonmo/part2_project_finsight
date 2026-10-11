@@ -1,4 +1,4 @@
-// judge 테스트 — node --test scripts/lighthouse/
+// judge 테스트 — node --test scripts/lighthouse/*.test.mjs
 //
 // 루프의 판정은 전부 여기 있다. 같은 측정 결과면 같은 판정이 나와야 한다.
 

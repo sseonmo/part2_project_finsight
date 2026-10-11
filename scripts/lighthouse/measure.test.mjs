@@ -1,4 +1,4 @@
-// measure 의 순수 헬퍼 테스트 — node --test scripts/lighthouse/
+// measure 의 순수 헬퍼 테스트 — node --test scripts/lighthouse/*.test.mjs
 //
 // 빌드·서버·Chrome 을 띄우는 본체는 기준선 실측으로 확인한다(Task 6).
 
