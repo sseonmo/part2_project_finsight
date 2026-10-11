@@ -1,1 +1,2 @@
 run	round	candidate	auditId	perfAvg	minGuard	status	commit	description
+1	0	base	-	83	96	baseline	e310b22	run 1 기준선
