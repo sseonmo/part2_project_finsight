@@ -5,7 +5,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { classifyCandidate, encodeCandidates, decodeCandidates } from './round.mjs'
+import { classifyCandidate, encodeCandidates, decodeCandidates, visualReason, missingRef, seoulDate } from './round.mjs'
 
 describe('classifyCandidate', () => {
   test('브랜치가 없으면 crash — 후보 에이전트가 커밋하지 못했다', () => {
@@ -38,5 +38,38 @@ describe('encode/decodeCandidates', () => {
     const enc = encodeCandidates(list)
     assert.match(enc, /^[A-Za-z0-9\-_.~%]+$/)
     assert.deepEqual(decodeCandidates(enc), list)
+  })
+})
+
+describe('visualReason', () => {
+  test('3개 이하면 그대로', () => {
+    assert.equal(visualReason(['mobile / 1.00%', 'desktop / 2.00%']), 'visual mobile / 1.00%, desktop / 2.00%')
+  })
+
+  test('22장이 다 달라도 앞 3개와 남은 장 수만 — results.tsv 한 칸이 수천 자가 되지 않게', () => {
+    const diffs = Array.from({ length: 22 }, (_, i) => `s${i} 1.00%`)
+    assert.equal(visualReason(diffs), 'visual s0 1.00%, s1 1.00%, s2 1.00% 외 19장')
+  })
+})
+
+describe('missingRef', () => {
+  test('refDir·refDate 가 없으면(이전 버전 best.json) 이유를 돌려준다', () => {
+    assert.match(missingRef({ commit: 'c' }, () => true), /baseline/)
+    assert.match(missingRef({ refDir: 'x' }, () => true), /baseline/)
+  })
+
+  test('디렉터리가 지워졌으면 이유를 돌려준다', () => {
+    assert.match(missingRef({ refDir: 'x', refDate: '2026-10-11' }, () => false), /x/)
+  })
+
+  test('있으면 null', () => {
+    assert.equal(missingRef({ refDir: 'x', refDate: '2026-10-11' }, () => true), null)
+  })
+})
+
+describe('seoulDate — 화면의 일자는 서버가 서울 날짜로 계산한다', () => {
+  test('UTC 14:59:59 는 아직 서울 같은 날, 15:00 부터 다음 날', () => {
+    assert.equal(seoulDate(new Date('2026-10-11T14:59:59Z')), '2026-10-11')
+    assert.equal(seoulDate(new Date('2026-10-11T15:00:00Z')), '2026-10-12')
   })
 })

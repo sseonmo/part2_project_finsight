@@ -8,7 +8,7 @@
 // 결과는 --out 에 원자적으로(임시 파일 → rename) 쓴다.
 
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, rmSync, readFileSync, renameSync, writeFileSync, appendFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, appendFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -35,6 +35,26 @@ export function encodeCandidates(list) {
 export function decodeCandidates(s) {
   return JSON.parse(decodeURIComponent(s))
 }
+
+export function visualReason(diffs) {
+  const head = diffs.slice(0, 3).join(', ')
+  return `visual ${head}${diffs.length > 3 ? ` 외 ${diffs.length - 3}장` : ''}`
+}
+
+// 기준 이미지 없이 evaluate 하면 관문이 비교할 대상이 없다. 건너뛰지 말고 멈춘다.
+export function missingRef(best, exists) {
+  if (!best.refDir || !best.refDate) return 'best.json 에 refDir·refDate 가 없다 — 이번 run 의 baseline 부터 다시 돌려라'
+  if (!exists(best.refDir)) return `기준 이미지 디렉터리가 없다: ${best.refDir}`
+  return null
+}
+
+// 대시보드 일자·체험 잔여일은 서버(next start)가 서울 날짜로 계산한다. 브라우저 시계를 고정해도
+// 소용없으므로, 기준선과 날짜가 달라지면 후보 탓이 아니라 환경 변화로 보고 멈춘다.
+export function seoulDate(now) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(now)
+}
+
+const shotsDir = (runNo, sub) => path.join(STATE_DIR, 'shots', `run${runNo}`, sub)
 
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim()
 const gitOk = (...args) => {
@@ -87,26 +107,65 @@ function nextState(best) {
 }
 
 async function baseline(runNo) {
-  const { measure } = await import('./measure.mjs')
+  const { preflight, build, withServer, lighthouse } = await import('./measure.mjs')
+  const { captureRef } = await import('./shots.mjs')
   assertCleanLoopBranch()
   // 같은 번호면 후보 브랜치 이름이 겹쳐 라운드 전체가 scope 로 탈락한다
   if (readHistory().some((h) => h.run === runNo)) throw new Error(`run ${runNo} 은 이미 있다 — 다음 번호를 써라`)
-  const measurement = await measure(process.cwd())
+  const cwd = process.cwd()
+  const refDir = shotsDir(runNo, 'ref')
+  const refDate = seoulDate(new Date())
+  await preflight(cwd)
+  build(cwd)
+  // 촬영을 먼저 한다 — 기준이 안정되지 않으면 측정할 이유가 없다
+  const measurement = await withServer(cwd, async (server) => {
+    await captureRef(server, refDir)
+    return lighthouse(server)
+  })
   appendFileSync(TSV, formatRow({
     run: runNo, round: 0, candidate: 'base', auditId: '-', perfAvg: measurement.perfAvg,
     minGuard: minGuard(measurement), status: 'baseline', commit: git('rev-parse', '--short', 'HEAD'), description: `run ${runNo} 기준선`,
   }) + '\n')
   const commit = commitTsv(`chore(perf): run ${runNo} 기준선 ${measurement.perfAvg}`)
-  const best = { commit, measurement }
+  const best = { commit, measurement, refDir, refDate }
   writeFileSync(BEST, JSON.stringify(best))
   return nextState(best)
 }
 
+// 검사 순서: lint → build → tsc → vitest → 촬영 → Lighthouse.
+// tsc 는 build 가 만든 현재 후보의 .next/types 를 봐야 한다. 처음엔 build 전에 tsc 를 돌리며
+// .next/types 를 지웠는데, 코드가 직전과 같으면 webpack 캐시가 타입 파일을 다시 만들지 않아
+// 멀쩡한 후보가 `.next/types/... not found` 로 crash 할 수 있었다.
+async function inspect(m, shots, best, dir) {
+  const cwd = process.cwd()
+  if (!run('npm', ['run', 'lint'])) return { status: 'crash', reason: 'lint 실패' }
+  try {
+    await m.preflight(cwd)
+    m.build(cwd)
+    // next.config.ts 의 ignoreBuildErrors 로 build 의 타입 검사를 끌 수 있으므로 따로 돌린다
+    if (!run('npx', ['tsc', '--noEmit'])) return { status: 'crash', reason: 'tsc 실패' }
+    if (!run('npx', ['vitest', 'run'])) return { status: 'crash', reason: 'vitest 실패' }
+    return await m.withServer(cwd, async (server) => {
+      const today = seoulDate(new Date())
+      if (today !== best.refDate) throw new Error(`서울 날짜가 기준선(${best.refDate})과 다르다(${today}) — 화면의 일자가 바뀌므로 새 run 으로 다시 시작하라`)
+      const v = await shots.captureCandidate(server, best.refDir, dir)
+      if (!v.ok) return { status: 'visual', reason: visualReason(v.diffs) } // 화면이 바뀌면 측정하지 않는다
+      return { status: 'measured', measurement: await m.lighthouse(server) }
+    })
+  } catch (e) {
+    if (e instanceof m.MeasureError && e.code === 2) return { status: 'crash', reason: e.message }
+    throw e // 환경 오류는 후보 탓이 아니다 — 라운드 전체를 멈춘다
+  }
+}
+
 async function evaluate(runNo, roundNo, candidates) {
-  const { measure, MeasureError } = await import('./measure.mjs')
+  const m = await import('./measure.mjs')
+  const shots = await import('./shots.mjs')
   assertCleanLoopBranch()
   const best = JSON.parse(readFileSync(BEST, 'utf8'))
   if (git('rev-parse', 'HEAD') !== best.commit) throw new Error('HEAD 가 best.json 의 커밋과 다르다')
+  const noRef = missingRef(best, existsSync)
+  if (noRef) throw new Error(noRef)
 
   const judged = []
   try {
@@ -120,22 +179,9 @@ async function evaluate(runNo, roundNo, candidates) {
         continue
       }
 
-      log(`${c.id} ${c.auditId} — lint·tsc·vitest·측정`)
+      log(`${c.id} ${c.auditId} — lint·build·tsc·vitest·촬영·측정`)
       git('checkout', '-q', '--detach', c.branch)
-      // tsconfig 가 .next/types 를 포함하는데 tsc 는 build 전에 돌아 이전 후보의 타입을 본다
-      rmSync('.next/types', { recursive: true, force: true })
-      if (!run('npm', ['run', 'lint'])) judged.push({ ...c, status: 'crash', reason: 'lint 실패' })
-      // next.config.ts 의 ignoreBuildErrors 로 build 의 타입 검사를 끌 수 있으므로 따로 돌린다
-      else if (!run('npx', ['tsc', '--noEmit'])) judged.push({ ...c, status: 'crash', reason: 'tsc 실패' })
-      else if (!run('npx', ['vitest', 'run'])) judged.push({ ...c, status: 'crash', reason: 'vitest 실패' })
-      else {
-        try {
-          judged.push({ ...c, status: 'measured', measurement: await measure(process.cwd()) })
-        } catch (e) {
-          if (e instanceof MeasureError && e.code === 2) judged.push({ ...c, status: 'crash', reason: e.message })
-          else throw e // 환경 오류는 후보 탓이 아니다 — 라운드 전체를 멈춘다
-        }
-      }
+      judged.push({ ...c, ...(await inspect(m, shots, best, shotsDir(runNo, `r${roundNo}-${c.id}`))) })
       git('checkout', '-q', LOOP_BRANCH)
     }
   } finally {
@@ -147,7 +193,7 @@ async function evaluate(runNo, roundNo, candidates) {
   if (decision.winner) {
     const w = judged.find((c) => c.id === decision.winner)
     git('merge', '-q', '--ff-only', w.branch)
-    next = { commit: git('rev-parse', 'HEAD'), measurement: w.measurement }
+    next = { ...best, commit: git('rev-parse', 'HEAD'), measurement: w.measurement }
   }
 
   for (const r of decision.results) {

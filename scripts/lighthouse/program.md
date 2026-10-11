@@ -17,6 +17,9 @@ karpathy/autoresearch 의 `program.md` 에 해당한다. 설계는
 - 그 밖의 경로, 특히 `src/app/api/`·`src/inngest/`·`src/lib/`·`src/services/`·`supabase/`·
   `scripts/`·테스트 파일·`.env*`·`package.json` 을 건드리면 측정 없이 탈락한다
 - 화면에 보이는 내용과 동작을 바꾸지 않는다. 점수를 위해 기능을 숨기거나 지우지 않는다
+- **최종 화면이 기준과 픽셀 단위로 같아야 keep 된다.** 11개 화면 × 모바일·데스크톱 22장을 찍어 비교하고,
+  한 장이라도 다르면 점수와 무관하게 `visual` 로 탈락한다. 글꼴(subset·weight 포함)·레이아웃·색·내용을
+  바꾸는 최적화는 안 된다. 폰트는 로딩 방식(`preload`·`font-display`·포맷)만 바꿀 수 있다
 - 서버 컴포넌트의 데이터 조회는 `src/lib/` 에 있어 고칠 수 없다. 렌더링 구조
   (클라이언트 경계, `next/dynamic`, `loading.tsx` 스트리밍, 이미지·폰트 로딩)로 접근한다
 - 최소 변경. 같은 효과면 줄 수가 적은 쪽
@@ -58,14 +61,22 @@ cp .env .env.local ~/.cache/finsight-lighthouse/bench/
 
 ### 매 실행
 
-1. `npx supabase start` — 로컬 Supabase. 테스트 유저 데이터가 `pages.json` 의 URL 을 200 으로
+1. `npx supabase start` — 로컬 Supabase. 테스트 유저 데이터가 `pages.json`·`screens.json` 의 URL 을 200 으로
    돌려줘야 한다. 루프 중에는 `scripts/browser-test/reset.sh` 를 돌리지 않는다
+1-1. 루프 브랜치 HEAD 의 화면을 미리 본다 — 관문의 기준 이미지가 이 화면이 된다. 기준이 틀리면 그 실행의 판정 전체가 틀어진다:
+   `npm run build && node scripts/lighthouse/shots.mjs ref .local/lighthouse/shots/preview` 후
+   `.local/lighthouse/shots/preview/` 의 몇 장(`mobile__root.png`, `desktop_dashboard.png`)을 연다.
+   같은 커밋이면 루프가 찍는 기준과 픽셀 단위로 같다
 2. 포트 3100 이 비어 있는지 확인
 3. Claude 에게: `벤치의 lighthouse-loop 워크플로를 run=<N> 으로 실행해줘` →
    `Workflow({ scriptPath: '<벤치>/.claude/workflows/lighthouse-loop.js', args: { run: N, bench: '<벤치>' } })`.
    이름(`name`)으로는 못 찾는다 — 메인 체크아웃은 main 에 있고 이 파일은 루프 브랜치에만 있다.
    N 은 `results.tsv` 의 마지막 run + 1 (같은 번호는 거부된다)
-4. 끝나면 `results.tsv` 와 `git log perf/lighthouse-loop` 를 본다
+4. 끝나면 `results.tsv` 와 `git log perf/lighthouse-loop` 를 본다.
+   `visual` 줄은 화면이 기준과 달랐다는 뜻이다. 다른 픽셀을 빨갛게 칠한 이미지가
+   `.local/lighthouse/shots/run<N>/r<R>-<후보>/diff/` 에, 후보 화면이 같은 디렉터리의 `shots/` 에,
+   기준이 `.local/lighthouse/shots/run<N>/ref/` 에 있다. "서울 날짜가 기준선과 다르다" 로 멈췄다면
+   자정을 넘긴 것이다 — 다음 번호로 다시 실행한다
 
 **측정 대상은 대표 3개**(`/`, `/dashboard`, `/dashboard/uploads`)다. 11개 전체는 1회 실행이 1시간을 넘어
 줄였다. 진단 3개가 셋 모두에 걸리고, 루트·marketing·`(app)` 레이아웃을 모두 지난다. 나머지 페이지의
@@ -73,8 +84,8 @@ cp .env .env.local ~/.cache/finsight-lighthouse/bench/
 (`pages.json` 을 아래 동적 URL 까지 채워 `node scripts/lighthouse/measure.mjs`).
 
 동적 URL 을 다시 넣을 때, 또는 `npx supabase db reset`(또는 `scripts/browser-test/reset.sh`)을 했다면 signal·upload id 가 바뀌어 프리플라이트가 404·리다이렉트로 멈춘다. 다시 채운다:
-- 신호·리포트 월: 구현 계획 Task 2 Step 6 의 조회로 `pages.json` 의 동적 URL 을 갱신한다. 테스트 유저에게 월간 리포트가 없어도 `/dashboard/report/<ym>` 은 빈 상태로 200 을 준다
-- 매핑 페이지: `needs_mapping` 업로드는 정상 흐름에서 남지 않으므로 합성 행을 넣고, 나온 id 로 `pages.json` 의 `/dashboard/uploads/<id>/mapping` 을 바꾼다
+- 신호·리포트 월: 구현 계획 Task 2 Step 6 의 조회로 `screens.json`(과 11개로 되돌린 `pages.json`)의 동적 URL 을 갱신한다. 테스트 유저에게 월간 리포트가 없어도 `/dashboard/report/<ym>` 은 빈 상태로 200 을 준다
+- 매핑 페이지: `needs_mapping` 업로드는 정상 흐름에서 남지 않으므로 합성 행을 넣고, 나온 id 로 `screens.json`(과 11개로 되돌린 `pages.json`)의 `/dashboard/uploads/<id>/mapping` 을 바꾼다
 
 ```bash
 docker exec supabase_db_part2_project_finsight psql -U postgres -d postgres -Atc "
