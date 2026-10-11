@@ -13,6 +13,8 @@ const pretendard = localFont({
     },
   ],
   display: "swap",
+  // 465KB 폰트 preload 가 렌더 차단 CSS 와 대역폭을 다투지 않게 한다. swap 이라 글자는 폴백으로 먼저 그려진다.
+  preload: false,
   variable: "--font-pretendard",
 });
 
