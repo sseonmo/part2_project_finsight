@@ -14,7 +14,6 @@ import {
 } from "@/components/UploadProgressCard";
 import { readSheet } from "@/lib/xlsx/readSheet";
 import { sheetToCsv } from "@/lib/xlsx/sheetToCsv";
-import { createBrowserClient } from "@/services/supabase";
 
 const UPLOAD_BUCKET = "transaction-csv-uploads";
 const UNSUPPORTED_FILE_MESSAGE = "CSV 또는 엑셀(.xlsx) 파일만 올릴 수 있습니다.";
@@ -214,6 +213,8 @@ export function UploadDialog({
       }
 
       const signed = (await signedResponse.json()) as SignedUrlResponse;
+      // supabase-js 는 업로드할 때만 내려받아 대시보드 첫 화면 번들에서 뺀다.
+      const { createBrowserClient } = await import("@/services/supabase");
       const supabase = createBrowserClient();
       const { error: storageError } = await supabase.storage
         .from(UPLOAD_BUCKET)

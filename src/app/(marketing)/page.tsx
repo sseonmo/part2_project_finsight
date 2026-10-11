@@ -15,7 +15,6 @@ import { InsightCardStack } from "@/components/landing/InsightCardStack";
 import { LandingSection } from "@/components/landing/LandingSection";
 import { SignalTypeGrid } from "@/components/landing/SignalTypeGrid";
 import { PricingCard } from "@/components/PricingCard";
-import { createBrowserClient } from "@/services/supabase";
 
 const MONTHLY_PRICE_KRW = 4_900;
 const YEARLY_PRICE_KRW = 49_000;
@@ -93,6 +92,15 @@ function buildCallbackUrl(redirectTo: string | null): string {
   return callbackUrl.toString();
 }
 
+// supabase-js 는 로그인 버튼을 누른 순간에만 내려받아 첫 화면 번들에서 뺀다.
+// 연달아 눌러도 import 를 한 번만 하도록 프라미스를 공유한다.
+let supabaseModule: Promise<typeof import("@/services/supabase")> | null = null;
+
+function loadSupabase() {
+  supabaseModule ??= import("@/services/supabase");
+  return supabaseModule;
+}
+
 function MarketingContent() {
   const searchParams = useSearchParams();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -103,6 +111,7 @@ function MarketingContent() {
     setErrorMessage(null);
 
     try {
+      const { createBrowserClient } = await loadSupabase();
       const supabase = createBrowserClient();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
