@@ -12,6 +12,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const PORT = 3100
+const BASE = `http://localhost:${PORT}`
 const RUNS = 3
 const SUPABASE = 'http://127.0.0.1:54321'
 const PAGES = JSON.parse(readFileSync(new URL('./pages.json', import.meta.url), 'utf8'))
@@ -106,45 +107,64 @@ function log(msg) {
   process.stderr.write(`[measure] ${msg}\n`)
 }
 
-export async function measure(cwd) {
-  const envPath = path.join(cwd, '.env.local')
-  if (!existsSync(envPath)) throw new MeasureError(1, '.env.local 이 없다. 이대로면 프로덕션 Supabase 를 때린다')
+export async function preflight(cwd) {
+  if (!existsSync(path.join(cwd, '.env.local'))) throw new MeasureError(1, '.env.local 이 없다. 이대로면 프로덕션 Supabase 를 때린다')
   if (!(await alive(SUPABASE))) throw new MeasureError(1, `로컬 Supabase(${SUPABASE})가 응답하지 않는다. npx supabase start`)
-  if (await alive(`http://localhost:${PORT}/`)) throw new MeasureError(1, `포트 ${PORT} 이 이미 쓰이고 있다`)
+  if (await alive(`${BASE}/`)) throw new MeasureError(1, `포트 ${PORT} 이 이미 쓰이고 있다`)
+}
 
+export function build(cwd) {
   log('npm run build')
-  const build = spawnSync('npm', ['run', 'build'], { cwd, stdio: ['ignore', 2, 2] })
-  if (build.status !== 0) throw new MeasureError(2, `build 실패 (exit ${build.status})`)
+  const r = spawnSync('npm', ['run', 'build'], { cwd, stdio: ['ignore', 2, 2] })
+  if (r.status !== 0) throw new MeasureError(2, `build 실패 (exit ${r.status})`)
+}
 
+// 서버 한 번으로 촬영과 측정을 함께 하려고 수명주기를 떼어 둔다. 끝나면 항상 서버를 끈다 —
+// 프로세스 그룹 kill 이라 Next 15 가 이름을 next-server 로 바꿔도 잡힌다.
+export async function withServer(cwd, fn) {
   log(`next start -p ${PORT}`)
   const server = spawn(path.join(cwd, 'node_modules/.bin/next'), ['start', '-p', String(PORT)], {
     cwd, detached: true, stdio: ['ignore', 'ignore', 'inherit'],
   })
-  const { launch } = await import('chrome-launcher')
-  const { default: lighthouse } = await import('lighthouse')
-  let chrome
   try {
-    for (let i = 0; i < 60 && !(await alive(`http://localhost:${PORT}/`)); i++) await new Promise((r) => setTimeout(r, 1000))
-    if (!(await alive(`http://localhost:${PORT}/`))) throw new MeasureError(1, 'next start 가 60초 안에 뜨지 않았다')
+    for (let i = 0; i < 60 && !(await alive(`${BASE}/`)); i++) await new Promise((r) => setTimeout(r, 1000))
+    if (!(await alive(`${BASE}/`))) throw new MeasureError(1, 'next start 가 60초 안에 뜨지 않았다')
 
-    const anon = readEnvValue(readFileSync(envPath, 'utf8'), 'NEXT_PUBLIC_SUPABASE_ANON_KEY')
+    const anon = readEnvValue(readFileSync(path.join(cwd, '.env.local'), 'utf8'), 'NEXT_PUBLIC_SUPABASE_ANON_KEY')
     const cookieRun = spawnSync('node', ['scripts/browser-test/make-cookie.mjs'], { cwd, env: { ...process.env, ANON: anon ?? '' }, encoding: 'utf8' })
     if (cookieRun.status !== 0) throw new MeasureError(1, `세션 쿠키 발급 실패: ${cookieRun.stderr.trim()}`)
-    const cookie = cookieHeader(JSON.parse(cookieRun.stdout))
+    const cookies = JSON.parse(cookieRun.stdout)
+    const cookie = cookieHeader(cookies)
 
     for (const p of PAGES) {
-      const res = await fetch(`http://localhost:${PORT}${p.path}`, { redirect: 'manual', headers: p.auth ? { cookie } : {} })
+      const res = await fetch(`${BASE}${p.path}`, { redirect: 'manual', headers: p.auth ? { cookie } : {} })
       const err = preflightStatus(res.status, res.headers.get('location'))
       if (err) throw new MeasureError(preflightErrorCode(res.status), `${p.path} 프리플라이트 실패: ${err}`)
     }
+    return await fn({ baseUrl: BASE, cookies })
+  } finally {
+    try {
+      process.kill(-server.pid, 'SIGTERM')
+    } catch {
+      // 이미 내려갔다
+    }
+    // 다음 후보의 preflight 가 내려가는 중인 서버를 "포트 사용 중" 으로 오인해 라운드를 멈추지 않게 한다
+    for (let i = 0; i < 10 && (await alive(`${BASE}/`)); i++) await new Promise((r) => setTimeout(r, 1000))
+  }
+}
 
-    chrome = await launch({ chromeFlags: ['--headless=new'] })
+export async function lighthouse({ baseUrl, cookies }) {
+  const { launch } = await import('chrome-launcher')
+  const { default: runLighthouse } = await import('lighthouse')
+  const cookie = cookieHeader(cookies)
+  const chrome = await launch({ chromeFlags: ['--headless=new'] })
+  try {
     const results = []
     for (const p of PAGES) {
       const runs = []
       for (let i = 0; i < RUNS; i++) {
         log(`${p.path} ${i + 1}/${RUNS}`)
-        const r = await lighthouse(`http://localhost:${PORT}${p.path}`, {
+        const r = await runLighthouse(`${baseUrl}${p.path}`, {
           port: chrome.port,
           output: 'json',
           logLevel: 'error',
@@ -161,13 +181,14 @@ export async function measure(cwd) {
     }
     return aggregate(results)
   } finally {
-    if (chrome) await chrome.kill()
-    try {
-      process.kill(-server.pid, 'SIGTERM')
-    } catch {
-      // 이미 내려갔다
-    }
+    await chrome.kill()
   }
+}
+
+export async function measure(cwd) {
+  await preflight(cwd)
+  build(cwd)
+  return withServer(cwd, lighthouse)
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
