@@ -7,13 +7,14 @@ import "./globals.css";
 const pretendard = localFont({
   src: [
     {
-      path: "./fonts/PretendardVariable.subset.woff2",
+      // 라틴·숫자·기호만 담았다. 한글은 globals.css 의 --font-core 다음 순위(시스템 폰트)로 그려진다.
+      path: "./fonts/PretendardLatin.woff2",
       style: "normal",
-      weight: "45 920",
+      weight: "400 600",
     },
   ],
   display: "swap",
-  // 465KB 폰트 preload 가 렌더 차단 CSS 와 대역폭을 다투지 않게 한다. swap 이라 글자는 폴백으로 먼저 그려진다.
+  // 폰트 preload 가 렌더 차단 CSS 와 대역폭을 다투지 않게 한다. swap 이라 글자는 폴백으로 먼저 그려진다.
   preload: false,
   variable: "--font-pretendard",
 });
