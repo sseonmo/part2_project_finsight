@@ -122,9 +122,10 @@ devDependencies 에 `lighthouse`, `chrome-launcher` 를 추가한다.
 
 ### `scripts/lighthouse/shots.mjs` — 촬영·비교 (에이전트 수정 금지)
 
-- 순수(TDD): `shotName(viewport, path)`, `comparePixels(a, b)` → `{ count, mask }`, `judgeShots(results)` → `{ ok, diffs: ['mobile /dashboard 1.20%', 'desktop / 높이 3843→3894'] }`, `pickRetakes(results)`(다른 화면만), `refSettled(prev, cur)`(기준 채택 규칙)
-- 본체: `capture(baseUrl, cookies, outDir, screens?)`, `compare(refDir, dir, diffOut)`
-- 의존성은 벤치에 이미 있는 `puppeteer-core`(lighthouse 의존성)·`sharp`(next 의존성). Chrome 은 `chrome-launcher` 가 찾는 경로를 쓴다
+- 순수(TDD): `shotName(viewport, path)`, `comparePixels(a, b)` → `{ count, mask }`, `listScreens(screens)`, `navErrorCode(status, redirected)`, `judgeShots(results)` → `{ ok, diffs: ['mobile /dashboard 1.20%', 'desktop / 크기 1440x3843→1440x3894'] }`, `pickRetakes(results)`(다른 화면만)
+- 본체: `capture(server, outDir, only?)`, `compare(refDir, dir, diffDir)`, `captureRef(server, refDir)`(기준 채택 규칙), `captureCandidate(server, refDir, dir)`(재촬영 포함). `server` 는 `withServer` 가 넘기는 `{ baseUrl, cookies }`
+- CLI: `node scripts/lighthouse/shots.mjs ref <refDir>` · `check <refDir> <dir>` — build 된 체크아웃에서 관문만 따로 돌린다(사람의 기준 이미지 확인용)
+- 의존성 `puppeteer-core`·`sharp` 는 지금 lighthouse·next 의 전이 의존성으로만 있다. 호이스팅이 바뀌면 사라지므로 devDependencies 에 설치된 버전 그대로(`25.13.0`·`0.35.4`) 명시한다. Chrome 은 `chrome-launcher` 가 찾는 경로를 쓴다
 - 촬영 중 5xx·navigation 실패는 후보 `crash`, 리다이렉트·401·404·Chrome 실행 실패는 환경 오류(exit 1) — `measure.mjs` 프리플라이트와 같은 기준
 
 ### `scripts/lighthouse/screens.json` — 촬영 대상
@@ -172,7 +173,7 @@ devDependencies 에 `lighthouse`, `chrome-launcher` 를 추가한다.
 ## 테스트
 
 - `judge.mjs`: `node --test` — 문턱 경계(+0.9 / +1.0), 가드레일 하락 1점, 금지 경로, 전 후보 crash, 종료 조건 세 가지, 가설 선택의 재시도 규칙
-- `shots.mjs`: `node --test` — `comparePixels` 동일·문턱 경계(차이 16 은 같음, 17 은 다름), `judgeShots` 높이 차이·일부 화면만 다름·전부 같음, `pickRetakes`, `refSettled`
+- `shots.mjs`: `node --test` — `comparePixels` 동일·문턱 경계(차이 16 은 같음, 17 은 다름), `judgeShots` 크기 차이·후보 이미지 없음·일부 화면만 다름·전부 같음, `pickRetakes`, `navErrorCode`
 - `judge.mjs` 추가: `visual` 은 keep 되지 않고 `outcompeted` 로 바뀌지 않음, `visual` 2회 audit 제외
 - `measure.mjs`·`round.mjs`: 순수 헬퍼만 `node --test`. 프로세스·git 을 엮는 본체는 기준선 실측과 1회 실행으로 확인한다
 - 워크플로: vitest — 전역 스텁으로 실행 (`review-code.test.js` 와 같은 방식)
