@@ -75,13 +75,14 @@ type RootLayoutProps = Readonly<{
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="ko" suppressHydrationWarning>
+    // 폰트 변수는 <html> 에 둔다. globals.css 의 :root 토큰이 이 변수를 참조한다.
+    <html lang="ko" className={pretendard.variable} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{ __html: themeInitializationScript }}
         />
       </head>
-      <body className={pretendard.variable}>{children}</body>
+      <body>{children}</body>
     </html>
   );
 }
