@@ -1,0 +1,13 @@
+[
+  { "path": "/", "auth": false },
+  { "path": "/dashboard", "auth": true },
+  { "path": "/dashboard/billing", "auth": true },
+  { "path": "/dashboard/subscriptions", "auth": true },
+  { "path": "/dashboard/transactions", "auth": true },
+  { "path": "/dashboard/uploads", "auth": true },
+  { "path": "/settings", "auth": true },
+  { "path": "/dashboard/report/2026-07", "auth": true },
+  { "path": "/dashboard/review/2026-07", "auth": true },
+  { "path": "/dashboard/review/2026-07/8f20fc98-3cce-47d4-a586-f68e0712291f", "auth": true },
+  { "path": "/dashboard/uploads/33dad667-f976-4661-8760-eef8a6f91085/mapping", "auth": true }
+]
