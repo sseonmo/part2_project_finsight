@@ -91,7 +91,7 @@ describe("UploadHistoryTable", () => {
   });
 
   it("confirms cascade counts before deleting an upload", async () => {
-    const confirm = vi.fn(() => true);
+    const confirm = vi.fn<(message: string) => boolean>(() => true);
     const fetch = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal("confirm", confirm);
     vi.stubGlobal("fetch", fetch);

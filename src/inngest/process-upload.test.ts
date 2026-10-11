@@ -88,10 +88,10 @@ function createStepRecorder() {
   return {
     names,
     step: {
-      run: vi.fn(async <T>(name: string, fn: () => Promise<T> | T): Promise<T> => {
+      async run<T>(name: string, fn: () => Promise<T> | T): Promise<T> {
         names.push(name);
         return await fn();
-      }),
+      },
     },
   };
 }
@@ -157,7 +157,7 @@ function createRepository(input: {
     async listMerchantCache() {
       return {};
     },
-    async insertTransactions(rowsToInsert: TransactionRecord[]) {
+    async insertTransactions(rowsToInsert: readonly TransactionRecord[]) {
       let insertedCount = 0;
 
       for (const transaction of rowsToInsert) {

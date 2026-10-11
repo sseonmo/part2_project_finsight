@@ -64,7 +64,9 @@ function createSupabaseMock(
       error: options.updateError ?? null,
     }),
   }));
-  const update = vi.fn(() => ({ eq: updateEq }));
+  const update = vi.fn<(patch: Record<string, unknown>) => { eq: typeof updateEq }>(
+    () => ({ eq: updateEq }),
+  );
 
   const from = vi.fn((table: string) => {
     if (table === "processed_webhook_events") {
