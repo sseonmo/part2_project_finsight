@@ -68,10 +68,10 @@ cp .env .env.local ~/.cache/finsight-lighthouse/bench/
    `.local/lighthouse/shots/preview/` 의 몇 장(`mobile__root.png`, `desktop_dashboard.png`)을 연다.
    같은 커밋이면 루프가 찍는 기준과 픽셀 단위로 같다
 2. 포트 3100 이 비어 있는지 확인
-3. Claude 에게: `벤치의 lighthouse-loop 워크플로를 run=<N> 으로 실행해줘` →
-   `Workflow({ scriptPath: '<벤치>/.claude/workflows/lighthouse-loop.js', args: { run: N, bench: '<벤치>' } })`.
-   이름(`name`)으로는 못 찾는다 — 메인 체크아웃은 main 에 있고 이 파일은 루프 브랜치에만 있다.
-   N 은 `results.tsv` 의 마지막 run + 1 (같은 번호는 거부된다)
+3. Claude 에게: `성능 최적화 워크플로 실행해줘` →
+   `Workflow({ scriptPath: '<벤치>/.claude/workflows/lighthouse-loop.js', args: { bench: '<벤치>' } })`.
+   이름(`name`)이 아니라 벤치의 `scriptPath` 로 부른다 — 이름으로 찾으면 메인 체크아웃의 사본을 쓰는데, 루프 브랜치에서 고친 스크립트가 main 보다 앞서 있을 수 있다.
+   실행 회차(run)는 `round.mjs baseline` 이 `results.tsv` 의 마지막 run + 1 로 정해 결과에 돌려준다. 특정 번호를 쓰려면 `args.run` 을 준다(이미 있는 번호는 거부된다)
 4. 끝나면 `results.tsv` 와 `git log perf/lighthouse-loop` 를 본다.
    `visual` 줄은 화면이 기준과 달랐다는 뜻이다. 다른 픽셀을 빨갛게 칠한 이미지가
    `.local/lighthouse/shots/run<N>/r<R>-<후보>/diff/` 에, 후보 화면이 같은 디렉터리의 `shots/` 에,

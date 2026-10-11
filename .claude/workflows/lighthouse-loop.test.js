@@ -105,8 +105,16 @@ describe('lighthouse-loop', () => {
     expect(labels(c.record)).toEqual(['measure:baseline'])
   })
 
-  it('run·bench 가 없으면 에이전트를 띄우지 않고 던진다', async () => {
+  it('bench 가 없으면 에이전트를 띄우지 않고 던진다', async () => {
     await expect(run({ args: { run: 1 } })).rejects.toThrow(/bench/)
-    await expect(run({ args: { bench: '/b' } })).rejects.toThrow(/run/)
+  })
+
+  it('run 을 주지 않으면 round.mjs 가 정한 번호(기준선 결과의 run)로 후보 브랜치·평가를 이어간다', async () => {
+    const { result, record } = await run({ args: { bench: '/bench', rounds: 1 }, measures: [state({ run: 3 }), state({ run: 3, winner: null, results: [] })] })
+    expect(record.calls[0].prompt).toMatch(/round\.mjs baseline --out/)
+    expect(record.calls[0].prompt).not.toContain('--run')
+    expect(record.calls[1].prompt).toContain('perf/cand/run3-r1-a')
+    expect(record.calls[4].prompt).toContain('evaluate --run 3 --round 1')
+    expect(result.run).toBe(3)
   })
 })

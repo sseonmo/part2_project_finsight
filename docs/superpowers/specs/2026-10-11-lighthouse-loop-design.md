@@ -162,7 +162,7 @@ devDependencies 에 `lighthouse`, `chrome-launcher` 를 추가한다.
 
 ### `.claude/workflows/lighthouse-loop.js` — 오케스트레이션
 
-스크립트는 셸·파일 접근이 없으므로 측정과 이력 읽기는 측정 에이전트가 `round.mjs` 로 하고, 스크립트는 그 결과 JSON 으로만 분기한다. `args`: `{ run, bench, rounds: 2 }`. 메인 체크아웃은 main 에 있고 이 파일은 루프 브랜치에만 있으므로 **이름이 아니라 벤치의 `scriptPath` 로 호출한다.**
+스크립트는 셸·파일 접근이 없으므로 측정과 이력 읽기는 측정 에이전트가 `round.mjs` 로 하고, 스크립트는 그 결과 JSON 으로만 분기한다. `args`: `{ bench, run?, rounds: 2 }`. `run` 을 생략하면 `round.mjs baseline` 이 `results.tsv` 의 마지막 run + 1 을 정해 결과로 돌려주고, 스크립트는 그 번호로 후보 브랜치·평가를 이어간다 — 사람이 회차를 기억하지 않게 하려는 것이다. **이름이 아니라 벤치의 `scriptPath` 로 호출한다** — 이름으로 찾으면 메인 체크아웃의 사본을 쓰는데, 루프 브랜치에서 고친 스크립트가 main 보다 앞서 있을 수 있다.
 
 ## 안전장치
 

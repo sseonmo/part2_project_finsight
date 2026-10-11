@@ -1,6 +1,6 @@
 // Lighthouse 루프의 한 단계를 결정론적으로 수행한다. 벤치 worktree 에서 실행한다.
 //
-//   node scripts/lighthouse/round.mjs baseline --run 1 --out .local/lighthouse/run1-base.json
+//   node scripts/lighthouse/round.mjs baseline [--run N] --out .local/lighthouse/run1-base.json   # --run 이 없으면 이력의 다음 번호
 //   node scripts/lighthouse/round.mjs evaluate --run 1 --round 1 --candidates <encoded> --out ...
 //   node scripts/lighthouse/round.mjs wait --out ... [--max 540]
 //
@@ -34,6 +34,11 @@ export function encodeCandidates(list) {
 
 export function decodeCandidates(s) {
   return JSON.parse(decodeURIComponent(s))
+}
+
+// 사람이 회차를 기억하지 않게 이력에서 다음 번호를 정한다.
+export function nextRun(history) {
+  return Math.max(0, ...history.map((h) => h.run)) + 1
 }
 
 export function visualReason(diffs) {
@@ -114,10 +119,11 @@ function nextState(best) {
   }
 }
 
-async function baseline(runNo) {
+async function baseline(requested) {
   const { preflight, build, withServer, lighthouse } = await import('./measure.mjs')
   const { captureRef } = await import('./shots.mjs')
   assertCleanLoopBranch()
+  const runNo = requested ?? nextRun(readHistory())
   // 같은 번호면 후보 브랜치 이름이 겹쳐 라운드 전체가 scope 로 탈락한다
   if (readHistory().some((h) => h.run === runNo)) throw new Error(`run ${runNo} 은 이미 있다 — 다음 번호를 써라`)
   const cwd = process.cwd()
@@ -137,7 +143,7 @@ async function baseline(runNo) {
   const commit = commitTsv(`chore(perf): run ${runNo} 기준선 ${measurement.perfAvg}`)
   const best = { commit, measurement, refDir, refDate }
   writeFileSync(BEST, JSON.stringify(best))
-  return nextState(best)
+  return { run: runNo, ...nextState(best) }
 }
 
 // 검사 순서: lint → build → tsc → vitest → 촬영 → Lighthouse.
@@ -251,7 +257,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   } else {
     mkdirSync(STATE_DIR, { recursive: true })
     try {
-      const runNo = Number(arg('run'))
+      const runNo = arg('run') === undefined ? undefined : Number(arg('run'))
       const state =
         cmd === 'baseline' ? await baseline(runNo)
         : cmd === 'evaluate' ? await evaluate(runNo, Number(arg('round')), decodeCandidates(arg('candidates')))

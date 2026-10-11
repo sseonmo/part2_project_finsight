@@ -12,8 +12,8 @@ export const meta = {
 // 측정 에이전트는 그 출력(JSON)을 그대로 돌려줄 뿐이다. 판정을 LLM 이 하지 않게 하려는 것이다.
 const a = typeof args !== 'undefined' && args ? args : {}
 if (!a.bench) throw new Error('args.bench(벤치 worktree 절대 경로)가 필요하다')
-if (!a.run) throw new Error('args.run(실행 번호)이 필요하다')
-const RUN = a.run
+// run 을 주지 않으면 round.mjs baseline 이 이력에서 다음 번호를 정해 돌려준다
+let RUN = a.run || null
 const BENCH = a.bench
 const ROUNDS = a.rounds || 2
 const IDS = ['A', 'B', 'C']
@@ -37,7 +37,7 @@ const encode = (list) =>
   encodeURIComponent(JSON.stringify(list)).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase())
 
 function measurePrompt(name, cliArgs) {
-  const out = `.local/lighthouse/run${RUN}-${name}.json`
+  const out = `.local/lighthouse/run${RUN ?? '-next'}-${name}.json`
   return [
     `Lighthouse 루프의 측정 단계를 실행하고 결과를 그대로 돌려준다. 해석·요약·재시도 금지.`,
     ``,
@@ -81,7 +81,11 @@ async function step(label, name, cliArgs) {
 const summary = { run: RUN, aborted: null, stop: null, bestPerf: null, rounds: [] }
 
 phase('Baseline')
-let s = await step('measure:baseline', 'base', `baseline --run ${RUN}`)
+let s = await step('measure:baseline', 'base', RUN ? `baseline --run ${RUN}` : 'baseline')
+if (s.ok && s.run) {
+  RUN = s.run
+  summary.run = RUN
+}
 
 for (let r = 1; s.ok && r <= ROUNDS; r++) {
   if (s.stop.stop) break

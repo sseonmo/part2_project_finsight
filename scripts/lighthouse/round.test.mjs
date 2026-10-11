@@ -5,7 +5,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { classifyCandidate, encodeCandidates, decodeCandidates, visualReason, missingRef, seoulDate, gateResult } from './round.mjs'
+import { classifyCandidate, encodeCandidates, decodeCandidates, visualReason, missingRef, seoulDate, gateResult, nextRun } from './round.mjs'
 
 describe('classifyCandidate', () => {
   test('브랜치가 없으면 crash — 후보 에이전트가 커밋하지 못했다', () => {
@@ -85,5 +85,12 @@ describe('gateResult — 관문이 다르다고 할 때 날짜를 다시 본다'
 
   test('촬영 도중 자정을 넘겨 달라졌으면 후보 visual 이 아니라 환경 오류로 던진다', () => {
     assert.throws(() => gateResult({ ok: false, diffs: ['mobile /dashboard 4.00%'] }, '2026-10-11', '2026-10-12'), /서울 날짜/)
+  })
+})
+
+describe('nextRun — 사람이 회차를 기억하지 않게 이력에서 다음 번호를 정한다', () => {
+  test('이력이 없으면 1', () => assert.equal(nextRun([]), 1))
+  test('가장 큰 run + 1 — 순서와 무관', () => {
+    assert.equal(nextRun([{ run: 2 }, { run: 1 }, { run: 2 }]), 3)
   })
 })
