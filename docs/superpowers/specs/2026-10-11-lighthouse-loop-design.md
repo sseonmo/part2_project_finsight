@@ -95,6 +95,7 @@ FinSight 의 Lighthouse Performance 점수를 사람이 한 건씩 고치지 않
 - **불안정 촬영 대응**: CSS 가 빠진 채 찍힌 1회(99.8% diff)가 관측됐다
   - 후보: 다른 화면만 최대 2회 재촬영, 세 번 모두 다를 때만 `visual`
   - 기준: 22장을 두 번 찍어 **서로 같아야** 채택. 다른 화면만 다시 찍어 직전 촬영과 일치하면 채택, 3회 안에 안 되면 환경 오류(exit 1). 기준이 틀리면 모든 후보가 억울하게 탈락하기 때문이다
+- **날짜가 바뀌면 멈춘다.** 대시보드 일자·체험 잔여일·설정의 남은 일수는 서버(`next start`)가 서울 날짜로 계산하므로 puppeteer 로 브라우저 시계를 고정해도 소용없다. 기준선의 서울 날짜를 `best.json` 의 `refDate` 에 두고, 후보를 찍기 직전 날짜가 다르면 환경 오류로 멈춘다 — 후보 실패로 기록하면 `pickHypotheses` 의 실패 횟수가 쌓여 멀쩡한 진단이 영영 제외된다
 - **Lighthouse 보다 먼저 찍는다.** `visual` 이면 10분 넘는 측정을 건너뛴다
 - diff 이미지(다른 픽셀 빨강)는 `.local/lighthouse/shots/run{N}/r{R}-{id}/diff/` 에 남겨 사람이 본다
 
@@ -141,7 +142,7 @@ devDependencies 에 `lighthouse`, `chrome-launcher` 를 추가한다.
 
 ### `scripts/lighthouse/round.mjs` — 라운드 절차 CLI
 
-`baseline --run N` / `evaluate --run N --round R --candidates <encoded>` / `wait`. 결과는 `--out` 파일에 원자적으로 쓴다. `best.json` 에 `refDir` 를 넣고, `evaluate` 는 `refDir` 가 없으면 중단한다 — 기준 없이 비교를 건너뛰는 경로를 두지 않는다.
+`baseline --run N` / `evaluate --run N --round R --candidates <encoded>` / `wait`. 결과는 `--out` 파일에 원자적으로 쓴다. `best.json` 에 `refDir`·`refDate` 를 넣고, `evaluate` 는 둘 중 하나라도 없으면 중단한다 — 기준 없이 비교를 건너뛰는 경로를 두지 않는다.
 
 **검사 순서는 lint → build → tsc → vitest.** tsconfig 가 `.next/types` 를 포함하므로 tsc 는 build 가 만든 현재 후보의 타입을 봐야 한다. 처음엔 build 전에 tsc 를 돌리며 `.next/types` 를 지웠는데, 코드가 직전과 같으면 webpack 캐시가 타입 파일을 다시 만들지 않아 멀쩡한 후보가 `.next/types/... not found` 로 crash 할 수 있었다. 이미 이력에 있는 run 번호는 거부한다 — 같은 번호면 후보 브랜치 이름이 겹쳐 라운드 전체가 scope 로 탈락한다.
 
@@ -183,6 +184,7 @@ devDependencies 에 `lighthouse`, `chrome-launcher` 를 추가한다.
 ## 감수한 트레이드오프
 
 - **의도한 화면 개선도 탈락한다.** 관문은 "바뀌었는가" 만 보고 "나아졌는가" 는 보지 않는다. 화면을 바꾸는 변경은 루프 밖에서 사람이 한다
+- 테스트 유저 데이터를 시드로 고정하지 않는다. 데이터가 바뀌어도 기준을 실행마다 다시 찍으므로 실행 안에서는 같다
 - 촬영은 로그인 상태의 정적 첫 화면만 본다. 클릭·스크롤 후 상태(모달, 드롭다운)의 회귀는 vitest 와 PR 리뷰에 맡긴다
 - keep 된 audit 을 다시 고르므로 같은 진단이 매 라운드 후보 한 자리를 차지할 수 있다
 

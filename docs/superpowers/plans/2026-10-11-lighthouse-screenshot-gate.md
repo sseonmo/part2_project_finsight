@@ -29,11 +29,11 @@
 
 ## Review Focus
 
-1. `db reset` 등으로 `screens.json` 의 동적 URL 이 404·리다이렉트가 되면 → 후보 `visual`/`crash` 가 아니라 환경 오류(exit 1)로 루프가 멈춰야 한다 — Task 3 `navErrorCode` 테스트
-2. 후보 촬영이 일부 화면에서 파일을 남기지 못했으면(크기 null) → 같은 것으로 보지 말고 차이로 판정 — Task 3 `judgeShots` 테스트
-3. 이전 실행이 남긴 `best.json` 에 `refDir` 가 없거나 디렉터리가 지워졌으면 → evaluate 가 비교를 건너뛰지 말고 중단 — Task 5 `missingRef` 테스트
-4. 22장이 전부 다르면(글꼴 변경) reason 이 수천 자가 돼 `results.tsv` 를 망친다 → 앞 3개 + "외 N장" — Task 5 `visualReason` 테스트
-5. alpha 채널만 다르거나 차이가 정확히 16 인 픽셀 → 같은 것으로 본다 — Task 3 `comparePixels` 테스트
+1. run 도중 서울 기준 자정을 넘기면 대시보드 일자·체험 잔여일이 서버에서 바뀐다 → 모든 후보 `visual` 이 아니라 환경 오류로 멈춰야 한다 — Task 5 `seoulDate` 테스트 + `inspect` 의 날짜 확인
+2. `db reset` 등으로 `screens.json` 의 동적 URL 이 404·리다이렉트가 되면 → 후보 `visual`/`crash` 가 아니라 환경 오류(exit 1)로 루프가 멈춰야 한다 — Task 3 `navErrorCode` 테스트
+3. 후보 촬영이 일부 화면에서 파일을 남기지 못했으면(크기 null) → 같은 것으로 보지 말고 차이로 판정 — Task 3 `judgeShots` 테스트
+4. 이전 실행이 남긴 `best.json` 에 `refDir`·`refDate` 가 없거나 디렉터리가 지워졌으면 → evaluate 가 비교를 건너뛰지 말고 중단 — Task 5 `missingRef` 테스트
+5. 22장이 전부 다르면(글꼴 변경) reason 이 수천 자가 돼 `results.tsv` 를 망친다 → 앞 3개 + "외 N장" — Task 5 `visualReason` 테스트
 
 ---
 
@@ -108,7 +108,7 @@ git commit -m "feat(perf): 화면을 바꾼 후보(visual)를 실패로 세어 �
 - Produces:
   - `preflight(cwd: string): Promise<void>` — `.env.local`·로컬 Supabase·포트 3100 확인, 실패 시 `MeasureError(1)`
   - `build(cwd: string): void` — `npm run build`, 실패 시 `MeasureError(2)`
-  - `withServer<T>(cwd: string, fn: (server: { baseUrl: string, cookies: {name,value}[] }) => Promise<T>): Promise<T>` — `next start`·쿠키·`pages.json` 프리플라이트 후 `fn` 호출, 항상 서버 종료
+  - `withServer<T>(cwd: string, fn: (server: { baseUrl: string, cookies: {name,value}[] }) => Promise<T>): Promise<T>` — `next start`·쿠키·`pages.json` 프리플라이트 후 `fn` 호출, 항상 서버 종료 후 포트가 닫힐 때까지(최대 10초) 기다린다
   - `lighthouse(server): Promise<{ perfAvg, perPage, opportunities }>`
   - `measure(cwd)` — 위 넷의 합성. CLI 동작 불변
 
@@ -161,6 +161,8 @@ export async function withServer(cwd, fn) {
     } catch {
       // 이미 내려갔다
     }
+    // 다음 후보의 preflight 가 내려가는 중인 서버를 "포트 사용 중" 으로 오인해 라운드를 멈추지 않게 한다
+    for (let i = 0; i < 10 && (await alive(`${BASE}/`)); i++) await new Promise((r) => setTimeout(r, 1000))
   }
 }
 
@@ -208,12 +210,7 @@ export async function measure(cwd) {
 Run: `node --test scripts/lighthouse/measure.test.mjs && node --check scripts/lighthouse/measure.mjs`
 Expected: PASS, 문법 오류 없음 (`scripts/**` 는 ESLint 대상이 아니다)
 
-- [ ] **Step 4: CLI 실측 — 동작 불변 확인** (로컬 Supabase 실행 중, 포트 3100 비어 있음)
-
-Run (Bash timeout 600000): `cd ~/.cache/finsight-lighthouse/bench && node scripts/lighthouse/measure.mjs > .local/lighthouse/task2.json; echo exit=$?; node -e "const m=require('./.local/lighthouse/task2.json');console.log(m.perfAvg, m.perPage.map(p=>p.path+':'+p.perf).join(' '))"; lsof -tiTCP:3100 -sTCP:LISTEN || echo port-free`
-Expected: `exit=0`, `perfAvg` 가 70~85 근처(Pretendard 적용 후 기준), 3개 페이지, 마지막 줄 `port-free`
-
-- [ ] **Step 5: 커밋**
+- [ ] **Step 4: 커밋** — 실제 build·서버·Lighthouse 동작은 Task 4(`withServer`)와 Task 6 baseline(`lighthouse`)이 실행으로 확인한다
 
 ```bash
 git add scripts/lighthouse/measure.mjs
@@ -657,12 +654,13 @@ git commit -m "feat(perf): 22장을 찍어 기준과 비교하는 스크린샷 �
 - Produces:
   - `visualReason(diffs: string[]) → string` — 앞 3개 + ` 외 N장`
   - `missingRef(best, exists: (p) => boolean) → string | null`
-  - `best.json` 에 `refDir` 필드. evaluate 결과 status 에 `visual` 추가(워크플로는 결과를 그대로 전달하므로 변경 없음)
+  - `seoulDate(now: Date) → 'YYYY-MM-DD'` (Asia/Seoul)
+  - `best.json` 에 `refDir`·`refDate` 필드. evaluate 결과 status 에 `visual` 추가(워크플로는 결과를 그대로 전달하므로 변경 없음)
 
 - [ ] **Step 1: 실패하는 테스트 작성** — `round.test.mjs` import 줄을 바꾸고 describe 2개 추가
 
 ```js
-import { classifyCandidate, encodeCandidates, decodeCandidates, visualReason, missingRef } from './round.mjs'
+import { classifyCandidate, encodeCandidates, decodeCandidates, visualReason, missingRef, seoulDate } from './round.mjs'
 ```
 
 ```js
@@ -678,16 +676,24 @@ describe('visualReason', () => {
 })
 
 describe('missingRef', () => {
-  test('refDir 가 없으면(이전 버전 best.json) 이유를 돌려준다', () => {
+  test('refDir·refDate 가 없으면(이전 버전 best.json) 이유를 돌려준다', () => {
     assert.match(missingRef({ commit: 'c' }, () => true), /baseline/)
+    assert.match(missingRef({ refDir: 'x' }, () => true), /baseline/)
   })
 
   test('디렉터리가 지워졌으면 이유를 돌려준다', () => {
-    assert.match(missingRef({ refDir: 'x' }, () => false), /x/)
+    assert.match(missingRef({ refDir: 'x', refDate: '2026-10-11' }, () => false), /x/)
   })
 
   test('있으면 null', () => {
-    assert.equal(missingRef({ refDir: 'x' }, () => true), null)
+    assert.equal(missingRef({ refDir: 'x', refDate: '2026-10-11' }, () => true), null)
+  })
+})
+
+describe('seoulDate — 화면의 일자는 서버가 서울 날짜로 계산한다', () => {
+  test('UTC 14:59:59 는 아직 서울 같은 날, 15:00 부터 다음 날', () => {
+    assert.equal(seoulDate(new Date('2026-10-11T14:59:59Z')), '2026-10-11')
+    assert.equal(seoulDate(new Date('2026-10-11T15:00:00Z')), '2026-10-12')
   })
 })
 ```
@@ -695,7 +701,7 @@ describe('missingRef', () => {
 - [ ] **Step 2: 실패 확인**
 
 Run: `node --test scripts/lighthouse/round.test.mjs`
-Expected: FAIL — `visualReason` is not a function (또는 export 없음 SyntaxError)
+Expected: FAIL — `visualReason`·`seoulDate` export 없음 SyntaxError
 
 - [ ] **Step 3: 구현** — `round.mjs`
 
@@ -715,9 +721,15 @@ export function visualReason(diffs) {
 
 // 기준 이미지 없이 evaluate 하면 관문이 비교할 대상이 없다. 건너뛰지 말고 멈춘다.
 export function missingRef(best, exists) {
-  if (!best.refDir) return 'best.json 에 refDir 가 없다 — 이번 run 의 baseline 부터 다시 돌려라'
+  if (!best.refDir || !best.refDate) return 'best.json 에 refDir·refDate 가 없다 — 이번 run 의 baseline 부터 다시 돌려라'
   if (!exists(best.refDir)) return `기준 이미지 디렉터리가 없다: ${best.refDir}`
   return null
+}
+
+// 대시보드 일자·체험 잔여일은 서버(next start)가 서울 날짜로 계산한다. 브라우저 시계를 고정해도
+// 소용없으므로, 기준선과 날짜가 달라지면 후보 탓이 아니라 환경 변화로 보고 멈춘다.
+export function seoulDate(now) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(now)
 }
 
 const shotsDir = (runNo, sub) => path.join(STATE_DIR, 'shots', `run${runNo}`, sub)
@@ -734,6 +746,7 @@ async function baseline(runNo) {
   if (readHistory().some((h) => h.run === runNo)) throw new Error(`run ${runNo} 은 이미 있다 — 다음 번호를 써라`)
   const cwd = process.cwd()
   const refDir = shotsDir(runNo, 'ref')
+  const refDate = seoulDate(new Date())
   await preflight(cwd)
   build(cwd)
   // 촬영을 먼저 한다 — 기준이 안정되지 않으면 측정할 이유가 없다
@@ -746,7 +759,7 @@ async function baseline(runNo) {
 그 아래 기존 `appendFileSync(TSV, …)`·`commitTsv(…)` 는 그대로 두고, `best` 줄만:
 
 ```js
-  const best = { commit, measurement, refDir }
+  const best = { commit, measurement, refDir, refDate }
 ```
 
 (d) `evaluate()` 위에 후보 검사 함수를 추가한다:
@@ -756,7 +769,7 @@ async function baseline(runNo) {
 // tsc 는 build 가 만든 현재 후보의 .next/types 를 봐야 한다. 처음엔 build 전에 tsc 를 돌리며
 // .next/types 를 지웠는데, 코드가 직전과 같으면 webpack 캐시가 타입 파일을 다시 만들지 않아
 // 멀쩡한 후보가 `.next/types/... not found` 로 crash 할 수 있었다.
-async function inspect(m, shots, refDir, dir) {
+async function inspect(m, shots, best, dir) {
   const cwd = process.cwd()
   if (!run('npm', ['run', 'lint'])) return { status: 'crash', reason: 'lint 실패' }
   try {
@@ -766,7 +779,9 @@ async function inspect(m, shots, refDir, dir) {
     if (!run('npx', ['tsc', '--noEmit'])) return { status: 'crash', reason: 'tsc 실패' }
     if (!run('npx', ['vitest', 'run'])) return { status: 'crash', reason: 'vitest 실패' }
     return await m.withServer(cwd, async (server) => {
-      const v = await shots.captureCandidate(server, refDir, dir)
+      const today = seoulDate(new Date())
+      if (today !== best.refDate) throw new Error(`서울 날짜가 기준선(${best.refDate})과 다르다(${today}) — 화면의 일자가 바뀌므로 새 run 으로 다시 시작하라`)
+      const v = await shots.captureCandidate(server, best.refDir, dir)
       if (!v.ok) return { status: 'visual', reason: visualReason(v.diffs) } // 화면이 바뀌면 측정하지 않는다
       return { status: 'measured', measurement: await m.lighthouse(server) }
     })
@@ -803,7 +818,7 @@ async function evaluate(runNo, roundNo, candidates) {
 
       log(`${c.id} ${c.auditId} — lint·build·tsc·vitest·촬영·측정`)
       git('checkout', '-q', '--detach', c.branch)
-      judged.push({ ...c, ...(await inspect(m, shots, best.refDir, shotsDir(runNo, `r${roundNo}-${c.id}`))) })
+      judged.push({ ...c, ...(await inspect(m, shots, best, shotsDir(runNo, `r${roundNo}-${c.id}`))) })
       git('checkout', '-q', LOOP_BRANCH)
     }
   } finally {
@@ -841,6 +856,15 @@ Expected: 전부 PASS, grep 출력 없음, `ok`
    같은 커밋이면 루프가 찍는 기준과 픽셀 단위로 같다
 ```
 
+"매 실행" 4번(`끝나면 results.tsv 와 …`) 끝에 추가:
+
+```markdown
+   `visual` 줄은 화면이 기준과 달랐다는 뜻이다. 다른 픽셀을 빨갛게 칠한 이미지가
+   `.local/lighthouse/shots/run<N>/r<R>-<후보>/diff/` 에, 후보 화면이 같은 디렉터리의 `shots/` 에,
+   기준이 `.local/lighthouse/shots/run<N>/ref/` 에 있다. "서울 날짜가 기준선과 다르다" 로 멈췄다면
+   자정을 넘긴 것이다 — 다음 번호로 다시 실행한다
+```
+
 "동적 URL 을 다시 넣을 때 …" 문단의 `pages.json` 언급 두 곳을 `pages.json`·`screens.json` 으로 바꾼다(촬영 대상은 11개 전부라 `screens.json` 이 항상 동적 URL 을 갖는다).
 
 - [ ] **Step 6: 커밋**
@@ -871,7 +895,7 @@ Expected: `ALL-OK`
 
 Run: `cd ~/.cache/finsight-lighthouse/bench && rm -f .local/lighthouse/run2-base.json && nohup node scripts/lighthouse/round.mjs baseline --run 2 --out .local/lighthouse/run2-base.json > .local/lighthouse/run2-base.json.log 2>&1 &`
 그다음 같은 턴 안에서 반복 (Bash timeout 600000): `cd ~/.cache/finsight-lighthouse/bench && node scripts/lighthouse/round.mjs wait --out .local/lighthouse/run2-base.json --max 540`
-Expected: `{"ok":true,"bestCommit":…,"bestPerf":7x.xx,…}`, `.local/lighthouse/shots/run2/ref/` 에 22장, `.local/lighthouse/best.json` 에 `refDir`
+Expected: `{"ok":true,"bestCommit":…,"bestPerf":…,…}` — `bestPerf` 가 70~85 근처(Pretendard 적용 후 11개 평균이 78.09 였다. 3개 평균이라 조금 다를 수 있다. 90 이상이면 글꼴이 빠진 것이니 멈추고 보고), `.local/lighthouse/shots/run2/ref/` 에 22장, `.local/lighthouse/best.json` 에 `refDir`·`refDate`. `.local/lighthouse/run2-base.json.log` 에 `[measure] / 1/3` 류 줄이 있다(measure 분리 후 Lighthouse 경로 확인)
 
 - [ ] **Step 3: 가짜 후보 브랜치 만들기** — 벤치는 루프 브랜치에 머물러야 하므로 임시 worktree 에서
 
