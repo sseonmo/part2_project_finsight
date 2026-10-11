@@ -43,8 +43,9 @@ function measurePrompt(name, cliArgs) {
     ``,
     `1. 실행 (Bash, 한 번만):`,
     `   cd ${BENCH} && mkdir -p .local/lighthouse && rm -f ${out} && nohup node scripts/lighthouse/round.mjs ${cliArgs} --out ${out} > ${out}.log 2>&1 &`,
-    `2. 대기: 아래를 반복한다. 출력이 {"pending":true} 이면 같은 명령을 다시 실행한다. 한 번에 최대 9분 걸린다.`,
+    `2. 대기: 아래를 반복한다. 출력이 {"pending":true} 이면 같은 명령을 다시 실행한다. 한 번에 최대 9분 걸리므로 Bash 도구의 timeout 파라미터를 600000(10분)으로 설정해 실행한다. 기본값(2분)이면 중간에 끊긴다.`,
     `   cd ${BENCH} && node scripts/lighthouse/round.mjs wait --out ${out} --max 540`,
+    `   출력 없이 timeout 으로 끊기면 같은 wait 명령을 그대로 다시 실행한다(out 파일을 읽기만 하므로 안전하며, 1번을 두 번 실행하지 말라는 규칙과 무관하다).`,
     `3. pending 이 아닌 출력이 나오면 그 JSON 한 줄을 stdout 필드에 그대로 담아 반환한다.`,
     ``,
     `규칙: 1번 명령을 두 번 실행하지 않는다(측정이 겹치면 점수가 흔들린다). 파일·브랜치를 고치지 않는다.`,
@@ -110,7 +111,7 @@ for (let r = 1; s.ok && r <= ROUNDS; r++) {
   }
 }
 
-if (!s.ok) summary.aborted = s.error
+if (!s.ok) summary.aborted = s.error ?? '예상 밖 출력: ' + JSON.stringify(s).slice(0, 200)
 else {
   summary.stop = s.stop
   summary.bestPerf = s.bestPerf

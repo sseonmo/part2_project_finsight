@@ -86,7 +86,7 @@ FinSight 의 Lighthouse Performance 점수를 사람이 한 건씩 고치지 않
 1. 전제 확인: `.env.local` 존재, `http://127.0.0.1:54321` 응답, 포트 3100 비어 있음. 아니면 exit 1
 2. `npm run build` (실패 시 exit 2 — 후보 crash) → `next start -p 3100`
 3. `scripts/browser-test/make-cookie.mjs` 로 세션 쿠키 발급
-4. `pages.json` 의 각 URL 이 리다이렉트 없이 200 인지 확인. 아니면 exit 1 (쿠키 만료·데이터 없음을 점수 하락으로 오인하지 않기 위해). `/` 는 쿠키 없이 — 로그인 사용자는 `/dashboard` 로 리다이렉트된다
+4. `pages.json` 의 각 URL 이 리다이렉트 없이 200 인지 확인. 아니면 exit 1 (쿠키 만료·데이터 없음을 점수 하락으로 오인하지 않기 위해). 단 HTTP 5xx 는 후보가 페이지를 깨뜨린 build/런타임 실패로 보고 exit 2 (→ crash), 리다이렉트·401·404 는 환경 오류로 남는다. `/` 는 쿠키 없이 — 로그인 사용자는 `/dashboard` 로 리다이렉트된다
 5. URL × 3회 Lighthouse (Node API + `chrome-launcher`, 쿠키는 `extraHeaders` 로 주입 — 페이지 로드에는 브라우저 Supabase 클라이언트가 쓰이지 않는다)
 6. 페이지별 카테고리 점수 중앙값 + opportunities(auditId, 예상 절감 ms, 해당 페이지) 집계. runtimeError·null 점수는 0점이 아니라 exit 1
 7. 서버 종료, stdout 으로 JSON 출력
@@ -102,8 +102,8 @@ devDependencies 에 `lighthouse`, `chrome-launcher` 를 추가한다.
 ### `scripts/lighthouse/judge.mjs` — 판정 (순수 함수, TDD)
 
 - `checkPaths(paths)` → `{ ok, violations }`
-- `decide(best, candidates)` → `{ winner | null, results: [{status: keep|discard|crash|scope, perfAvg, reason}] }`
-- `pickHypotheses(opportunities, history, n=3)` → 절감 ms 내림차순. 실패(discard·crash·scope) 2회 audit 만 제외한다. **keep 된 audit 도 다시 고를 수 있다** — 가장 큰 진단은 한 번의 최소 변경으로 다 해소되지 않는 경우가 많다
+- `decide(best, candidates)` → `{ winner | null, results: [{status: keep|discard|outcompeted|crash|scope, perfAvg, reason}] }`
+- `pickHypotheses(opportunities, history, n=3)` → 절감 ms 내림차순. 실패(discard·crash·scope) 2회 audit 만 제외한다(기준을 넘고도 라운드 승자에게 밀린 `outcompeted` 는 실패로 세지 않는다). **keep 된 audit 도 다시 고를 수 있다** — 가장 큰 진단은 한 번의 최소 변경으로 다 해소되지 않는 경우가 많다
 - `shouldStop(bestPerf, history)` → `{ stop, reason }`
 
 ### `scripts/lighthouse/round.mjs` — 라운드 절차 CLI

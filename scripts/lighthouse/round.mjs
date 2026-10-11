@@ -8,7 +8,7 @@
 // 결과는 --out 에 원자적으로(임시 파일 → rename) 쓴다.
 
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, appendFileSync } from 'node:fs'
+import { existsSync, mkdirSync, rmSync, readFileSync, renameSync, writeFileSync, appendFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -113,7 +113,7 @@ async function evaluate(runNo, roundNo, candidates) {
     for (const c of candidates) {
       const exists = gitOk('rev-parse', '--verify', '--quiet', `${c.branch}^{commit}`)
       const isDescendant = exists && gitOk('merge-base', '--is-ancestor', best.commit, c.branch)
-      const changed = isDescendant ? git('diff', '--name-only', best.commit, c.branch).split('\n').filter(Boolean) : []
+      const changed = isDescendant ? git('diff', '--name-only', '--no-renames', best.commit, c.branch).split('\n').filter(Boolean) : []
       const cls = classifyCandidate({ exists, isDescendant, changed })
       if (cls.status !== 'measure') {
         judged.push({ ...c, ...cls })
@@ -122,6 +122,8 @@ async function evaluate(runNo, roundNo, candidates) {
 
       log(`${c.id} ${c.auditId} — lint·tsc·vitest·측정`)
       git('checkout', '-q', '--detach', c.branch)
+      // tsconfig 가 .next/types 를 포함하는데 tsc 는 build 전에 돌아 이전 후보의 타입을 본다
+      rmSync('.next/types', { recursive: true, force: true })
       if (!run('npm', ['run', 'lint'])) judged.push({ ...c, status: 'crash', reason: 'lint 실패' })
       // next.config.ts 의 ignoreBuildErrors 로 build 의 타입 검사를 끌 수 있으므로 따로 돌린다
       else if (!run('npx', ['tsc', '--noEmit'])) judged.push({ ...c, status: 'crash', reason: 'tsc 실패' })

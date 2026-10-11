@@ -81,4 +81,4 @@ docker exec supabase_db_part2_project_finsight psql -U postgres -d postgres -Atc
 ### 결과 반영
 
 루프 브랜치는 push 하지 않는다. 쓸 만한 커밋을 골라 별도 브랜치로 PR 을 만든다.
-후보 브랜치 `perf/cand/*` 는 정리할 때 `git branch -D` 로 지운다.
+후보 브랜치 `perf/cand/*` 는 정리할 때 먼저 후보 worktree 를 `git worktree remove` 로 지운다(이미 디렉터리가 없으면 `git worktree prune`). 커밋이 있는 후보 worktree 는 Claude Code 가 남겨 두고, 체크아웃 중인 브랜치는 `git branch -D` 가 거부되기 때문이다. 그 뒤에 `git branch -D` 로 브랜치를 지운다.

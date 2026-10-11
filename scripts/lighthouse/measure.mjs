@@ -79,6 +79,11 @@ export function preflightStatus(status, location) {
   return `HTTP ${status}${location ? ` → ${location}` : ''}`
 }
 
+// 5xx 는 후보가 페이지를 런타임에 깨뜨린 것이라 crash(2). 리다이렉트·401·404 는 환경 문제(1).
+export function preflightErrorCode(status) {
+  return status >= 500 ? 2 : 1
+}
+
 export function cookieHeader(list) {
   return list.map(({ name, value }) => `${name}=${value}`).join('; ')
 }
@@ -108,7 +113,7 @@ export async function measure(cwd) {
   if (await alive(`http://localhost:${PORT}/`)) throw new MeasureError(1, `포트 ${PORT} 이 이미 쓰이고 있다`)
 
   log('npm run build')
-  const build = spawnSync('npm', ['run', 'build'], { cwd, stdio: ['ignore', 'inherit', 'inherit'] })
+  const build = spawnSync('npm', ['run', 'build'], { cwd, stdio: ['ignore', 2, 2] })
   if (build.status !== 0) throw new MeasureError(2, `build 실패 (exit ${build.status})`)
 
   log(`next start -p ${PORT}`)
@@ -130,7 +135,7 @@ export async function measure(cwd) {
     for (const p of PAGES) {
       const res = await fetch(`http://localhost:${PORT}${p.path}`, { redirect: 'manual', headers: p.auth ? { cookie } : {} })
       const err = preflightStatus(res.status, res.headers.get('location'))
-      if (err) throw new MeasureError(1, `${p.path} 프리플라이트 실패: ${err}`)
+      if (err) throw new MeasureError(preflightErrorCode(res.status), `${p.path} 프리플라이트 실패: ${err}`)
     }
 
     chrome = await launch({ chromeFlags: ['--headless=new'] })

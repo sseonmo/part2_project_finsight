@@ -81,7 +81,7 @@ describe('decide', () => {
   test('조건을 넘은 후보가 여럿이면 최고만 keep, 나머지는 discard', () => {
     const r = decide(best, [cand('A', m(63)), cand('B', m(65)), cand('C', m(62))])
     assert.equal(r.winner, 'B')
-    assert.deepEqual(r.results.map((x) => x.status), ['discard', 'keep', 'discard'])
+    assert.deepEqual(r.results.map((x) => x.status), ['outcompeted', 'keep', 'outcompeted'])
     assert.match(r.results[0].reason, /B/)
   })
 
@@ -113,6 +113,11 @@ describe('pickHypotheses', () => {
 
   test('절감 ms 내림차순, 동률이면 auditId 순', () => {
     assert.deepEqual(pickHypotheses(ops, []).map((o) => o.auditId), ['b', 'c', 'd'])
+  })
+
+  test('outcompeted 는 실패로 세지 않는다', () => {
+    const picked = pickHypotheses(ops, [row('b', 'outcompeted'), row('b', 'outcompeted')])
+    assert.deepEqual(picked.map((o) => o.auditId), ['b', 'c', 'd'])
   })
 
   test('keep 된 audit 은 다시 고를 수 있고, 실패 2회면 제외', () => {

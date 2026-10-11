@@ -5,7 +5,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { median, summarizeLhr, aggregate, preflightStatus, cookieHeader, readEnvValue } from './measure.mjs'
+import { median, summarizeLhr, aggregate, preflightStatus, preflightErrorCode, cookieHeader, readEnvValue } from './measure.mjs'
 
 const lhr = (perf, extraAudits = {}) => ({
   categories: {
@@ -72,6 +72,16 @@ describe('preflightStatus', () => {
     assert.equal(preflightStatus(200, null), null)
     assert.match(preflightStatus(307, '/?redirectTo=%2Fdashboard'), /307.*redirectTo/)
     assert.match(preflightStatus(404, null), /404/)
+  })
+})
+
+describe('preflightErrorCode', () => {
+  test('5xx 는 후보 탓(2), 리다이렉트·401·404 는 환경 오류(1)', () => {
+    assert.equal(preflightErrorCode(500), 2)
+    assert.equal(preflightErrorCode(503), 2)
+    assert.equal(preflightErrorCode(307), 1)
+    assert.equal(preflightErrorCode(401), 1)
+    assert.equal(preflightErrorCode(404), 1)
   })
 })
 

@@ -71,7 +71,7 @@ export function decide(best, candidates) {
   const winner = eligible.reduce((w, r) => (w && w.perfAvg >= r.perfAvg ? w : r), null)
   for (const r of eligible) {
     if (r === winner) r.status = 'keep'
-    else Object.assign(r, { status: 'discard', reason: `${r.reason}, ${winner.id} 에 밀림` })
+    else Object.assign(r, { status: 'outcompeted', reason: `${r.reason}, ${winner.id} 에 밀림` })
   }
   return { winner: winner ? winner.id : null, results }
 }

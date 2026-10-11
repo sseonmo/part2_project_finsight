@@ -59,6 +59,7 @@ describe('lighthouse-loop', () => {
     expect(base).toContain('cd /bench')
     expect(base).toContain('round.mjs baseline --run 1')
     expect(base).toContain('round.mjs wait')
+    expect(base).toContain('600000')
     const evalPrompt = record.calls.at(-1).prompt
     expect(evalPrompt).toMatch(/round\.mjs evaluate --run 1 --round 1 --candidates [A-Za-z0-9\-_.~%]+ /)
   })
@@ -99,6 +100,8 @@ describe('lighthouse-loop', () => {
     expect(b.result.aborted).toMatch(/JSON/)
     const c = await run({ measures: [] })
     expect(c.result.aborted).toMatch(/측정 에이전트/)
+    const d = await run({ measures: [{ pending: true }] })
+    expect(d.result.aborted).toMatch(/예상 밖 출력/)
     expect(labels(c.record)).toEqual(['measure:baseline'])
   })
 
