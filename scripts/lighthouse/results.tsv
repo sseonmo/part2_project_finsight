@@ -9,3 +9,4 @@ run	round	candidate	auditId	perfAvg	minGuard	status	commit	description
 2	0	base	-	77.33	96	baseline	e8c6695	run 2 기준선
 2	1	A	gate-test-sysfont			visual	ea40939	관문 실측: 시스템 폰트 — visual mobile / 1.18%, mobile /dashboard 4.62%, mobile /dashboard/billing 5.33% 외 19장
 2	1	B	gate-test-comment	77	96	discard	19d6672	관문 실측: 주석만 — gain +-0.33 < 1
+3	0	base	-	77.33	96	baseline	aa926c2	run 3 기준선
