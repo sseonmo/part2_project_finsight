@@ -15,7 +15,7 @@
 - 측정은 로컬 Supabase(`.env.local`)에서만. `.env.local` 없거나 `http://127.0.0.1:54321` 무응답이면 exit 1
 - Lighthouse 는 기본 설정(모바일 에뮬레이션 + 4x CPU·Slow 4G throttling). `--preset=desktop` 금지
 - 페이지별 3회 중앙값, 11개 페이지 Performance 평균 = `perfAvg`
-- keep: `perfAvg ≥ 현재 최고 + 1`, 모든 페이지 a11y·bp·seo 가 현재 최고 측정값 이상, lint·vitest·build 통과, 허용 경로만 변경 — 이 조건을 만족하는 후보 중 최고 1개
+- keep: `perfAvg ≥ 현재 최고 + 1`, 모든 페이지 a11y·bp·seo 가 현재 최고 측정값 이상, lint·tsc·vitest·build 통과, 허용 경로만 변경 — 이 조건을 만족하는 후보 중 최고 1개
 - 종료: `perfAvg ≥ 90` / 5라운드 연속 keep 없음 / 누적 20라운드 — 먼저 오는 것
 - 1회 실행 = 기준선 + 2라운드 = 에이전트 9개
 - 허용 경로: `src/components/**`, `src/app/**/page.tsx`, `src/app/**/layout.tsx`, `src/app/**/loading.tsx`, `src/app/globals.css`, `next.config.ts`, `public/**`
@@ -23,7 +23,7 @@
 - 판정은 LLM 이 하지 않는다. push 하지 않는다
 - `scripts/**` 는 ESLint 대상이 아니다(`eslint.config.mjs` ignores). `scripts/lighthouse/*.test.mjs` 는 `node --test` 로 돌린다 (`scripts/hooks/` 와 같은 관례)
 
-## 스펙과 달라지는 점 (승인 필요)
+## 스펙과 달라지는 점 (승인됨, spec 에 반영)
 
 1. **측정 위치: 메인 체크아웃 → 별도 벤치 worktree.** 메인 체크아웃에서 측정하면 (a) `.claude/settings.json` 의 Stop 훅이 매 턴 `npm run build` 로 같은 `.next` 를 덮어써 측정 중인 `next start` 가 깨지고, (b) 루프가 도는 몇 시간 동안 메인 체크아웃을 쓸 수 없다. 벤치는 저장소 **밖**(`~/.cache/finsight-lighthouse/bench`)에 둔다. 저장소 안(`.local/`)에 두면 ESLint(`.` 전체)와 `tsconfig` include 가 벤치 파일까지 훑는다
 2. **라운드 절차를 `round.mjs` 로 스크립트화.** 스펙은 측정 에이전트가 단계를 하나씩 수행한다고 했지만, 후보 3개 × (체크아웃·lint·test·build·측정·복귀)를 LLM 이 손으로 하면 순서 실수가 이력을 오염시킨다. 에이전트는 `round.mjs` 실행과 결과 전달만 한다
@@ -194,9 +194,9 @@ describe('pickHypotheses', () => {
     assert.deepEqual(pickHypotheses(ops, []).map((o) => o.auditId), ['b', 'c', 'd'])
   })
 
-  test('keep 된 audit 은 제외, 실패는 1회만 재시도', () => {
+  test('keep 된 audit 은 다시 고를 수 있고, 실패 2회면 제외', () => {
     const picked = pickHypotheses(ops, [row('b', 'keep'), row('c', 'discard'), row('d', 'crash'), row('d', 'scope')])
-    assert.deepEqual(picked.map((o) => o.auditId), ['c', 'a'])
+    assert.deepEqual(picked.map((o) => o.auditId), ['b', 'c', 'a'])
   })
 
   test('진단이 모자라면 있는 만큼만', () => {
@@ -339,13 +339,13 @@ export function decide(best, candidates) {
 
 const FAILED = new Set(['discard', 'crash', 'scope'])
 
+// keep 된 audit 도 다시 고른다. 가장 큰 진단은 한 번의 최소 변경으로 다 해소되지 않는다.
 export function pickHypotheses(opportunities, history, n = THRESHOLDS.CANDIDATES) {
-  const kept = new Set(history.filter((h) => h.status === 'keep').map((h) => h.auditId))
   const fails = {}
   for (const h of history) if (FAILED.has(h.status)) fails[h.auditId] = (fails[h.auditId] ?? 0) + 1
 
   return opportunities
-    .filter((o) => !kept.has(o.auditId) && (fails[o.auditId] ?? 0) < 2)
+    .filter((o) => (fails[o.auditId] ?? 0) < 2)
     .sort((a, b) => b.savingsMs - a.savingsMs || a.auditId.localeCompare(b.auditId))
     .slice(0, n)
 }
@@ -791,7 +791,7 @@ git commit -m "feat(perf): 11개 페이지를 모바일 Lighthouse 3회 중앙�
 **Interfaces:**
 - Consumes: Task 1 의 `checkPaths`, `decide`, `pickHypotheses`, `shouldStop`, `parseHistory`, `formatRow`, `TSV_HEADER`; Task 2 의 `measure(cwd)`, `MeasureError`
 - Produces:
-  - `node scripts/lighthouse/round.mjs baseline --run N --out <file>`
+  - `node scripts/lighthouse/round.mjs baseline --run N --out <file>` — 이력에 이미 있는 run 이면 `{ ok: false }`
   - `node scripts/lighthouse/round.mjs evaluate --run N --round R --candidates <encoded> --out <file>`
   - `node scripts/lighthouse/round.mjs wait --out <file> [--max 540]` → 파일이 생기면 내용을 출력, 아니면 `{"pending":true}`
   - `--out` 파일 내용(= 워크플로가 받는 상태) `State`:
@@ -961,6 +961,8 @@ function nextState(best) {
 async function baseline(runNo) {
   const { measure } = await import('./measure.mjs')
   assertCleanLoopBranch()
+  // 같은 번호면 후보 브랜치 이름이 겹쳐 라운드 전체가 scope 로 탈락한다
+  if (readHistory().some((h) => h.run === runNo)) throw new Error(`run ${runNo} 은 이미 있다 — 다음 번호를 써라`)
   const measurement = await measure(process.cwd())
   appendFileSync(TSV, formatRow({
     run: runNo, round: 0, candidate: 'base', auditId: '-', perfAvg: measurement.perfAvg,
@@ -990,9 +992,11 @@ async function evaluate(runNo, roundNo, candidates) {
         continue
       }
 
-      log(`${c.id} ${c.auditId} — lint·vitest·측정`)
+      log(`${c.id} ${c.auditId} — lint·tsc·vitest·측정`)
       git('checkout', '-q', '--detach', c.branch)
       if (!run('npm', ['run', 'lint'])) judged.push({ ...c, status: 'crash', reason: 'lint 실패' })
+      // next.config.ts 의 ignoreBuildErrors 로 build 의 타입 검사를 끌 수 있으므로 따로 돌린다
+      else if (!run('npx', ['tsc', '--noEmit'])) judged.push({ ...c, status: 'crash', reason: 'tsc 실패' })
       else if (!run('npx', ['vitest', 'run'])) judged.push({ ...c, status: 'crash', reason: 'vitest 실패' })
       else {
         try {
@@ -1155,12 +1159,11 @@ describe('lighthouse-loop', () => {
     expect(result.aborted).toBeNull()
   })
 
-  it('후보 프롬프트에 브랜치 이름·기준 커밋·audit 이 들어간다', async () => {
+  it('후보 프롬프트에 브랜치 이름·기준 커밋이 들어간다', async () => {
     const { record } = await run({ args: { run: 3, bench: '/bench', rounds: 1 }, measures: [state({ bestCommit: 'deadbeef' }), state()] })
     const p = record.calls[1].prompt
     expect(p).toContain('perf/cand/run3-r1-a')
     expect(p).toContain('deadbeef')
-    expect(p).toContain('`a`')
   })
 
   it('측정 프롬프트는 벤치에서 round.mjs 를 nohup 으로 띄우고 wait 로 기다리게 한다', async () => {
@@ -1232,7 +1235,7 @@ Expected: FAIL — `ENOENT ... lighthouse-loop.js`
 export const meta = {
   name: 'lighthouse-loop',
   description: 'Lighthouse(모바일) 점수를 autoresearch 방식으로 올린다 — 라운드마다 후보 3개를 만들고 최고만 keep',
-  whenToUse: '벤치 worktree 가 준비된 뒤 scripts/lighthouse/program.md 의 실행 절차대로 호출',
+  whenToUse: '벤치 worktree 가 준비된 뒤 scriptPath 로 호출 (scripts/lighthouse/program.md 실행 절차)',
   phases: [
     { title: 'Baseline', detail: '현재 최고 커밋 재측정' },
     { title: 'Round', detail: '후보 3개 병렬 → 직렬 측정 → 최고만 keep' },
@@ -1424,21 +1427,30 @@ karpathy/autoresearch 의 `program.md` 에 해당한다. 설계는
 ```bash
 git switch main
 git worktree add ~/.cache/finsight-lighthouse/bench perf/lighthouse-loop
-cp .env.local ~/.cache/finsight-lighthouse/bench/
+cp .env .env.local ~/.cache/finsight-lighthouse/bench/
 (cd ~/.cache/finsight-lighthouse/bench && npm ci)
 ```
 
 벤치를 저장소 밖에 두는 이유: 메인 체크아웃의 Stop 훅이 매 턴 `npm run build` 로 `.next` 를
 덮어쓰고, 저장소 안에 두면 ESLint·`tsconfig` 가 벤치 파일까지 훑는다.
 
+`.env` 와 `.env.local` 을 둘 다 복사한다. 둘 다 gitignore 대상이라 worktree 에 따라오지 않고,
+`.env` 에만 있는 키(`SUPABASE_STORAGE_BUCKET`·`NEXT_PUBLIC_APP_URL` 등)가 없으면 빌드·렌더가
+실패한다. `.env.local` 이 Supabase·Inngest 를 로컬로 덮는다(`up.sh` 와 같은 조합).
+
 ### 매 실행
 
 1. `npx supabase start` — 로컬 Supabase. 테스트 유저 데이터가 `pages.json` 의 URL 을 200 으로
    돌려줘야 한다. 루프 중에는 `scripts/browser-test/reset.sh` 를 돌리지 않는다
 2. 포트 3100 이 비어 있는지 확인
-3. Claude 에게: `lighthouse-loop 워크플로를 run=<N>, bench=<벤치 절대 경로> 로 실행해줘`
-   (N 은 `results.tsv` 의 마지막 run + 1)
+3. Claude 에게: `벤치의 lighthouse-loop 워크플로를 run=<N> 으로 실행해줘` →
+   `Workflow({ scriptPath: '<벤치>/.claude/workflows/lighthouse-loop.js', args: { run: N, bench: '<벤치>' } })`.
+   이름(`name`)으로는 못 찾는다 — 메인 체크아웃은 main 에 있고 이 파일은 루프 브랜치에만 있다.
+   N 은 `results.tsv` 의 마지막 run + 1 (같은 번호는 거부된다)
 4. 끝나면 `results.tsv` 와 `git log perf/lighthouse-loop` 를 본다
+
+`npx supabase db reset` 을 했다면 signal·upload id 가 바뀌어 프리플라이트가 404 로 멈춘다.
+`pages.json` 의 동적 URL 을 다시 채운다(구현 계획 Task 2 Step 6 의 조회).
 
 ### 결과 반영
 
@@ -1448,7 +1460,7 @@ cp .env.local ~/.cache/finsight-lighthouse/bench/
 
 - [ ] **Step 2: 확인**
 
-Run: `grep -c "perf/cand" .claude/workflows/lighthouse-loop.js && grep -n "program.md" .claude/workflows/lighthouse-loop.js`
+Run: `grep -n "program.md" .claude/workflows/lighthouse-loop.js`
 Expected: 후보 프롬프트가 `scripts/lighthouse/program.md` 를 가리킨다
 
 - [ ] **Step 3: Commit**
@@ -1474,7 +1486,7 @@ Expected: 모두 통과
 ```bash
 git switch main
 git worktree add ~/.cache/finsight-lighthouse/bench perf/lighthouse-loop
-cp .env.local ~/.cache/finsight-lighthouse/bench/
+cp .env .env.local ~/.cache/finsight-lighthouse/bench/
 (cd ~/.cache/finsight-lighthouse/bench && npm ci)
 ```
 
@@ -1489,7 +1501,7 @@ cd ~/.cache/finsight-lighthouse/bench && mkdir -p .local/lighthouse && \
 
 - [ ] **Step 4: 사용자 확인 후 워크플로 1회 실행**
 
-`Workflow({ name: 'lighthouse-loop', args: { run: 1, bench: '<벤치 절대 경로>' } })`
+`Workflow({ scriptPath: '<벤치>/.claude/workflows/lighthouse-loop.js', args: { run: 1, bench: '<벤치 절대 경로>' } })` — `name` 으로는 못 찾는다(메인 체크아웃은 main)
 
 완료 기준:
 - `results.tsv` 에 run 1 의 기준선 1줄 + 라운드마다 후보 줄

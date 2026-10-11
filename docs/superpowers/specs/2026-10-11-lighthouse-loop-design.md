@@ -20,7 +20,7 @@ FinSight 의 Lighthouse Performance 점수를 사람이 한 건씩 고치지 않
 ## 지키는 선
 
 - 측정은 **로컬 Supabase**(`.env.local`)에서만 한다. `.env.local` 이 없으면 프로덕션을 때리므로 즉시 실패한다 (`scripts/browser-test/up.sh` 와 같은 이유)
-- 판정은 LLM 이 하지 않는다. 점수 비교·가드레일·종료 조건·다음 가설 선택은 순수 함수(`judge.mjs`)가 하고, 에이전트는 그 출력대로 commit/reset 만 한다. 같은 측정 결과면 같은 판정이 나와야 테스트할 수 있다
+- 판정은 LLM 이 하지 않는다. 점수 비교·가드레일·종료 조건·다음 가설 선택은 순수 함수(`judge.mjs`)가 하고, 에이전트는 결정론적 스크립트(`round.mjs`)를 실행하고 그 출력을 전달만 한다. 같은 측정 결과면 같은 판정이 나와야 테스트할 수 있다
 - push 하지 않는다. 마이그레이션·`.env*`·테스트 파일을 고치지 않는다
 - 새 로직은 테스트를 먼저 쓴다 (TDD) — `judge.mjs` 가 대상
 
@@ -33,7 +33,7 @@ FinSight 의 Lighthouse Performance 점수를 사람이 한 건씩 고치지 않
 - keep 조건: 아래를 모두 만족하는 후보 중 `perfAvg` 최고 1개
   - `perfAvg ≥ 현재 최고 + 1` (측정 노이즈로 우연히 오른 점수를 거른다)
   - 어떤 페이지의 Accessibility·Best Practices·SEO 도 기준선보다 낮아지지 않음
-  - `npm run lint`, `npx vitest run`, `npm run build` 통과
+  - `npm run lint`, `npx tsc --noEmit`, `npx vitest run`, `npm run build` 통과 (`tsc` 를 따로 두는 이유: 허용 경로인 `next.config.ts` 로 `ignoreBuildErrors` 를 켜면 build 의 타입 검사가 꺼진다)
   - 패치가 허용 경로 밖을 건드리지 않음
 
 **측정 조건 — 모바일.** Lighthouse 기본(모바일 에뮬레이션 + 4x CPU·Slow 4G throttling). 데스크톱 preset 은 쓰지 않는다.
@@ -54,42 +54,46 @@ FinSight 의 Lighthouse Performance 점수를 사람이 한 건씩 고치지 않
 ## 구조
 
 ```
-[기준선] 측정 에이전트: 현재 HEAD 측정 → perfAvg·가드레일 기준값·opportunities
+[기준선] 측정 에이전트 → round.mjs baseline: 현재 최고 커밋 측정 → perfAvg·가드레일 기준값·opportunities
    │
-   ▼  judge.pickHypotheses(): 시도 이력에 없는 audit 상위 3개를 후보에 배정
+   ▼  judge.pickHypotheses(): 절감 ms 상위 audit 3개를 후보에 배정
 [라운드 n]
   ├─ 후보 A (worktree) ─┐
-  ├─ 후보 B (worktree) ─┼─ program.md 지침대로 한 가설만 수정 → git diff 를 패치로 반환
+  ├─ 후보 B (worktree) ─┼─ program.md 지침대로 한 가설만 수정 → perf/cand/run{N}-r{n}-{x} 브랜치에 커밋
   └─ 후보 C (worktree) ─┘
    │  barrier — 세 결과를 비교해야 하므로
    ▼
-  측정 에이전트 (메인 체크아웃, 직렬):
-     후보마다: 경로 검사 → 패치 적용 → lint·vitest·build → measure.mjs → git reset --hard
-     → judge.decide() 결과대로 승자 패치만 다시 적용해 commit
-     → results.tsv 에 후보 3줄 + 결정 기록
+  측정 에이전트 → round.mjs evaluate (벤치 worktree, 직렬, 백그라운드 + wait 폴링):
+     후보마다: 경로 검사 → 체크아웃 → lint·tsc·vitest → measure.mjs(build 포함) → 루프 브랜치 복귀
+     → judge.decide() 의 승자만 ff-merge
+     → results.tsv 에 후보 줄 기록 후 커밋
    │
    ▼  judge.shouldStop() 확인 → 계속이면 다음 라운드
 ```
 
 **실행마다 기준선을 재측정한다.** 실행 사이에 머신 부하·온도가 달라지면 절대 점수가 흔들린다. 같은 실행 안에서 비교해야 +1 문턱이 의미를 가진다.
 
-**후보 패치는 worktree 에서 만들고 측정은 메인 체크아웃에서 한다.** worktree 에는 `node_modules`·`.env.local` 이 없어 빌드·측정이 불가능하고, Lighthouse 는 CPU 를 다투면 점수가 흔들리므로 측정은 어차피 직렬이어야 한다.
+**측정은 저장소 밖 벤치 worktree(`~/.cache/finsight-lighthouse/bench`)에서 한다.** 메인 체크아웃에서 측정하면 `.claude/settings.json` 의 Stop 훅이 매 턴 `npm run build` 로 같은 `.next` 를 덮어써 측정 중인 `next start` 가 깨지고, 루프가 도는 몇 시간 동안 메인 체크아웃을 쓸 수 없다. 저장소 안(`.local/`)에 두면 ESLint·`tsconfig` 가 벤치 파일까지 훑는다. 벤치는 루프 브랜치를 체크아웃하고, `.env`·`.env.local` 을 복사하고 `npm ci` 로 준비한다(`.env.local` 이 Supabase·Inngest 를 로컬로 덮는, `up.sh` 와 같은 조합).
+
+**후보는 브랜치로 넘긴다.** worktree 들은 같은 저장소의 ref 를 공유하므로 벤치에서 바로 체크아웃할 수 있다. 후보 worktree 에는 `node_modules` 가 없어 빌드·측정은 하지 않는다.
+
+**라운드 절차는 `round.mjs` 가 한다.** 후보 3개 × (체크아웃·검사·측정·복귀)를 LLM 이 손으로 하면 순서 실수가 이력을 오염시킨다. 측정 에이전트는 실행과 결과 전달만 한다. Bash 단일 호출 상한(10분)보다 라운드가 길므로 `nohup` 으로 띄우고 `round.mjs wait` 로 최대 9분씩 기다린다.
 
 ## 구성 요소
 
 ### `scripts/lighthouse/measure.mjs` — 측정 (에이전트 수정 금지)
 
-1. 전제 확인: `.env.local` 존재, `http://127.0.0.1:54321` 응답. 아니면 exit 1
-2. `npm run build` → `next start -p 3100` (dev 서버 3000 과 겹치지 않게)
+1. 전제 확인: `.env.local` 존재, `http://127.0.0.1:54321` 응답, 포트 3100 비어 있음. 아니면 exit 1
+2. `npm run build` (실패 시 exit 2 — 후보 crash) → `next start -p 3100`
 3. `scripts/browser-test/make-cookie.mjs` 로 세션 쿠키 발급
-4. `pages.json` 의 각 URL 이 리다이렉트 없이 200 인지 확인. 아니면 exit 1 (쿠키 만료·데이터 없음을 점수 하락으로 오인하지 않기 위해)
-5. URL × 3회 Lighthouse (Node API + `chrome-launcher`, 쿠키는 `extraHeaders` 로 주입)
-6. 페이지별 카테고리 점수 중앙값 + opportunities(auditId, 예상 절감 ms, 해당 페이지) 집계
+4. `pages.json` 의 각 URL 이 리다이렉트 없이 200 인지 확인. 아니면 exit 1 (쿠키 만료·데이터 없음을 점수 하락으로 오인하지 않기 위해). `/` 는 쿠키 없이 — 로그인 사용자는 `/dashboard` 로 리다이렉트된다
+5. URL × 3회 Lighthouse (Node API + `chrome-launcher`, 쿠키는 `extraHeaders` 로 주입 — 페이지 로드에는 브라우저 Supabase 클라이언트가 쓰이지 않는다)
+6. 페이지별 카테고리 점수 중앙값 + opportunities(auditId, 예상 절감 ms, 해당 페이지) 집계. runtimeError·null 점수는 0점이 아니라 exit 1
 7. 서버 종료, stdout 으로 JSON 출력
 
 ```json
 { "perfAvg": 62.4,
-  "perPage": [{ "url": "/", "perf": 71, "a11y": 95, "bp": 100, "seo": 92 }],
+  "perPage": [{ "path": "/", "perf": 71, "a11y": 95, "bp": 100, "seo": 92 }],
   "opportunities": [{ "auditId": "unused-javascript", "savingsMs": 1350, "pages": ["/dashboard"] }] }
 ```
 
@@ -97,18 +101,21 @@ devDependencies 에 `lighthouse`, `chrome-launcher` 를 추가한다.
 
 ### `scripts/lighthouse/judge.mjs` — 판정 (순수 함수, TDD)
 
-- `isPathAllowed(paths)` → 금지 경로 목록
-- `decide(baseline, best, candidates)` → `{ winner | null, perCandidate: [{status: keep|discard|crash|scope, reason}] }`
-- `pickHypotheses(opportunities, history, n=3)` → 절감 ms 내림차순, 이력에 keep 된 audit 제외, discard 는 1회까지만 재시도
-- `shouldStop(history)` → `{ stop, reason }`
+- `checkPaths(paths)` → `{ ok, violations }`
+- `decide(best, candidates)` → `{ winner | null, results: [{status: keep|discard|crash|scope, perfAvg, reason}] }`
+- `pickHypotheses(opportunities, history, n=3)` → 절감 ms 내림차순. 실패(discard·crash·scope) 2회 audit 만 제외한다. **keep 된 audit 도 다시 고를 수 있다** — 가장 큰 진단은 한 번의 최소 변경으로 다 해소되지 않는 경우가 많다
+- `shouldStop(bestPerf, history)` → `{ stop, reason }`
 
-측정 에이전트는 `node scripts/lighthouse/judge.mjs <cmd> <json>` CLI 로 호출하고 출력 그대로 따른다.
+### `scripts/lighthouse/round.mjs` — 라운드 절차 CLI
 
-### `scripts/lighthouse/program.md` — 후보 에이전트 지침
+`baseline --run N` / `evaluate --run N --round R --candidates <encoded>` / `wait`. 결과는 `--out` 파일에 원자적으로 쓴다. 이미 이력에 있는 run 번호는 거부한다 — 같은 번호면 후보 브랜치 이름이 겹쳐 라운드 전체가 scope 로 탈락한다.
+
+### `scripts/lighthouse/program.md` — 후보 지침과 실행 절차
 
 - 받은 audit 하나만 겨냥한다. 다른 개선을 끼워 넣지 않는다
 - 허용 경로 안에서 최소 변경. 기능·화면 동작을 바꾸지 않는다
-- 끝나면 `git diff` 를 그대로 반환하고, 변경 의도를 한 줄로 요약한다
+- 지정 브랜치에 커밋 1개, 한 줄 요약 반환
+- 벤치 준비·매 실행 절차·`db reset` 후 `pages.json` 갱신
 
 ### `scripts/lighthouse/results.tsv` — 이력 (커밋 대상)
 
@@ -116,20 +123,26 @@ devDependencies 에 `lighthouse`, `chrome-launcher` 를 추가한다.
 
 ### `.claude/workflows/lighthouse-loop.js` — 오케스트레이션
 
-이름으로 재실행할 수 있게 저장한다. 스크립트는 셸·파일 접근이 없으므로 측정과 이력 읽기는 측정 에이전트가 하고, 스크립트는 그 결과 JSON 으로만 분기한다. `args`: `{ run: <실행 번호>, rounds: 2 }`.
+스크립트는 셸·파일 접근이 없으므로 측정과 이력 읽기는 측정 에이전트가 `round.mjs` 로 하고, 스크립트는 그 결과 JSON 으로만 분기한다. `args`: `{ run, bench, rounds: 2 }`. 메인 체크아웃은 main 에 있고 이 파일은 루프 브랜치에만 있으므로 **이름이 아니라 벤치의 `scriptPath` 로 호출한다.**
 
 ## 안전장치
 
-- 측정 에이전트는 시작 시 브랜치가 `perf/lighthouse-loop` 이고 `git status` 가 깨끗한지 확인한다. 아니면 중단
-- 후보 처리 사이 항상 `git reset --hard <현재 최고 commit>` — 한 후보의 잔여물이 다음 후보 측정에 섞이지 않게
-- 빌드·테스트 실패는 `crash` 로 기록하고 다음 후보로 넘어간다. 루프 전체를 멈추지 않는다
-- `measure.mjs` 전제 확인 실패(Supabase 꺼짐, 쿠키 만료)는 루프를 멈춘다. 환경 문제를 후보 실패로 기록하면 이력이 오염된다
+- `round.mjs` 는 시작 시 브랜치가 `perf/lighthouse-loop` 이고 `git status` 가 깨끗한지 확인한다. 아니면 중단
+- 후보는 detached 체크아웃으로 측정하고 끝나면 항상(`finally`) 루프 브랜치로 돌아간다 — 한 후보의 잔여물이 다음 후보에 섞이지 않게
+- 빌드·타입·테스트 실패는 `crash` 로 기록하고 다음 후보로 넘어간다. 루프 전체를 멈추지 않는다
+- `measure.mjs` 전제 확인 실패(Supabase 꺼짐, 쿠키 만료, 리다이렉트)는 루프를 멈춘다. 환경 문제를 후보 실패로 기록하면 이력이 오염된다
 
 ## 테스트
 
-- `judge.mjs`: vitest — 문턱 경계(+0.9 / +1.0), 가드레일 하락 1점, 금지 경로 1개 포함, 전 후보 crash, 종료 조건 세 가지, 가설 선택의 재시도 규칙
-- `measure.mjs`: 단위 테스트 대신 기준선 1회 실측으로 확인한다 (외부 프로세스 오케스트레이션이라 모킹 가치가 낮다)
+- `judge.mjs`: `node --test` — 문턱 경계(+0.9 / +1.0), 가드레일 하락 1점, 금지 경로, 전 후보 crash, 종료 조건 세 가지, 가설 선택의 재시도 규칙
+- `measure.mjs`·`round.mjs`: 순수 헬퍼만 `node --test`. 프로세스·git 을 엮는 본체는 기준선 실측과 1회 실행으로 확인한다
+- 워크플로: vitest — 전역 스텁으로 실행 (`review-code.test.js` 와 같은 방식)
 - 루프 전체: 1회 실행(기준선 + 2라운드)을 돌려 `results.tsv` 와 브랜치 커밋이 기대대로 남는지 본다
+
+## 감수한 트레이드오프
+
+- **화면 내용을 지워 점수를 올리는 변경은 결정론적으로 막지 않는다.** vitest 가 일부만 잡는다. keep 커밋을 사람이 PR 에서 거르는 것이 최종 방어선이다
+- keep 된 audit 을 다시 고르므로 같은 진단이 매 라운드 후보 한 자리를 차지할 수 있다
 
 ## 하지 않는 것
 
