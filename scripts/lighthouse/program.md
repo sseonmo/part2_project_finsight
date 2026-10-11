@@ -67,7 +67,12 @@ cp .env .env.local ~/.cache/finsight-lighthouse/bench/
    N 은 `results.tsv` 의 마지막 run + 1 (같은 번호는 거부된다)
 4. 끝나면 `results.tsv` 와 `git log perf/lighthouse-loop` 를 본다
 
-`npx supabase db reset`(또는 `scripts/browser-test/reset.sh`)을 했다면 signal·upload id 가 바뀌어 프리플라이트가 404·리다이렉트로 멈춘다. 다시 채운다:
+**측정 대상은 대표 3개**(`/`, `/dashboard`, `/dashboard/uploads`)다. 11개 전체는 1회 실행이 1시간을 넘어
+줄였다. 진단 3개가 셋 모두에 걸리고, 루트·marketing·`(app)` 레이아웃을 모두 지난다. 나머지 페이지의
+회귀는 루프가 보지 못하므로 keep 커밋을 PR 로 옮기기 전에 전체 11개를 한 번 단독 실측한다
+(`pages.json` 을 아래 동적 URL 까지 채워 `node scripts/lighthouse/measure.mjs`).
+
+동적 URL 을 다시 넣을 때, 또는 `npx supabase db reset`(또는 `scripts/browser-test/reset.sh`)을 했다면 signal·upload id 가 바뀌어 프리플라이트가 404·리다이렉트로 멈춘다. 다시 채운다:
 - 신호·리포트 월: 구현 계획 Task 2 Step 6 의 조회로 `pages.json` 의 동적 URL 을 갱신한다. 테스트 유저에게 월간 리포트가 없어도 `/dashboard/report/<ym>` 은 빈 상태로 200 을 준다
 - 매핑 페이지: `needs_mapping` 업로드는 정상 흐름에서 남지 않으므로 합성 행을 넣고, 나온 id 로 `pages.json` 의 `/dashboard/uploads/<id>/mapping` 을 바꾼다
 

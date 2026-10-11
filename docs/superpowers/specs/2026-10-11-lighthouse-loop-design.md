@@ -10,7 +10,7 @@ FinSight 의 Lighthouse Performance 점수를 사람이 한 건씩 고치지 않
 |---|---|
 | `train.py` (에이전트가 고치는 유일한 파일) | 허용 경로 안의 앱 코드 |
 | `prepare.py` (고정된 평가) | `measure.mjs` + `judge.mjs` (에이전트 수정 금지) |
-| `val_bpb` (단일 지표) | 11개 페이지 Performance 평균 |
+| `val_bpb` (단일 지표) | 대표 3개 페이지 Performance 평균 |
 | 개선 시 commit, 아니면 `git reset` | 동일. 브랜치 `perf/lighthouse-loop` |
 | `results.tsv` | `scripts/lighthouse/results.tsv` |
 | `program.md` | `scripts/lighthouse/program.md` |
@@ -26,10 +26,10 @@ FinSight 의 Lighthouse Performance 점수를 사람이 한 건씩 고치지 않
 
 ## 범위
 
-**측정 대상 — 11개 페이지 전체.** `src/app/**/page.tsx` 전부. 동적 라우트(`[yearMonth]`, `[signalId]`, `[id]`)는 테스트 유저의 기존 데이터 기준 고정 URL 을 `scripts/lighthouse/pages.json` 에 적는다.
+**측정 대상 — 대표 3개 페이지.** `/`, `/dashboard`, `/dashboard/uploads`. 처음엔 `src/app/**/page.tsx` 11개 전부였으나 1회 실행이 1시간을 넘어 줄였다(2026-10-11). 진단 3개(render-blocking·unused-javascript·legacy-javascript)가 셋 모두에 걸리고 루트·marketing·`(app)` 레이아웃을 모두 지나므로 개선이 나머지 페이지에도 대체로 옮겨간다. 나머지 페이지의 회귀는 루프가 보지 못하므로 PR 전에 11개를 한 번 단독 실측한다. 11개로 되돌릴 때 동적 라우트(`[yearMonth]`, `[signalId]`, `[id]`)는 테스트 유저의 기존 데이터 기준 고정 URL 을 `scripts/lighthouse/pages.json` 에 적는다.
 
 **판정 지표 — Performance 평균 + 가드레일.**
-- 지표: 페이지별 Performance 3회 중앙값의 11개 평균 (`perfAvg`)
+- 지표: 페이지별 Performance 3회 중앙값의 평균 (`perfAvg`)
 - keep 조건: 아래를 모두 만족하는 후보 중 `perfAvg` 최고 1개
   - `perfAvg ≥ 현재 최고 + 1` (측정 노이즈로 우연히 오른 점수를 거른다)
   - 어떤 페이지의 Accessibility·Best Practices·SEO 도 기준선보다 낮아지지 않음
